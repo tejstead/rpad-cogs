@@ -71,6 +71,12 @@ class BadUser:
                 output += str(e)
         
         await self.bot.say(box(output))
+            
+    @baduser.command(name="strikes", pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def strikes(self, ctx, user : discord.Member):
+        strikes = self.settings.countUserStrikes(ctx.message.server.id, user.id)
+        await self.bot.say(box('User {} has {} strikes'.format(user.name, strikes)))
 
     async def mod_message(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
@@ -193,6 +199,13 @@ class BadUserSettings(CogSettings):
             
         badusers[user_id].append(msg)
         self.save_settings()
+        
+    def countUserStrikes(self, server_id, user_id):
+        badusers = self.getBadUsers(server_id)
+        if user_id not in badusers:
+            return 0
+        else:
+            return len(badusers[user_id])
 
     def updateChannel(self, server_id, channel_id):
         server = self.getServer(server_id)
