@@ -103,6 +103,7 @@ class BadUser:
            member.name, member.nick, member.id, member.joined_at, role.name)
         msg += '\n'.join(latest_messages)
         self.settings.updateBadUser(member.server.id, member.id, msg) 
+        strikes = self.settings.countUserStrikes(member.server.id, member.id)
         
         update_channel = self.settings.getChannel(member.server.id)
         if update_channel is not None:
@@ -110,6 +111,7 @@ class BadUser:
             await self.bot.send_message(channel_obj, inline('Detected bad user'))
             await self.bot.send_message(channel_obj, box(msg))
             await self.bot.send_message(channel_obj, 'Hey @here please leave a note explaining why this user is punished')
+            await self.bot.send_message(channel_obj, 'This user now has {} strikes'.format(strikes))
         
         
     def _get_role(self, roles, role_string):
