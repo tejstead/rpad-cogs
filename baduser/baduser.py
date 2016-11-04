@@ -78,8 +78,9 @@ class BadUser:
         
         author = message.author
         content = message.clean_content
+        channel = message.channel
         timestamp = str(message.timestamp)[:-7]
-        log_msg = '[{}] {} ({}): {}'.format(timestamp, author.name, author.id, content)
+        log_msg = '[{}] {} ({}): {}/{}'.format(timestamp, author.name, author.id, channel.name, content)
         self.logs[author.id].append(log_msg)
     
     async def check_punishment(self, before, after):
@@ -99,8 +100,10 @@ class BadUser:
         
         update_channel = self.settings.getChannel(member.server.id)
         if update_channel is not None:
-            await self.bot.send_message(discord.Object(update_channel), inline('Detected bad user'))
-            await self.bot.send_message(discord.Object(update_channel), box(msg))
+            channel_obj = discord.Object(update_channel)
+            await self.bot.send_message(channel_obj, inline('Detected bad user'))
+            await self.bot.send_message(channel_obj, box(msg))
+            await self.bot.send_message(channel_obj, 'Hey @here please leave a note explaining why this user is punished')
         
         
     def _get_role(self, roles, role_string):
