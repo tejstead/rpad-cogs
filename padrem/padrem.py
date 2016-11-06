@@ -518,8 +518,9 @@ class EggMachine:
 class RareEggMachine(EggMachine):
     def __init__(self, server, global_rem_list, carnival_modifier):
         super(RareEggMachine, self).__init__()
-        
+
         self.machine_name = 'REM ({})'.format(server)
+        
         if carnival_modifier:
             self.machine_name += ' with {} x{} ({})'.format(carnival_modifier.name, carnival_modifier.boost_rate, carnival_modifier.egg_id)     
         
@@ -543,7 +544,7 @@ class RareEggMachine(EggMachine):
 class GfEggMachine(RareEggMachine):
     def __init__(self, server, global_rem_list, gfe_rem_list, carnival_modifier, godfest_modifier):
         super(GfEggMachine, self).__init__(server, global_rem_list, carnival_modifier)
-        
+
         self.machine_name = '{} Godfest x{} ({}) {}'.format(godfest_modifier.open_date_str, godfest_modifier.boost_rate, godfest_modifier.egg_id, self.machine_name)
         
         for m in gfe_rem_list:
@@ -561,7 +562,12 @@ class CollabEggMachine(EggMachine):
     def __init__(self, collab_modifier):
         super(CollabEggMachine, self).__init__()
         
-        self.machine_name = collab_modifier.name
+        self.machine_id = int(collab_modifier.egg_id)
+        self.machine_name = '{} ({})'.format(collab_modifier.name, collab_modifier.egg_id)
+        
+        self.rem_rates = DEFAULT_COLLAB_RATES
+        if self.machine_id == 905:
+            self.rem_rates = IMOUTO_COLLAB_RATES
         
         for m in collab_modifier.monster_list:
             self.addMonsterAndBoost(m, 1)
@@ -569,20 +575,37 @@ class CollabEggMachine(EggMachine):
         self.computeMonsterEntries()
 
     def pointsForMonster(self, monster):
-        if monster.rarity == 8:
-            return 1
-        if monster.rarity == 7:
-            return 3
-        if monster.rarity == 6:
-            return 4
-        if monster.rarity == 5:
-            return 9
-        if monster.rarity == 4:
-            return 12
+        id_monster_rates = self.rem_rates['monster_id']
+        if monster.monster_id_jp in id_monster_rates:
+            return id_monster_rates[monster.monster_id_jp]
+        else:
+            return self.rem_rates['rarity'][monster.rarity]
 
     def toDescription(self):
         return self.toLongDescription(True, 1)
             
+
+DEFAULT_COLLAB_RATES = {
+    'monster_id': {},
+    'rarity': {
+        8: 1,
+        7: 3,
+        6: 4,
+        5: 9,
+        4: 12,
+    },
+}
+
+# TODO: make this configurable
+IMOUTO_COLLAB_RATES = {
+    'monster_id': {},
+    'rarity': {
+        8: 0,
+        7: 1,
+        6: 3,
+        5: 17,
+    },
+}
 
 class EggMachineModifier:
     def __init__(self, egg_instance, egg_name, monster_list, boost_rate):
