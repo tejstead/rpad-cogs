@@ -183,7 +183,7 @@ class PadRem:
             return
         
         picks = 0
-        roll_stones = 5
+        roll_stones = machine.stones_per_roll
         roll_price = 3.53 if server == 'NA' else 2.65
         while picks < 500:
             monster = machine.pickMonster()
@@ -442,6 +442,7 @@ class EggMachine:
         self.monster_id_to_monster = {}
         self.monster_id_jp_to_monster = {}
         self.monster_entries = list()
+        self.stone_count = 5
         
     def addMonsterAndBoost(self, monster, boost):
         saved_boost = self.monster_id_to_boost.get(monster.monster_id, boost)
@@ -468,16 +469,11 @@ class EggMachine:
         return (9 - monster.rarity) * self.monster_id_to_boost[monster.monster_id]
 
     def pointsForMonster(self, monster):
-        if monster.rarity == 8:
-            return 3
-        if monster.rarity == 7:
-            return 3
-        if monster.rarity == 6:
-            return 6
-        if monster.rarity == 5:
-            return 12
-        if monster.rarity == 4:
-            return 24
+        id_monster_rates = self.rem_config['monster_id']
+        if monster.monster_id_jp in id_monster_rates:
+            return id_monster_rates[monster.monster_id_jp]
+        else:
+            return self.rem_config['rarity'][monster.rarity]
     
     def chanceOfMonster(self, monster):
         return self.pointsForMonster(monster) / len(self.monster_entries)
@@ -520,6 +516,8 @@ class RareEggMachine(EggMachine):
         super(RareEggMachine, self).__init__()
 
         self.machine_name = 'REM ({})'.format(server)
+        self.rem_config = DEFAULT_MACHINE_CONFIG
+        self.stones_per_roll = self.rem_config['stones_per_roll']
         
         if carnival_modifier:
             self.machine_name += ' with {} x{} ({})'.format(carnival_modifier.name, carnival_modifier.boost_rate, carnival_modifier.egg_id)     
@@ -565,27 +563,35 @@ class CollabEggMachine(EggMachine):
         self.machine_id = int(collab_modifier.egg_id)
         self.machine_name = '{} ({})'.format(collab_modifier.name, collab_modifier.egg_id)
         
-        self.rem_rates = DEFAULT_COLLAB_RATES
+        self.rem_config = DEFAULT_COLLAB_CONFIG
         if self.machine_id == 905:
-            self.rem_rates = IMOUTO_COLLAB_RATES
+            self.rem_config = IMOUTO_COLLAB_CONFIG
+        
+        self.stones_per_roll = self.rem_config['stones_per_roll']
         
         for m in collab_modifier.monster_list:
             self.addMonsterAndBoost(m, 1)
             
         self.computeMonsterEntries()
 
-    def pointsForMonster(self, monster):
-        id_monster_rates = self.rem_rates['monster_id']
-        if monster.monster_id_jp in id_monster_rates:
-            return id_monster_rates[monster.monster_id_jp]
-        else:
-            return self.rem_rates['rarity'][monster.rarity]
-
     def toDescription(self):
         return self.toLongDescription(True, 1)
             
 
-DEFAULT_COLLAB_RATES = {
+DEFAULT_MACHINE_CONFIG = {
+    'stones_per_roll': 5,
+    'monster_id': {},
+    'rarity': {
+        8: 3,
+        7: 3,
+        6: 6,
+        5: 12,
+        4: 24,
+    },
+}
+
+DEFAULT_COLLAB_CONFIG = {
+    'stones_per_roll': 5,
     'monster_id': {},
     'rarity': {
         8: 1,
@@ -597,7 +603,8 @@ DEFAULT_COLLAB_RATES = {
 }
 
 # TODO: make this configurable
-IMOUTO_COLLAB_RATES = {
+IMOUTO_COLLAB_CONFIG = {
+    'stones_per_roll': 10,
     'monster_id': {},
     'rarity': {
         8: 0,
