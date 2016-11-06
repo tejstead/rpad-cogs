@@ -184,13 +184,13 @@ class PadRem:
         
         picks = 0
         roll_stones = machine.stones_per_roll
-        roll_price = 3.53 if server == 'NA' else 2.65
+        stone_price = 3.53/5 if server == 'NA' else 2.65/5
         while picks < 500:
             monster = machine.pickMonster()
             picks += 1
             if check_monster_fn(monster):
                 stones = picks * roll_stones
-                price = picks * roll_price
+                price = stones * stone_price
                 msg = 'It took {} tries, ${:.0f}, and {} stones to pull : #{} {}'.format(picks, price, stones, monster.monster_id_jp, monster.name_na)
                 await self.bot.say(box(msg))
                 return
