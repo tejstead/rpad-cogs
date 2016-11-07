@@ -608,9 +608,9 @@ IMOUTO_COLLAB_CONFIG = {
     'monster_id': {},
     'rarity': {
         8: 0,
-        7: 1,
-        6: 3,
-        5: 17,
+        7: 15,
+        6: 51,
+        5: 145,
     },
 }
 
