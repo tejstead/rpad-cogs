@@ -6,25 +6,28 @@ from __main__ import user_allowed, send_cmd_help
 import os
 import re
 
-class CustomCommands:
-    """Custom commands."""
+from .utils.cog_settings import *
+
+class Memes:
+    """Custom memes."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.c_commands = fileIO("data/customcom/commands.json", "load")
+        self.c_commands = fileIO("data/memes/commands.json", "load")
+        self.settings = MemesSettings("memes")
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
-    async def addcom(self, ctx, command : str, *, text):
-        """Adds a custom command
+    async def addmeme(self, ctx, command : str, *, text):
+        """Adds a meme
 
         Example:
-        !addcom yourcommand Text you want
+        !addmeme yourmeme Text you want
         """
         server = ctx.message.server
         command = command.lower()
         if command in self.bot.commands.keys():
-            await self.bot.say("That command is already a standard command.")
+            await self.bot.say("That meme is already a standard command.")
             return
         if not server.id in self.c_commands:
             self.c_commands[server.id] = {}
@@ -32,18 +35,18 @@ class CustomCommands:
         if command not in cmdlist:
             cmdlist[command] = text
             self.c_commands[server.id] = cmdlist
-            fileIO("data/customcom/commands.json", "save", self.c_commands)
+            fileIO("data/memes/commands.json", "save", self.c_commands)
             await self.bot.say("Custom command successfully added.")
         else:
             await self.bot.say("This command already exists. Use editcom to edit it.")
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
-    async def editcom(self, ctx, command : str, *, text):
-        """Edits a custom command
+    async def editmeme(self, ctx, command : str, *, text):
+        """Edits a meme
 
         Example:
-        !editcom yourcommand Text you want
+        !editmeme yourcommand Text you want
         """
         server = ctx.message.server
         command = command.lower()
@@ -52,7 +55,7 @@ class CustomCommands:
             if command in cmdlist:
                 cmdlist[command] = text
                 self.c_commands[server.id] = cmdlist
-                fileIO("data/customcom/commands.json", "save", self.c_commands)
+                fileIO("data/memes/commands.json", "save", self.c_commands)
                 await self.bot.say("Custom command successfully edited.")
             else:
                 await self.bot.say("That command doesn't exist. Use addcom [command] [text]")
@@ -61,11 +64,11 @@ class CustomCommands:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
-    async def delcom(self, ctx, command : str):
-        """Deletes a custom command
+    async def delmeme(self, ctx, command : str):
+        """Deletes a meme
 
         Example:
-        !delcom yourcommand"""
+        !delmeme yourcommand"""
         server = ctx.message.server
         command = command.lower()
         if server.id in self.c_commands:
@@ -73,22 +76,34 @@ class CustomCommands:
             if command in cmdlist:
                 cmdlist.pop(command, None)
                 self.c_commands[server.id] = cmdlist
-                fileIO("data/customcom/commands.json", "save", self.c_commands)
-                await self.bot.say("Custom command successfully deleted.")
+                fileIO("data/memes/commands.json", "save", self.c_commands)
+                await self.bot.say("Custom meme successfully deleted.")
             else:
-                await self.bot.say("That command doesn't exist.")
+                await self.bot.say("That meme doesn't exist.")
         else:
-            await self.bot.say("There are no custom commands in this server. Use addcom [command] [text]")
+            await self.bot.say("There are no custom memes in this server. Use addmeme [command] [text]")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def customcommands(self, ctx):
-        """Shows custom commands list"""
+    @checks.mod_or_permissions(administrator=True)
+    async def setmemerole(self, ctx, rolename : str):
+        """Sets the meme role
+
+        Example:
+        !setmemerole Regular"""
+        
+        role = self._get_role(ctx.message.server.roles, rolename)
+        self.settings.setPrivileged(ctx.message.server.id, role.id)
+        await self.bot.say("done")
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def memes(self, ctx):
+        """Shows custom memes list"""
         server = ctx.message.server
         if server.id in self.c_commands:
             cmdlist = self.c_commands[server.id]
             if cmdlist:
                 i = 0
-                msg = ["```Custom commands:\n"]
+                msg = ["```Custom memes:\n"]
                 for cmd in sorted([cmd for cmd in cmdlist.keys()]):
                     if len(msg[i]) + len(ctx.prefix) + len(cmd) + 5 > 2000:
                         msg[i] += "```"
@@ -100,9 +115,9 @@ class CustomCommands:
                 for cmds in msg:
                     await self.bot.whisper(cmds)
             else:
-                await self.bot.say("There are no custom commands in this server. Use addcom [command] [text]")
+                await self.bot.say("There are no custom memes in this server. Use addmeme [command] [text]")
         else:
-            await self.bot.say("There are no custom commands in this server. Use addcom [command] [text]")
+            await self.bot.say("There are no custom memes in this server. Use addmeme [command] [text]")
 
     async def checkCC(self, message):
         if message.author.id == self.bot.user.id or len(message.content) < 2 or message.channel.is_private:
@@ -110,6 +125,17 @@ class CustomCommands:
 
         if not user_allowed(message):
             return
+        
+        
+        role_id = self.settings.getPrivileged(message.server.id)
+        print(role_id)
+        if role_id is not None:
+            role = self._get_role_from_id(message.server, role_id)
+            print(role)
+            if role not in message.author.roles:
+                print('failed')
+                return
+            print('passed')
 
         msg = message.content
         server = message.server
@@ -164,14 +190,44 @@ class CustomCommands:
             return raw_result
         return str(getattr(first, second, raw_result))
 
+    def _get_role(self, roles, role_string):
+        if role_string.lower() == "everyone":
+            role_string = "@everyone"
+
+        role = discord.utils.find(
+            lambda r: r.name.lower() == role_string.lower(), roles)
+
+        if role is None:
+            raise RoleNotFound(roles[0].server, role_string)
+
+        return role
+
+    def _get_role_from_id(self, server, roleid):
+        try:
+            roles = server.roles
+        except AttributeError:
+            server = self._get_server_from_id(server)
+            try:
+                roles = server.roles
+            except AttributeError:
+                raise RoleNotFound(server, roleid)
+
+        role = discord.utils.get(roles, id=roleid)
+        if role is None:
+            raise RoleNotFound(server, roleid)
+        return role
+
+    def _get_server_from_id(self, serverid):
+        return discord.utils.get(self.bot.servers, id=serverid)
+
 
 def check_folders():
-    if not os.path.exists("data/customcom"):
-        print("Creating data/customcom folder...")
-        os.makedirs("data/customcom")
+    if not os.path.exists("data/memes"):
+        print("Creating data/memes folder...")
+        os.makedirs("data/memes")
 
 def check_files():
-    f = "data/customcom/commands.json"
+    f = "data/memes/commands.json"
     if not fileIO(f, "check"):
         print("Creating empty commands.json...")
         fileIO(f, "save", {})
@@ -179,6 +235,32 @@ def check_files():
 def setup(bot):
     check_folders()
     check_files()
-    n = CustomCommands(bot)
+    n = Memes(bot)
     bot.add_listener(n.checkCC, "on_message")
     bot.add_cog(n)
+
+
+class MemesSettings(CogSettings):
+    def make_default_settings(self):
+        config = {
+          'configs' : {}
+        }
+        return config
+    
+    def serverConfigs(self):
+        return self.bot_settings['configs']
+    
+    def getServer(self, server_id):
+        configs = self.serverConfigs()
+        if server_id not in configs:
+            configs[server_id] = {}
+        return configs[server_id]
+
+    def getPrivileged(self, server_id):
+        server = self.getServer(server_id)
+        return server.get('privileged')
+
+    def setPrivileged(self, server_id, role_id):
+        server = self.getServer(server_id)
+        server['privileged'] = role_id
+        self.save_settings()
