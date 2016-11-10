@@ -102,7 +102,7 @@ class PadEvents:
                 daily_refresh_servers = set()
                 for e in events:
                     self.started_events.add(e.uid)
-                    if e.event_type == EventType.EventTypeGuerrilla:
+                    if e.event_type in [EventType.EventTypeGuerrilla, EventType.EventTypeGuerrillaNew]:
                         print("its a guerrilla")
                         for gr in self.settings.listGuerrillaReg():
                             if e.server == gr['server']:
@@ -296,9 +296,13 @@ class PadEvents:
         if len(special_week_events):
             msg += "\n\n" + "Found " + str(len(special_week_events)) + " unexpected special week events!"
             
-        guerrilla_new_events = available_events.withType(EventType.EventTypeGuerrillaNew).items()
-        if len(guerrilla_new_events):
-            msg += "\n\n" + "Found " + str(len(guerrilla_new_events)) + " unexpected guerrilla new events!"
+        active_guerrilla_new_events = active_events.withType(EventType.EventTypeGuerrillaNew).items()
+        if len(active_guerrilla_new_events) > 0:
+            msg += "\n\n" + self.makeActiveGuerrillaOutput('Active New Guerrillas', active_guerrilla_new_events)
+
+        guerrilla_new_events = pending_events.withType(EventType.EventTypeGuerrillaNew).items()
+        if len(guerrilla_new_events) > 0:
+            msg += "\n\n" + self.makeFullGuerrillaOutput('New Guerrilla Events', guerrilla_new_events, new_guerrilla=True)
         
         # clean up long headers
         msg = msg.replace('-------------------------------------', '-----------------------')
@@ -338,13 +342,13 @@ class PadEvents:
             tbl.add_row([e.nameAndModifier(), e.group, e.endFromNowFullMin().strip()])
         return tbl.get_string()
     
-    def makeFullGuerrillaOutput(self, table_name, event_list):
+    def makeFullGuerrillaOutput(self, table_name, event_list, new_guerrilla=False):
         events_by_name = defaultdict(list)
         for e in event_list:
             events_by_name[e.name()].append(e)
         
         rows = list()
-        grps = ["A", "B", "C", "D", "E"]
+        grps = ["A", "B", "C"] if new_guerrilla else ["A", "B", "C", "D", "E"]
         for name, events in events_by_name.items():
             events = sorted(events, key=lambda e: e.open_datetime)
             events_by_group = defaultdict(list)
