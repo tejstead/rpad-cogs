@@ -128,14 +128,10 @@ class Memes:
         
         
         role_id = self.settings.getPrivileged(message.server.id)
-        print(role_id)
         if role_id is not None:
             role = self._get_role_from_id(message.server, role_id)
-            print(role)
             if role not in message.author.roles:
-                print('failed')
                 return
-            print('passed')
 
         msg = message.content
         server = message.server
