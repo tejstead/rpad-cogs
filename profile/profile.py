@@ -46,9 +46,13 @@ def validateAndCleanId(id):
         return id
     else:
         return None
-    
+
+def formatNameLine(server, pad_name, pad_id):
+    group = computeNewGroup(pad_id) if server == 'JP' else computeOldGroup(pad_id)
+    return "[{}]: '{}' : {} (Group {})".format(server, pad_name, formatId(pad_id), group)
+
 def formatId(id):
-    return id[0:3] + "," + id[3:6] + "," + id[6:9] + " Group {} (NA) {} (JP)".format(computeOldGroup(id), computeNewGroup(id))
+    return id[0:3] + "," + id[3:6] + "," + id[6:9]
 
 def computeOldGroup(str_id):
     old_id_digit = str_id[2]
@@ -90,7 +94,7 @@ class Profile:
         profile_text = self.settings.getProfileText(user_id, server)
         
         line1 = "Info for " + ctx.message.author.name
-        line2 = "[{}]: '{}' : {}".format(server, pad_name, formatId(pad_id))
+        line2 = formatNameLine(server, pad_name, pad_id)
         line3 = profile_text
         
         msg = inline(line1) + "\n" + box(line2 + "\n" + line3)
@@ -152,7 +156,7 @@ class Profile:
         profile_text = self.settings.getProfileText(user.id, server)
         
         line1 = "Info for " + user.name
-        line2 = "[{}]: '{}' : {}".format(server, pad_name, pad_id)
+        line2 = formatNameLine(server, pad_name, pad_id)
         line3 = profile_text
         
         msg = inline(line1) + "\n" + box(line2 + "\n" + line3)
