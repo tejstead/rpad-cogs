@@ -60,7 +60,7 @@ def computeOldGroup(str_id):
 
 def computeNewGroup(str_id):
     int_id = int(str_id)
-    return (int_id % 3) + 1
+    return (int_id % 3)
 
 class Profile:
     def __init__(self, bot):
