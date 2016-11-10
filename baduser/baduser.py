@@ -97,13 +97,13 @@ class BadUser:
             bad_role_ids = self.settings.getPunishmentRoles(after.server.id)
             for role in after.roles:
                 if role.id in bad_role_ids:
-                    await self.recordBadUser(after, role)
+                    await self.recordBadUser(after, role.name)
                     return
     
-    async def recordBadUser(self, member, role):
+    async def recordBadUser(self, member, role_name):
         latest_messages = self.logs[member.id]
         msg = 'Name={} Nick={} ID={} Joined={} Role={}\n'.format(
-           member.name, member.nick, member.id, member.joined_at, role.name)
+           member.name, member.nick, member.id, member.joined_at, role_name)
         msg += '\n'.join(latest_messages)
         self.settings.updateBadUser(member.server.id, member.id, msg) 
         strikes = self.settings.countUserStrikes(member.server.id, member.id)
