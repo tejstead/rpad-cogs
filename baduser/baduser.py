@@ -88,6 +88,9 @@ class BadUser:
         timestamp = str(message.timestamp)[:-7]
         log_msg = '[{}] {} ({}): {}/{}'.format(timestamp, author.name, author.id, channel.name, content)
         self.logs[author.id].append(log_msg)
+
+    async def mod_ban(self, member):
+        await self.recordBadUser(member, 'BANNED')
     
     async def check_punishment(self, before, after):
         if before.roles != after.roles:
@@ -149,6 +152,7 @@ def setup(bot):
     print('baduser bot setup')
     n = BadUser(bot)
     bot.add_listener(n.mod_message, "on_message")
+    bot.add_listener(n.mod_ban, "on_member_ban")
     bot.add_listener(n.check_punishment, "on_member_update")
     bot.add_cog(n)
     print('done adding baduser bot')
