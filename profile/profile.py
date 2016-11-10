@@ -48,7 +48,15 @@ def validateAndCleanId(id):
         return None
     
 def formatId(id):
-    return id[0:3] + "," + id[3:6] + "," + id[6:9] 
+    return id[0:3] + "," + id[3:6] + "," + id[6:9] + " Group {} (NA) {} (JP)".format(computeOldGroup(id), computeNewGroup(id))
+
+def computeOldGroup(str_id):
+    old_id_digit = str_id[2]
+    return chr(ord('A') + (int(old_id_digit) % 5))
+
+def computeNewGroup(str_id):
+    int_id = int(str_id)
+    return (int_id % 3) + 1
 
 class Profile:
     def __init__(self, bot):
