@@ -81,24 +81,11 @@ class Profile:
         if not await self.settings.checkUsage(ctx, 'idme'):
             return
         
-        user_id = ctx.message.author.id
-        if server is None:
-            server = self.settings.getDefaultServer(user_id)
-        server = normalizeServer(server)
-        if server not in SUPPORTED_SERVERS:
-            await self.bot.say(inline('Unsupported server: ' + server))
+        profile_msg = await self.getIdMsg(ctx.message.author, server, False)
+        if profile_msg is None:
             return
         
-        pad_id = self.settings.getId(user_id, server)
-        pad_name = self.settings.getName(user_id, server)
-        profile_text = self.settings.getProfileText(user_id, server)
-        
-        line1 = "Info for " + ctx.message.author.name
-        line2 = formatNameLine(server, pad_name, pad_id)
-        line3 = profile_text
-        
-        msg = inline(line1) + "\n" + box(line2 + "\n" + line3)
-        await self.bot.say(msg)
+        await self.bot.say(profile_msg)
 
     @commands.command(name="idto", pass_context=True)
     async def idTo(self, ctx, user: discord.Member, server=None):
@@ -108,7 +95,7 @@ class Profile:
         """
         if not await self.settings.checkUsage(ctx, 'idto'):
             return
-        profile_msg = await self.getIdMsg(ctx, ctx.message.author, server)
+        profile_msg = await self.getIdMsg(ctx.message.author, server)
         if profile_msg is None:
             return
         
@@ -125,15 +112,14 @@ class Profile:
         """
         if not await self.settings.checkUsage(ctx, 'idto'):
             return
-        profile_msg = await self.getIdMsg(ctx, user, server)
+        profile_msg = await self.getIdMsg(user, server)
         if profile_msg is None:
             return
         
         await self.bot.whisper(profile_msg)
     
     
-    async def getServer(self, ctx, server=None):
-        user_id = ctx.message.author.id
+    async def getServer(self, user_id, server=None):
         if server is None:
             server = self.settings.getDefaultServer(user_id)
         server = normalizeServer(server)
@@ -142,16 +128,16 @@ class Profile:
             return None
         return server
     
-    async def getIdMsg(self, ctx, user, server=None):
-        server = await self.getServer(ctx, server)
+    async def getIdMsg(self, user, server=None, for_other=True):
+        server = await self.getServer(user.id, server)
         if server is None:
             return None
         
-        if not self.settings.getPublic(user.id, server):
+        if for_other and not self.settings.getPublic(user.id, server):
             await self.bot.say(inline("That user's profile is private"))
             return None
 
-        pad_id = formatId(self.settings.getId(user.id, server))
+        pad_id = self.settings.getId(user.id, server)
         pad_name = self.settings.getName(user.id, server)
         profile_text = self.settings.getProfileText(user.id, server)
         
