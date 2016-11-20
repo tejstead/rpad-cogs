@@ -566,6 +566,8 @@ class CollabEggMachine(EggMachine):
         self.rem_config = DEFAULT_COLLAB_CONFIG
         if self.machine_id == 905:
             self.rem_config = IMOUTO_COLLAB_CONFIG
+        if self.machine_id == 650:
+            self.rem_config = FF_COLLAB_CONFIG
         
         self.stones_per_roll = self.rem_config['stones_per_roll']
         
@@ -611,6 +613,19 @@ IMOUTO_COLLAB_CONFIG = {
         7: 15,
         6: 51,
         5: 145,
+    },
+}
+
+# TODO: make this configurable
+FF_COLLAB_CONFIG = {
+    'stones_per_roll': 5,
+    'monster_id': {},
+    'rarity': {
+        8: 0,
+        7: 0,
+        6: 29,
+        5: 40,
+        4: 57,
     },
 }
 
