@@ -83,12 +83,9 @@ class TrUtils:
     async def doRefreshRainbow(self):
         servers = self.settings.servers()
         for server_id, server_data in servers.items():
-            print("server_id", server_id)
             server = self._get_server_from_id(server_id)
-            print("server", server)
             rainbow_ids = self.settings.rainbow(server_id)
             for role_id in rainbow_ids:
-                print("role_id", role_id)
                 role = self._get_role_from_id(server, role_id)
                 color = random.choice(self.colors)
                 await self.bot.edit_role(server, role, color=color)
