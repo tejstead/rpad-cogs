@@ -113,13 +113,13 @@ class TrUtils:
             print('failed to check for nickname change' + str(e))
             
     @commands.command(name="dontchangemyname", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
+    @checks.is_owner()
     async def dontchangemyname(self, ctx, nickname):
         self.settings.setNickname(ctx.message.server.id, ctx.message.author.id, nickname)
         await self.bot.say('`done`')
 
     @commands.command(name="cleardontchangemyname", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
+    @checks.is_owner()
     async def cleardontchangemyname(self, ctx):
         self.settings.clearNickname(ctx.message.server.id, ctx.message.author.id)
         await self.bot.say('`done`')
