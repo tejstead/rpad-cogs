@@ -91,6 +91,24 @@ class BadUser:
 
     async def mod_ban(self, member):
         await self.recordBadUser(member, 'BANNED')
+
+    async def mod_user_left(self, member):
+        strikes = self.settings.countUserStrikes(member.server.id, member.id)
+        if strikes:
+            msg = 'FYI: A user with {} strikes just left the server: {}'.format(strikes, member.name)
+            update_channel = self.settings.getChannel(member.server.id)
+            if update_channel is not None:
+                channel_obj = discord.Object(update_channel)
+                await self.bot.send_message(channel_obj, msg)
+
+    async def mod_user_join(self, member):
+        strikes = self.settings.countUserStrikes(member.server.id, member.id)
+        if strikes:
+            msg = 'Hey @here a user with {} strikes just joined the server: {}'.format(strikes, member.name)
+            update_channel = self.settings.getChannel(member.server.id)
+            if update_channel is not None:
+                channel_obj = discord.Object(update_channel)
+                await self.bot.send_message(channel_obj, msg)
     
     async def check_punishment(self, before, after):
         if before.roles != after.roles:
@@ -154,6 +172,8 @@ def setup(bot):
     bot.add_listener(n.mod_message, "on_message")
     bot.add_listener(n.mod_ban, "on_member_ban")
     bot.add_listener(n.check_punishment, "on_member_update")
+    bot.add_listener(n.mod_user_join, "on_member_join")
+    bot.add_listener(n.mod_user_left, "on_member_remove")
     bot.add_cog(n)
     print('done adding baduser bot')
 
