@@ -421,7 +421,7 @@ def monsterToInfoText(m: Monster):
     unique_awakenings = set(m.awakening_names)
     for a in unique_awakenings:
         count = m.awakening_names.count(a)
-        awakenings_row += ' {}x{}'.format(a, count)
+        awakenings_row += ' {}x{}'.format(AWAKENING_NAME_MAP.get(a, a), count)
     awakenings_row = awakenings_row.strip()
     
     if not len(awakenings_row):
@@ -455,6 +455,53 @@ attr_prefix_map = {
   'Wood':'g',
   'Light':'l',
   'Dark':'d',
+}
+
+AWAKENING_NAME_MAP = {
+  'Enhanced Fire Orbs': 'R-OE',
+  'Enhanced Water Orbs': 'B-OE',
+  'Enhanced Wood Orbs': 'G-OE',
+  'Enhanced Light Orbs': 'L-OE',
+  'Enhanced Dark Orbs': 'D-OE',
+  'Enhanced Heal Orbs': 'H-OE',
+  
+  'Enhanced Fire Att.': 'R-RE',
+  'Enhanced Water Att.': 'B-RE',
+  'Enhanced Wood Att.': 'G-RE',
+  'Enhanced Light Att.': 'L-RE',
+  'Enhanced Dark Att.': 'D-RE',
+  
+  'Enhanced HP': 'HP',
+  'Enhanced Attack': 'ATK',
+  'Enhanced Heal': 'RCV',
+  
+  'Auto-Recover': 'AUTO-RECOVER',
+  'Skill Boost': 'SB',
+  'Resistance-Skill Bind': 'SBR',
+  'Two-Pronged Attack': 'TPA',
+  'Multi Boost': 'MULTI-BOOST',
+  'Recover Bind': 'RCV-BIND',
+  'Extend Time': 'TE',
+  
+  'Resistance-Bind': 'RES-BIND',
+  'Resistance-Dark': 'RES-DARK',
+  'Resistance-Poison': 'RES-POISON',
+  'Resistance-Jammers': 'RES-JAMMER',
+  
+  'Reduce Fire Damage': 'R-RES',
+  'Reduce Water Damage': 'B-RES',
+  'Reduce Wood Damage': 'G-RES',
+  'Reduce Light Damage': 'L-RES',
+  'Reduce Dark Damage': 'D-RES',
+  
+  'Healer Killer': 'K-HEALER',
+  'Machine Killer': 'K-MACHINE',
+  'Dragon Killer': 'K-DRAGON',
+  'Attacker Killer': 'K-ATTACKER',
+  'Physical Killer': 'K-PHYSICAL',
+  'God Killer': 'K-GOD',
+  'Devil Killer': 'K-DEVIL',
+  'Balance Killer': 'K-BALANCE',
 }
 
 def addNickname(m: Monster):
