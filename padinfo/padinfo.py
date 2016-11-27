@@ -115,8 +115,12 @@ class PadInfo:
         query = " ".join(query)
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            info, link = monsterToInfoText(m)
-            await self.bot.say(box(info) + '\n<' + link + '>')
+            embed = monsterToEmbed(m, ctx.message.server)
+            try:
+                await self.bot.say(embed=embed)
+            except Exception as e:
+                info, link = monsterToInfoText(m)
+                await self.bot.say(box(info) + '\n<' + link + '>')
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
@@ -401,7 +405,7 @@ def monsterToInfoText(m: Monster):
     header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
     if not m.on_us:
         header += ' (JP only)'
-    
+
     info_row = m.attr1
     if m.attr2:
         info_row += '/' + m.attr2
@@ -449,12 +453,116 @@ def monsterToPicText(m: Monster):
     link = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'.format(m.monster_id_na)
     return header, link 
 
+def monsterToEmbed(m: Monster, server):
+    header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
+    if not m.on_us:
+        header += ' (JP only)'
+        
+    embed = discord.Embed()
+    embed.set_thumbnail(url='http://www.puzzledragonx.com/en/img/book/{}.png'.format(m.monster_id_na))
+    embed.title = header
+    embed.description = 'this is a description'
+    embed.url = 'http://www.puzzledragonx.com/en/monster.asp?n={}'.format(m.monster_id_na)
+    
+    info_row_1 = m.type1
+    if m.type2:
+        info_row_1 += '/' + m.type2
+    if m.type3:
+        info_row_1 += '/' + m.type3
+        
+    info_row_2 = '**Rarity** {}\n**Cost** {}'.format(m.rarity, m.cost)
+    embed.add_field(name=info_row_1, value=info_row_2)
+    
+    stats_row_1 = 'Weighted {}'.format(m.weighted_stats)
+    stats_row_2 = '**HP** {}\n**ATK** {}\n**RCV** {}'.format(m.hp, m.atk, m.rcv)
+    embed.add_field(name=stats_row_1, value=stats_row_2)
+    
+    awakenings_row = ''
+    unique_awakenings = set(m.awakening_names)
+    for a in unique_awakenings:
+        count = m.awakening_names.count(a)
+        mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a)
+        if mapped_awakening:
+            mapped_awakening = discord.utils.get(server.emojis, name=mapped_awakening)
+        
+        if mapped_awakening is None:
+            mapped_awakening = AWAKENING_NAME_MAP.get(a, a)
+            
+        awakenings_row += ' {}x{}'.format(mapped_awakening, count)
+        
+    awakenings_row = awakenings_row.strip()
+    
+    if not len(awakenings_row):
+        awakenings_row = 'No Awakenings'
+    
+    embed.description = awakenings_row
+    
+    active_header = 'Active Skill'
+    active_body = 'None/Missing'
+    if m.active_text:
+        active_header = 'Active Skill ({} -> {})'.format(m.active_max, m.active_min, m.active_text)
+        active_body = m.active_text
+    embed.add_field(name=active_header, value=active_body, inline=False)
+    
+    ls_row = m.leader_text if m.leader_text else 'None/Missing'
+    embed.add_field(name='Leader Skill', value=ls_row, inline=False)
+    
+    
+    return embed
+
 attr_prefix_map = {
   'Fire':'r',
   'Water':'b',
   'Wood':'g',
   'Light':'l',
   'Dark':'d',
+}
+
+AWAKENING_NAME_MAP_RPAD = {
+  'Enhanced Fire Orbs': 'oe6fire',
+  'Enhanced Water Orbs': 'oe5water',
+  'Enhanced Wood Orbs': 'oe4wood',
+  'Enhanced Light Orbs': 'oe3light',
+  'Enhanced Dark Orbs': 'oe2dark',
+  'Enhanced Heal Orbs': 'oe1heart',
+       
+  'Enhanced Fire Att.': 'row6fire',
+  'Enhanced Water Att.': 'row5water',
+  'Enhanced Wood Att.': 'row4wood',
+  'Enhanced Light Att.': 'row3light',
+  'Enhanced Dark Att.': ':row2dark',
+  
+#   'Enhanced HP': 'HP',
+#   'Enhanced Attack': 'ATK',
+#   'Enhanced Heal': 'RCV',
+  
+  'Auto-Recover': 'awakening_autoheal',
+  'Skill Boost': 'awakening_sb',
+  'Resistance-Skill Bind': 'awakening_sbr',
+  'Two-Pronged Attack': 'awakening_tpa',
+  'Multi Boost': 'awakening_multiboost',
+#  'Recover Bind': 'awakening_bindres',
+  'Extend Time': 'awakening_te',
+  
+  'Resistance-Bind': 'awakening_bindres',
+  'Resistance-Dark': 'awakening_blindres',
+#   'Resistance-Poison': 'RES-POISON',
+  'Resistance-Jammers': 'awakening_jammerres',
+  
+#   'Reduce Fire Damage': 'R-RES',
+#   'Reduce Water Damage': 'B-RES',
+#   'Reduce Wood Damage': 'G-RES',
+#   'Reduce Light Damage': 'L-RES',
+#   'Reduce Dark Damage': 'D-RES',
+#   
+#   'Healer Killer': 'K-HEALER',
+  'Machine Killer': 'killermachine',
+  'Dragon Killer': 'killerdragon',
+  'Attacker Killer': 'killerattacker',
+#   'Physical Killer': 'K-PHYSICAL',
+  'God Killer': 'killergod',
+  'Devil Killer': 'killerdevil',
+#   'Balance Killer': 'K-BALANCE',
 }
 
 AWAKENING_NAME_MAP = {
