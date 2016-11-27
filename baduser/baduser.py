@@ -119,7 +119,7 @@ class BadUser:
                     return
     
     async def recordBadUser(self, member, role_name):
-        latest_messages = self.logs[member.id]
+        latest_messages = self.logs.get(member.id, "")
         msg = 'Name={} Nick={} ID={} Joined={} Role={}\n'.format(
            member.name, member.nick, member.id, member.joined_at, role_name)
         msg += '\n'.join(latest_messages)
