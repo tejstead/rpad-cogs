@@ -541,7 +541,7 @@ AWAKENING_NAME_MAP_RPAD = {
   'Resistance-Skill Bind': 'awakening_sbr',
   'Two-Pronged Attack': 'awakening_tpa',
   'Multi Boost': 'awakening_multiboost',
-#  'Recover Bind': 'awakening_bindres',
+  'Recover Bind': 'row1bindclear',
   'Extend Time': 'awakening_te',
   
   'Resistance-Bind': 'awakening_bindres',
