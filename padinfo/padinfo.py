@@ -481,7 +481,7 @@ def monsterToEmbed(m: Monster, server):
     unique_awakenings = set(m.awakening_names)
     for a in unique_awakenings:
         count = m.awakening_names.count(a)
-        mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a)
+        mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a) if server is not None else None
         if mapped_awakening:
             mapped_awakening = discord.utils.get(server.emojis, name=mapped_awakening)
         
