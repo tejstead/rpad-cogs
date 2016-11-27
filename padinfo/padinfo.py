@@ -530,7 +530,7 @@ AWAKENING_NAME_MAP_RPAD = {
   'Enhanced Water Att.': 'row5water',
   'Enhanced Wood Att.': 'row4wood',
   'Enhanced Light Att.': 'row3light',
-  'Enhanced Dark Att.': ':row2dark',
+  'Enhanced Dark Att.': 'row2dark',
   
 #   'Enhanced HP': 'HP',
 #   'Enhanced Attack': 'ATK',
