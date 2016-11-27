@@ -125,14 +125,14 @@ class TrUtils:
         await self.bot.say('`done`')
             
     @commands.command(name="rainbow", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
+    @checks.is_owner()
     async def rainbow(self, ctx, role_name):
         role = self._get_role(ctx.message.server.roles, role_name)
         self.settings.setRainbow(ctx.message.server.id, role.id)
         await self.bot.say('`done`')
 
     @commands.command(name="clearrainbow", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
+    @checks.is_owner()
     async def clearrainbow(self, ctx, role_name):
         role = self._get_role(ctx.message.server.roles, role_name)
         self.settings.clearRainbow(ctx.message.server.id, role.id)
