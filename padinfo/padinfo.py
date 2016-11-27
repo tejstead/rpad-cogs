@@ -487,8 +487,11 @@ def monsterToEmbed(m: Monster, server):
         
         if mapped_awakening is None:
             mapped_awakening = AWAKENING_NAME_MAP.get(a, a)
+            awakenings_row += ' {}x{}'.format(mapped_awakening, count)
+        else:
+            awakenings_row += (' ' + str(mapped_awakening)) * count
             
-        awakenings_row += ' {}x{}'.format(mapped_awakening, count)
+            
         
     awakenings_row = awakenings_row.strip()
     
