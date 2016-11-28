@@ -12,7 +12,7 @@ from datetime import timedelta
 from dateutil import tz
 import pytz
 import traceback
-
+from collections import Counter
 
 import time
 import threading
@@ -39,6 +39,17 @@ from .utils.cog_settings import *
 import prettytable
 from setuptools.command.alias import alias
 from builtins import filter
+
+from collections import OrderedDict, Counter
+
+class OrderedCounter(Counter, OrderedDict):
+    """Counter that remembers the order elements are first seen"""
+    def __repr__(self):
+        return "%s(%r)" % (self.__class_.__name__, OrderedDict(self))
+
+    def __reduce__(self):
+        return self.__class__, (OrderedDict(self),)
+
 
 EXPOSED_PAD_INFO = None
 
@@ -478,9 +489,8 @@ def monsterToEmbed(m: Monster, server):
     embed.add_field(name=stats_row_1, value=stats_row_2)
     
     awakenings_row = ''
-    unique_awakenings = set(m.awakening_names)
-    for a in unique_awakenings:
-        count = m.awakening_names.count(a)
+    unique_awakenings = OrderedCounter(m.awakening_names)
+    for a, count in unique_awakenings.items():
         mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a) if server is not None else None
         if mapped_awakening:
             mapped_awakening = discord.utils.get(server.emojis, name=mapped_awakening)
