@@ -88,7 +88,12 @@ class TrUtils:
             for role_id in rainbow_ids:
                 role = self._get_role_from_id(server, role_id)
                 color = random.choice(self.colors)
-                await self.bot.edit_role(server, role, color=color)
+                try:
+                    await self.bot.edit_role(server, role, color=color)
+                except Exception as e:
+                    traceback.print_exc()
+                    print("caught exception while updating role, disabling: " + str(e))
+                    self.settings.clearRainbow(server_id, role_id)
 
     async def on_ready(self):
         """ready"""
