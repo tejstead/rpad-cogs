@@ -135,7 +135,7 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(name="idz", pass_context=True)
-    async def _doid(self, ctx, *query):
+    async def _doidz(self, ctx, *query):
         query = " ".join(query)
         m, err, debug_info = self.findMonster(query)
         if m is not None:
