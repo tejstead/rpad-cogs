@@ -62,7 +62,7 @@ class TrUtils:
     def __unload(self):
         print("unloading trutils")
         self.rainbow_task.cancel()
-        
+
     async def refresh_rainbow(self):
         print("rainbow refresher")
         while "TrUtils" in self.bot.cogs:
@@ -77,9 +77,9 @@ class TrUtils:
             except Exception as e:
                 traceback.print_exc()
                 print("caught exception while refreshing rainbow " + str(e))
-                
+
         print("done refresh_rainbow")
-    
+
     async def doRefreshRainbow(self):
         servers = self.settings.servers()
         for server_id, server_data in servers.items():
@@ -98,17 +98,17 @@ class TrUtils:
     async def on_ready(self):
         """ready"""
         print("started trutils")
-        
+
     async def check_for_nickname_change(self, before, after):
         try:
             server = after.server
             saved_nick = self.settings.getNickname(server.id, after.id)
             if saved_nick is None:
                 return
-            
+
             if not len(saved_nick):
                 saved_nick = None
-                
+
             if before.nick != after.nick:
                 if after.nick != saved_nick:
                     print("caught bad nickname change {} {}".format(after.nick, saved_nick))
@@ -116,7 +116,7 @@ class TrUtils:
         except Exception as e:
             traceback.print_exc()
             print('failed to check for nickname change' + str(e))
-            
+
     @commands.command(name="dontchangemyname", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def dontchangemyname(self, ctx, nickname):
@@ -128,7 +128,7 @@ class TrUtils:
     async def cleardontchangemyname(self, ctx):
         self.settings.clearNickname(ctx.message.server.id, ctx.message.author.id)
         await self.bot.say('`done`')
-            
+
     @commands.command(name="rainbow", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def rainbow(self, ctx, role_name):
@@ -172,7 +172,7 @@ class TrUtils:
 
     def _get_server_from_id(self, serverid):
         return discord.utils.get(self.bot.servers, id=serverid)
-   
+
 def setup(bot):
     print('trutils bot setup')
     n = TrUtils(bot)
@@ -188,16 +188,16 @@ class TrUtilsSettings(CogSettings):
           'servers': {},
         }
         return config
-    
+
     def servers(self):
         return self.bot_settings['servers']
-    
+
     def getServer(self, server_id):
         servers = self.servers()
         if server_id not in servers:
             servers[server_id] = {}
         return servers[server_id]
-    
+
     def setNickname(self, server_id, user_id, nickname):
         server = self.getServer(server_id)
         server[user_id] = nickname
@@ -212,13 +212,13 @@ class TrUtilsSettings(CogSettings):
         if user_id in server:
             server.pop(user_id)
         self.save_settings()
-    
+
     def rainbow(self, server_id):
         server = self.getServer(server_id)
         if 'rainbow' not in server:
             server['rainbow'] = []
         return server['rainbow']
-        
+
     def setRainbow(self, server_id, role_id):
         rainbow = self.rainbow(server_id)
         if role_id not in rainbow:
@@ -230,5 +230,5 @@ class TrUtilsSettings(CogSettings):
         if role_id in rainbow:
             rainbow.remove(role_id)
             self.save_settings()
-        
+
 

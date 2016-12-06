@@ -28,7 +28,7 @@ class TimeCog:
         except Exception as e:
             await self.bot.say("Failed to parse tz: " + tz)
             return
-        
+
         now = datetime.now(tz_obj)
         msg = "The time in " + now.strftime('%Z') + " is " + fmtTimeShort(now).strip()
         await self.bot.say(inline(msg))
@@ -41,21 +41,21 @@ class TimeCog:
         except Exception as e:
             await self.bot.say("Failed to parse tz: " + tz)
             return
-        
+
         try:
             time_obj = timeStrToObj(time)
         except Exception as e:
             print(e)
             await self.bot.say("Failed to parse time: " + time)
             return
-        
+
         now = datetime.now(tz_obj)
         req_time = now.replace(hour=time_obj.tm_hour, minute=time_obj.tm_min)
-        
+
         if req_time < now:
             req_time = req_time + timedelta(days=1)
         delta = req_time - now
-            
+
         msg = "There are " + fmtHrsMins(delta.seconds).strip() + " until " + time.strip() + " in " + now.strftime('%Z')
         await self.bot.say(inline(msg))
 
@@ -72,26 +72,26 @@ class TimeCog:
 #         except Exception as e:
 #             await self.bot.say("Failed to parse to tz: " + to_tz)
 #             return
-#         
+#
 #         try:
 #             from_time_obj = timeStrToObj(from_time)
 #         except Exception as e:
 #             await self.bot.say("Failed to parse from time: " + from_time)
 #             return
-#         
+#
 #         try:
 #             to_time_obj = timeStrToObj(to_time)
 #         except Exception as e:
 #             await self.bot.say("Failed to parse from time: " + to_time)
 #             return
-#         
+#
 #         now = datetime.now(tz_obj)
 #         req_time = now.replace(hour=time_obj.tm_hour, minute=time_obj.tm_min)
-#         
+#
 #         if req_time < now:
 #             req_time = req_time + timedelta(days=1)
 #         delta = req_time - now
-#             
+#
 #         msg = "There are " + fmtHrsMins(delta.seconds).strip() + " until " + time.strip() + " in " + now.strftime('%Z')
 #         await self.bot.say(inline(msg))
 
@@ -131,7 +131,7 @@ def tzStrToObj(tz):
         return tz_lookup['JST']
     else:
         return tz_lookup[tz.upper()]
-        
+
     tz_obj = pytz.timezone(tz)
     return tz_obj
 

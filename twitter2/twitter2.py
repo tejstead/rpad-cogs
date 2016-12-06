@@ -23,18 +23,18 @@ class TwitterCog2:
     def __init__(self, bot):
         self.bot = bot
         self.config = fileIO("data/twitter2/config.json", "load")
-        
+
         config = self.config
         self.twitter_config = (config['akey'], config['asecret'], config['otoken'], config['osecret'])
         print(self.twitter_config)
-        
+
 #         self.channels = list() # channels to push updates to
         self.channel_ids = config['channels'] or dict()
         self.ntweets = 0
         self.stream = None
         self.stream_thread = None
-        self.pre = 'TwitterBot: ' # message preamble
-        
+        self.pre = 'TwitterBot: '  # message preamble
+
     def __unload(self):
         # Stop previous thread, if any
         if self.stream_thread:
@@ -84,18 +84,18 @@ and starts following a user if one was set upon construction."""
                 return
         elif not self.checkTwitterUser(twitter_user):
             await self.bot.say(inline("User seems invalid : " + twitter_user))
-            return    
+            return
         else:
             self.channel_ids[twitter_user] = list()
-        
+
         self.channel_ids[twitter_user].append(ctx.message.channel.id)
         self.save_config()
         await self.bot.say(inline("Channel now active for user " + twitter_user))
-        
+
         if not already_following:
             await self.bot.say(inline("New account, restarting twitter connection"))
             await self.refollow()
-            
+
 
     @twitter2.command(name="rmchannel", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -115,12 +115,12 @@ and starts following a user if one was set upon construction."""
             await self.bot.say(inline("Last channel removed for " + twitter_user + ", restarting twitter connection"))
             self.channel_ids.pop(twitter_user)
             await self.refollow(True)
-        
+
         self.save_config()
 
     @twitter2.command(name="resend", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def _resend(self, ctx, idx : int = 1):
+    async def _resend(self, ctx, idx : int=1):
         last_tweet = self.stream.last(idx)
         if last_tweet:
             print('Resending tweet idx ' + str(idx))
@@ -137,21 +137,21 @@ and starts following a user if one was set upon construction."""
 Returns False if the user does not exist, True otherwise."""
         if not len(self.channel_ids):
             return
-        
+
         # Stop previous thread, if any
         if self.stream_thread:
             if src_channel:
                 await self.bot.say("Disconnecting from twitter.")
             self.stream.disconnect()
             self.stream_thread.join()
-            
+
         # Setup new thread to run the twitter stream in background
         if src_channel:
             await self.bot.say("Connecting to twitter.")
-            
+
         user_string = ",".join(self.channel_ids.keys())
         self.stream_thread = self.stream.follow_thread(user_string)
-        
+
         if src_channel:
             await self.bot.say("Now following these users: " + user_string + ".")
 
@@ -160,7 +160,7 @@ Returns False if the user does not exist, True otherwise."""
         utc = dt.replace(tzinfo=tz.tzutc())
         local = utc.astimezone(tz.tzlocal())
         return local.strftime(TIME_FMT)
-        
+
     def tweet(self, data):
         self.bot.loop.call_soon(asyncio.async, self.tweetAsync(data))
 
@@ -175,7 +175,7 @@ Returns False if the user does not exist, True otherwise."""
         }
         await self.bot.say("Sending test msg: " + str(data))
         await self.tweetAsync(data)
-        
+
     async def tweetAsync(self, data):
         """Display a tweet to the current channel. Increments ntweets."""
         text = data and data.get('text')
@@ -185,11 +185,11 @@ Returns False if the user does not exist, True otherwise."""
 
         if not text:
             return False
-        
+
         self.ntweets += 1
         msg = box("@" + user_name + " tweeted : \n" + text)
         msg += "<https://twitter.com/" + user_name + "/status/" + msg_id + ">"
-        
+
         entities = data.get('entities')
         if entities:
             print("got entities")
@@ -200,17 +200,17 @@ Returns False if the user does not exist, True otherwise."""
                 msg += "\nImages:"
                 for media_item in media:
                     msg += "\n" + media_item.get("media_url_https")
-        
+
         await self.send_all(msg, user_name)
         return True
-            
+
     async def send_all(self, message, twitter_user):
         """Send a message to all active channels."""
         twitter_user = twitter_user.lower()
         if twitter_user not in self.channel_ids:
             print("Error! Unexpected user: " + twitter_user)
             return
-              
+
         for chan_id in self.channel_ids[twitter_user]:
             print("for channel " + chan_id)
             await self.bot.send_message(discord.Object(chan_id), message)
@@ -233,15 +233,15 @@ as the given channel. If channel is None, show active channels from all servers.
 #                 ccount += 1
 #                 cstr += "#" + c.name + ", "
         if cstr:
-            cstr = cstr[:-2] # strip extra comma
+            cstr = cstr[:-2]  # strip extra comma
 
-      
-        return ("**TwitterBot**\n"+
+
+        return ("**TwitterBot**\n" +
                 "Currently following: " + ",".join(self.channel_ids.keys()) + "\n" +
                 "Tweets streamed: " + str(self.ntweets) + "\n" +
                 "Last tweet from user: " + last_time + "\n" +
                 "Active channels on server: (" + str(ccount) + ") " + cstr)
-        
+
     def save_config(self):
         self.config['channels'] = self.channel_ids
         f = "data/twitter2/config.json"

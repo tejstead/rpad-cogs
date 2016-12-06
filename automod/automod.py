@@ -20,8 +20,7 @@ def mod_or_perms(ctx, **perms):
     server = ctx.message.server
     mod_role = settings.get_server_mod(server).lower()
     admin_role = settings.get_server_admin(server).lower()
-    return checks.role_or_permissions(ctx, lambda r: r.name.lower() in (mod_role,admin_role), **perms)
-
+    return checks.role_or_permissions(ctx, lambda r: r.name.lower() in (mod_role, admin_role), **perms)
 
 class CtxWrapper:
     def __init__(self, msg):
@@ -31,7 +30,7 @@ class CtxWrapper:
 class AutoMod:
     def __init__(self, bot):
         self.bot = bot
-        
+
         self.settings = AutoModSettings("automod")
 
     @commands.group(pass_context=True, no_pm=True)
@@ -44,14 +43,14 @@ class AutoMod:
     @checks.mod_or_permissions(manage_server=True)
     async def addWhitelist(self, ctx, name, value):
         try:
-            re.compile(value) 
+            re.compile(value)
             self.settings.addWhitelist(ctx, name, value)
             await self.bot.say(inline('Added whitelist config for "' + name + '" with value: ' + value))
         except Exception as e:
             await self.bot.say(inline('Error! Maybe regex was invalid: ' + value))
             print(str(e))
-            
-            
+
+
     @automod.command(name="rmwhitelist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmWhitelist(self, ctx, name):
@@ -68,7 +67,7 @@ class AutoMod:
         except Exception as e:
             await self.bot.say(inline('Error! Maybe regex was invalid: ' + value))
             print(str(e))
-            
+
     @automod.command(name="rmblacklist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmBlacklist(self, ctx, name):
@@ -85,13 +84,13 @@ class AutoMod:
         except Exception as e:
             await self.bot.say(inline('Error! Maybe regex was invalid: ' + value))
             print(str(e))
-            
+
     @automod.command(name="rmreplacement", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmReplacement(self, ctx, name):
         self.settings.rmReplacement(ctx, name)
         await self.bot.say(inline('Removed replacement config for "' + name + '"'))
-            
+
     @automod.command(name="list", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def list(self, ctx):
@@ -99,24 +98,24 @@ class AutoMod:
         output = 'AutoMod configs for this channel\n\n'
         output += 'Whitelists:\n'
         for name, value in configs['whitelist'].items():
-            output += '\t"{}" -> {}\n'.format(name, value)    
+            output += '\t"{}" -> {}\n'.format(name, value)
         output += 'Blacklists:\n'
         for name, value in configs['blacklist'].items():
             output += '\t"{}" -> {}\n'.format(name, value)
         output += 'Replacements:\n'
         for name, values in configs['replacement'].items():
             output += '\t"{}" -> ({} -> )\n'.format(name, values[0], values[1])
-        
+
         await self.bot.say(box(output))
 
     async def mod_message_edit(self, before, after):
         await self.mod_message(after)
-    
+
     async def mod_message(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
-        
-        ctx = CtxWrapper(message)        
+
+        ctx = CtxWrapper(message)
         is_mod = mod_or_perms(ctx, kick_members=True)
         if is_mod:
             return
@@ -124,10 +123,10 @@ class AutoMod:
         configs = self.settings.getChannel(ctx)
         whitelists = configs['whitelist']
         blacklists = configs['blacklist']
-        
+
         msg_template = box('Your message in {} was deleted for violating the following policy: {}\n'
                            'Message content: {}')
-        
+
         for name, value in blacklists.items():
             p = re.compile(value, re.IGNORECASE | re.MULTILINE | re.DOTALL)
             if p.match(message.clean_content):
@@ -139,7 +138,7 @@ class AutoMod:
                     print('Failure while deleting message from {}, tried to send : {}'.format(message.author.name, msg))
                     print(str(e))
                 return
-        
+
         if len(whitelists):
             for name, value in whitelists.items():
                 p = re.compile(value, re.IGNORECASE | re.MULTILINE | re.DOTALL)
@@ -153,25 +152,24 @@ class AutoMod:
                     print('Failure while deleting message from {}, tried to send : {}'.format(message.author.name, msg))
                     print(str(e))
                 return
-        
-        
+
         replacements = configs['replacement']
-        
+
         msg_template = box('Your message in {} was automatically modified because it matched the following policy: {}\n'
                            'Original content: {}\n'
                            'Adjusted content: {}\n')
-        
+
         if len(replacements):
             for name, value in replacements.items():
                 search_value = value[0]
                 replacement_value = value[1]
-                
+
                 p = re.compile(search_value, re.IGNORECASE | re.MULTILINE | re.DOTALL)
                 (adjusted_msg, match_count) = p.subn(replacement_value, message.clean_content)
-                
+
                 if adjusted_msg != message.clean_content:
                     msg = msg_template.format(message.channel.name, name, message.clean_content, adjusted_msg)
-                    
+
                     try:
                         await self.bot.edit_message(message, adjusted_msg)
                         await self.bot.send_message(message.author, msg)
@@ -179,7 +177,7 @@ class AutoMod:
                         print('Failure while editing message from {}, tried to send : {}'.format(message.author.name, msg))
                         print(str(e))
                     return
-        
+
 
 def setup(bot):
     print('automod bot setup')
@@ -196,7 +194,7 @@ class AutoModSettings(CogSettings):
           'configs' : {}
         }
         return config
-    
+
     def serverConfigs(self):
         return self.bot_settings['configs']
 
@@ -209,11 +207,11 @@ class AutoModSettings(CogSettings):
 
     def getChannel(self, ctx):
         server = self.getServer(ctx)
-        
+
         channel_id = ctx.message.channel.id
         if channel_id not in server:
             server[channel_id] = {}
-        
+
         channel = server[channel_id]
         if 'whitelist' not in channel:
             channel['whitelist'] = {}
@@ -221,7 +219,7 @@ class AutoModSettings(CogSettings):
             channel['blacklist'] = {}
         if 'replacement' not in channel:
             channel['replacement'] = {}
-            
+
         return channel
 
     def addWhitelist(self, ctx, name, value):

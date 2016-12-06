@@ -90,7 +90,7 @@ class Memes:
 
         Example:
         !setmemerole Regular"""
-        
+
         role = self._get_role(ctx.message.server.roles, rolename)
         self.settings.setPrivileged(ctx.message.server.id, role.id)
         await self.bot.say("done")
@@ -125,8 +125,8 @@ class Memes:
 
         if not user_allowed(message):
             return
-        
-        
+
+
         role_id = self.settings.getPrivileged(message.server.id)
         if role_id is not None:
             role = self._get_role_from_id(message.server, role_id)
@@ -242,10 +242,10 @@ class MemesSettings(CogSettings):
           'configs' : {}
         }
         return config
-    
+
     def serverConfigs(self):
         return self.bot_settings['configs']
-    
+
     def getServer(self, server_id):
         configs = self.serverConfigs()
         if server_id not in configs:

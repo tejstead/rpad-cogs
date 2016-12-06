@@ -17,7 +17,7 @@ class AdminLog:
         self.bot = bot
         self.file = 'data/adminlog/{}.log'
         self.ignore_file = 'data/adminlog/adminlog.json'
-        
+
         self.logs = defaultdict(lambda: deque(maxlen=LOGS_PER_CHANNEL))
 
     @commands.group(pass_context=True, no_pm=True, name='adminlogs', aliases=['adminlog'])
@@ -29,7 +29,7 @@ class AdminLog:
     async def log_message(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
-        
+
         author = message.author
         content = message.clean_content
         timestamp = str(message.timestamp)[:-7]
@@ -39,7 +39,7 @@ class AdminLog:
     async def log_message_delete(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
-        
+
         author = message.author
         content = message.clean_content
         timestamp = str(message.timestamp)[:-7]
@@ -49,15 +49,14 @@ class AdminLog:
     async def log_message_edit(self, before, after):
         if before.author.id == self.bot.user.id or before.channel.is_private:
             return
-        
+
         author = before.author
         content_old = before.clean_content
         content_new = after.clean_content
         timestamp = str(after.timestamp)[:-7]
         log_msg = '[{}] (EDT) {} ({}): {} -> {}'.format(timestamp, author.name, author.id, content_old, content_new)
         self.logs[before.channel.id].append(log_msg)
-        
-        
+
     @_adminlogs.command(pass_context=True, no_pm=True, name='all')
     @checks.mod_or_permissions(manage_channels=True)
     async def _get(self, context, channel: discord.Channel):
@@ -76,7 +75,7 @@ class AdminLog:
                     t = self.file.format(str(time()).split('.')[0])
                     with open(t, encoding='utf-8', mode="w") as f:
                         for message in log[::-1]:
-                            f.write(message+'\n')
+                            f.write(message + '\n')
                     f.close()
                     await self.bot.send_file(context.message.channel, t)
                     os.remove(t)
@@ -84,7 +83,7 @@ class AdminLog:
                     print(error)
             except discord.errors.Forbidden:
                 await self.bot.say('I don\'t have permission!')
- 
+
 def check_folder():
     if not os.path.exists("data/adminlog"):
         print("Creating data/adminlog folder...")
