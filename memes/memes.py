@@ -8,7 +8,7 @@ from __main__ import user_allowed, send_cmd_help
 
 from .utils import checks
 from .utils.cog_settings import *
-from .utils.dataIO import fileIO
+from .utils.dataIO import dataIO
 
 
 class Memes:
@@ -16,7 +16,8 @@ class Memes:
 
     def __init__(self, bot):
         self.bot = bot
-        self.c_commands = fileIO("data/memes/commands.json", "load")
+        self.file_path = "data/customcom/commands.json"
+        self.c_commands = dataIO.load_json(self.file_path)
         self.settings = MemesSettings("memes")
 
     @commands.command(pass_context=True, no_pm=True)
@@ -38,7 +39,7 @@ class Memes:
         if command not in cmdlist:
             cmdlist[command] = text
             self.c_commands[server.id] = cmdlist
-            fileIO("data/memes/commands.json", "save", self.c_commands)
+            dataIO.save_json(self.file_path, self.c_commands)
             await self.bot.say("Custom command successfully added.")
         else:
             await self.bot.say("This command already exists. Use editcom to edit it.")
@@ -58,7 +59,7 @@ class Memes:
             if command in cmdlist:
                 cmdlist[command] = text
                 self.c_commands[server.id] = cmdlist
-                fileIO("data/memes/commands.json", "save", self.c_commands)
+                dataIO.save_json(self.file_path, self.c_commands)
                 await self.bot.say("Custom command successfully edited.")
             else:
                 await self.bot.say("That command doesn't exist. Use addcom [command] [text]")
@@ -79,7 +80,7 @@ class Memes:
             if command in cmdlist:
                 cmdlist.pop(command, None)
                 self.c_commands[server.id] = cmdlist
-                fileIO("data/memes/commands.json", "save", self.c_commands)
+                dataIO.save_json(self.file_path, self.c_commands)
                 await self.bot.say("Custom meme successfully deleted.")
             else:
                 await self.bot.say("That meme doesn't exist.")
@@ -123,26 +124,26 @@ class Memes:
             await self.bot.say("There are no custom memes in this server. Use addmeme [command] [text]")
 
     async def checkCC(self, message):
-        if message.author.id == self.bot.user.id or len(message.content) < 2 or message.channel.is_private:
+        if len(message.content) < 2 or message.channel.is_private:
             return
 
-        if not user_allowed(message):
+        server = message.server
+        prefix = self.get_prefix(message)
+
+        if not prefix:
             return
 
-
+        # MEME CODE
         role_id = self.settings.getPrivileged(message.server.id)
         if role_id is not None:
             role = self._get_role_from_id(message.server, role_id)
             if role not in message.author.roles:
                 return
+        # MEME CODE
 
-        msg = message.content
-        server = message.server
-        prefix = self.get_prefix(msg)
-
-        if prefix and server.id in self.c_commands.keys():
+        if server.id in self.c_commands and user_allowed(message):
             cmdlist = self.c_commands[server.id]
-            cmd = msg[len(prefix):]
+            cmd = message.content[len(prefix):]
             if cmd in cmdlist.keys():
                 cmd = cmdlist[cmd]
                 cmd = self.format_cc(cmd, message)
@@ -152,9 +153,9 @@ class Memes:
                 cmd = self.format_cc(cmd, message)
                 await self.bot.send_message(message.channel, cmd)
 
-    def get_prefix(self, msg):
-        for p in self.bot.command_prefix:
-            if msg.startswith(p):
+    def get_prefix(self, message):
+        for p in self.bot.settings.get_prefixes(message.server):
+            if message.content.startswith(p):
                 return p
         return False
 
@@ -227,9 +228,9 @@ def check_folders():
 
 def check_files():
     f = "data/memes/commands.json"
-    if not fileIO(f, "check"):
+    if not dataIO.is_valid_json(f):
         print("Creating empty commands.json...")
-        fileIO(f, "save", {})
+        dataIO.save_json(f, {})
 
 def setup(bot):
     check_folders()
