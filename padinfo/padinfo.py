@@ -23,6 +23,7 @@ import discord
 from discord.ext import commands
 import prettytable
 import pytz
+import romkan
 from setuptools.command.alias import alias
 
 from __main__ import user_allowed, send_cmd_help
@@ -389,6 +390,9 @@ class Monster:
         self.series_id = monster_info.series_id
         self.is_gfe = self.series_id == '34'
 
+        if self.name_jp == self.name_na and not self.on_us:
+            self.debug_info += '| roma: {} | hepburn: {}'.format(romkan.to_roma(self.name_jp), romkan.to_hepburn(self.name_jp))
+
         self.attr1 = None
         self.attr2 = None
         if base_monster.attr1 != '0':
@@ -549,9 +553,9 @@ AWAKENING_NAME_MAP_RPAD = {
   'Enhanced Light Att.': 'row3light',
   'Enhanced Dark Att.': 'row2dark',
 
-  'Enhanced HP': 'boost_hp',
-  'Enhanced Attack': 'boost_atk',
-  'Enhanced Heal': 'boost_rcv',
+#   'Enhanced HP': 'HP',
+#   'Enhanced Attack': 'ATK',
+#   'Enhanced Heal': 'RCV',
 
   'Auto-Recover': 'awakening_autoheal',
   'Skill Boost': 'awakening_sb',
@@ -563,28 +567,23 @@ AWAKENING_NAME_MAP_RPAD = {
 
   'Resistance-Bind': 'awakening_bindres',
   'Resistance-Dark': 'awakening_blindres',
-  'Resistance-Poison': 'awakening_poisonres',
+#   'Resistance-Poison': 'RES-POISON',
   'Resistance-Jammers': 'awakening_jammerres',
 
-  'Reduce Fire Damage': 'reduce_fire',
-  'Reduce Water Damage': 'reduce_water',
-  'Reduce Wood Damage': 'reduce_wood',
-  'Reduce Light Damage': 'reduce_light',
-  'Reduce Dark Damage': 'reduce_dark',
-
-  'Healer Killer': 'killerhealer',
+#   'Reduce Fire Damage': 'R-RES',
+#   'Reduce Water Damage': 'B-RES',
+#   'Reduce Wood Damage': 'G-RES',
+#   'Reduce Light Damage': 'L-RES',
+#   'Reduce Dark Damage': 'D-RES',
+#
+#   'Healer Killer': 'K-HEALER',
   'Machine Killer': 'killermachine',
   'Dragon Killer': 'killerdragon',
   'Attacker Killer': 'killerattacker',
-  'Physical Killer': 'killerphysical',
+#   'Physical Killer': 'K-PHYSICAL',
   'God Killer': 'killergod',
   'Devil Killer': 'killerdevil',
-  'Balance Killer': 'killerbalance',
-
-  'Awoken Killer': 'killerawoken',
-  'Evolve Material Killer': 'killerevomat',
-  'Enhance Killer': 'killerenhancemat',
-  'Vendor Killer': 'killervendor',
+#   'Balance Killer': 'K-BALANCE',
 }
 
 AWAKENING_NAME_MAP = {
