@@ -1,12 +1,15 @@
-import discord
-from discord.ext import commands
-from .utils.dataIO import fileIO
-from .utils import checks
-from __main__ import user_allowed, send_cmd_help
 import os
 import re
 
+import discord
+from discord.ext import commands
+
+from __main__ import user_allowed, send_cmd_help
+
+from .utils import checks
 from .utils.cog_settings import *
+from .utils.dataIO import fileIO
+
 
 class Memes:
     """Custom memes."""

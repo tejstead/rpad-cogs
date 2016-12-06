@@ -1,16 +1,19 @@
-import discord
-from discord.ext import commands
-from .utils.chat_formatting import *
-from .utils.dataIO import fileIO
-from .utils import checks
-from __main__ import send_cmd_help
-import os
-
-import time
 from datetime import datetime
 from datetime import timedelta
+import os
+import time
+
 from dateutil import tz
+import discord
+from discord.ext import commands
 import pytz
+
+from __main__ import send_cmd_help
+
+from .utils import checks
+from .utils.chat_formatting import *
+from .utils.dataIO import fileIO
+
 
 tz_lookup = dict([(pytz.timezone(x).localize(datetime.now()).tzname(), pytz.timezone(x)) for x in pytz.all_timezones])
 

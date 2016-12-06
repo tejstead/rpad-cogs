@@ -1,49 +1,43 @@
-import http.client
-import urllib.parse
-import json
-import re
+from _collections import OrderedDict
+import asyncio
+from builtins import filter
+from collections import defaultdict
 import csv
-import random
-
-import os
-
-import time
 from datetime import datetime
 from datetime import timedelta
-from dateutil import tz
-import pytz
-import traceback
-
-
-import time
-import threading
-import asyncio
-import discord
-
 from enum import Enum
+import http.client
+from itertools import groupby
+import json
+from operator import itemgetter
+import os
+import random
+import re
+import threading
+import time
+import time
+import traceback
+import urllib.parse
 
+from dateutil import tz
+import discord
 from discord.ext import commands
-from .utils.chat_formatting import *
-from .utils.dataIO import fileIO
-from .utils import checks
-from .utils.twitter_stream import *
+import prettytable
+import pytz
+from setuptools.command.alias import alias
+
 from __main__ import user_allowed, send_cmd_help
 
-from itertools import groupby
-from collections import defaultdict
-from operator import itemgetter
-# from copy import deepcopy
-
-from .utils.padguide import *
-from .utils.cog_settings import *
-
-import prettytable
-from setuptools.command.alias import alias
-from builtins import filter
-
 from .padinfo import EXPOSED_PAD_INFO
-from _collections import OrderedDict
+from .utils import checks
+from .utils.chat_formatting import *
+from .utils.cog_settings import *
+from .utils.dataIO import fileIO
+from .utils.padguide import *
+from .utils.twitter_stream import *
 
+
+# from copy import deepcopy
 def normalizeServer(server):
     server = server.upper()
     return 'NA' if server == 'US' else server

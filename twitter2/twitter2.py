@@ -1,21 +1,23 @@
-import time
-import threading
 import asyncio
-import discord
-
+from copy import deepcopy
 from datetime import datetime
+import os
+import threading
+import time
+
 from dateutil import tz
+import discord
+from discord.ext import commands
 from twython import Twython, TwythonStreamer
 from twython.exceptions import TwythonError
 
-from discord.ext import commands
+from __main__ import user_allowed, send_cmd_help
+
+from .utils import checks
 from .utils.chat_formatting import *
 from .utils.dataIO import fileIO
-from .utils import checks
 from .utils.twitter_stream import *
-from __main__ import user_allowed, send_cmd_help
-import os
-from copy import deepcopy
+
 
 TIME_FMT = """%a %b %d %H:%M:%S %Y"""
 

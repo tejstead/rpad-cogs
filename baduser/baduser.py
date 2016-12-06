@@ -1,20 +1,21 @@
+from collections import defaultdict
+from collections import deque
+import copy
+import os
+import re
+from time import time
+
 import discord
-from .utils import checks
 from discord.ext import commands
+
+from __main__ import send_cmd_help
+from __main__ import settings
+
+from .utils import checks
+from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
-from __main__ import settings
-from __main__ import send_cmd_help
-from time import time
-import os
 
-from collections import deque
-from collections import defaultdict
-import copy
-
-import re
-
-from .utils.cog_settings import *
 
 LOGS_PER_USER = 10
 

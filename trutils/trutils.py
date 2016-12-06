@@ -1,30 +1,26 @@
-import http.client
-import urllib.parse
-import json
-import re
-
-import os
-
-import traceback
-
-import time
-import threading
 import asyncio
-import discord
-import random
-
+from collections import defaultdict
 from enum import Enum
+import http.client
+import json
+import os
+import random
+import re
+import threading
+import time
+import traceback
+import urllib.parse
 
+import discord
 from discord.ext import commands
-from .utils.chat_formatting import *
-from .utils.dataIO import fileIO
-from .utils import checks
-from .utils.twitter_stream import *
+
 from __main__ import user_allowed, send_cmd_help
 
-from collections import defaultdict
-
+from .utils import checks
+from .utils.chat_formatting import *
 from .utils.cog_settings import *
+from .utils.dataIO import fileIO
+from .utils.twitter_stream import *
 
 
 class TrUtils:
