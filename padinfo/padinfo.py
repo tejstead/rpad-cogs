@@ -390,8 +390,19 @@ class Monster:
         self.series_id = monster_info.series_id
         self.is_gfe = self.series_id == '34'
 
-        if self.name_jp == self.name_na and not self.on_us:
-            self.debug_info += '| roma: {} | hepburn: {}'.format(romkan.to_roma(self.name_jp), romkan.to_hepburn(self.name_jp))
+        self.roma_subname = None
+        if self.name_jp == self.name_na and '・' in self.name_jp:
+            subname = self.name_jp.split('・')[-1]
+            try:
+                roma_subname = romkan.to_roma(subname)
+                hepburn_subname = romkan.to_hepburn(subname)
+                self.debug_info += '| roma: {} | hepburn: {}'.format(roma_subname, hepburn_subname)
+
+                if roma_subname != subname:
+                    self.roma_subname = roma_subname
+                    self.debug_info += '| picked roma name'
+            except:
+                pass
 
         self.attr1 = None
         self.attr2 = None
@@ -422,6 +433,10 @@ class Monster:
 
 def monsterToInfoText(m: Monster):
     header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
+
+    if m.roma_subname:
+        header += ' [{}]'.format(m.roma_subname)
+
     if not m.on_us:
         header += ' (JP only)'
 
@@ -474,6 +489,10 @@ def monsterToPicText(m: Monster):
 
 def monsterToEmbed(m: Monster, server):
     header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
+
+    if m.roma_subname:
+        header += ' [{}]'.format(m.roma_subname)
+
     if not m.on_us:
         header += ' (JP only)'
 
@@ -835,6 +854,9 @@ class PgDataWrapper:
                     self.maybeAdd(self.two_word_entries, p + alt_nickname, m)
                     self.maybeAdd(self.two_word_entries, p + ' ' + alt_nickname, m)
 
+            if m.roma_subname:
+                print('adding', m.roma_subname)
+                self.maybeAdd(self.all_entries, m.roma_subname, m)
 
     def buildMonsterGroup(self, m: Monster, mg: MonsterGroup):
         mg.monsters.append(m)
