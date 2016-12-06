@@ -583,7 +583,7 @@ AWAKENING_NAME_MAP_RPAD = {
 
   'Awoken Killer': 'killerawoken',
   'Evolve Material Killer': 'killerevomat',
-  'Enhance Killer': 'killerenhance',
+  'Enhance Killer': 'killerenhancemat',
   'Vendor Killer': 'killervendor',
 }
 
