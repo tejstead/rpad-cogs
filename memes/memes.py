@@ -16,7 +16,7 @@ class Memes:
 
     def __init__(self, bot):
         self.bot = bot
-        self.file_path = "data/customcom/commands.json"
+        self.file_path = "data/memes/commands.json"
         self.c_commands = dataIO.load_json(self.file_path)
         self.settings = MemesSettings("memes")
 
