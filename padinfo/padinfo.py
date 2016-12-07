@@ -572,9 +572,9 @@ AWAKENING_NAME_MAP_RPAD = {
   'Enhanced Light Att.': 'row3light',
   'Enhanced Dark Att.': 'row2dark',
 
-#   'Enhanced HP': 'HP',
-#   'Enhanced Attack': 'ATK',
-#   'Enhanced Heal': 'RCV',
+  'Enhanced HP': 'boost_hp',
+  'Enhanced Attack': 'boost_atk',
+  'Enhanced Heal': 'boost_rcv',
 
   'Auto-Recover': 'awakening_autoheal',
   'Skill Boost': 'awakening_sb',
@@ -586,23 +586,28 @@ AWAKENING_NAME_MAP_RPAD = {
 
   'Resistance-Bind': 'awakening_bindres',
   'Resistance-Dark': 'awakening_blindres',
-#   'Resistance-Poison': 'RES-POISON',
+  'Resistance-Poison': 'awakening_poisonres',
   'Resistance-Jammers': 'awakening_jammerres',
 
-#   'Reduce Fire Damage': 'R-RES',
-#   'Reduce Water Damage': 'B-RES',
-#   'Reduce Wood Damage': 'G-RES',
-#   'Reduce Light Damage': 'L-RES',
-#   'Reduce Dark Damage': 'D-RES',
-#
-#   'Healer Killer': 'K-HEALER',
+  'Reduce Fire Damage': 'reduce_fire',
+  'Reduce Water Damage': 'reduce_water',
+  'Reduce Wood Damage': 'reduce_wood',
+  'Reduce Light Damage': 'reduce_light',
+  'Reduce Dark Damage': 'reduce_dark',
+
+  'Healer Killer': 'killerhealer',
   'Machine Killer': 'killermachine',
   'Dragon Killer': 'killerdragon',
   'Attacker Killer': 'killerattacker',
-#   'Physical Killer': 'K-PHYSICAL',
+  'Physical Killer': 'killerphysical',
   'God Killer': 'killergod',
   'Devil Killer': 'killerdevil',
-#   'Balance Killer': 'K-BALANCE',
+  'Balance Killer': 'killerbalance',
+
+  'Awoken Killer': 'killerawoken',
+  'Evolve Material Killer': 'killerevomat',
+  'Enhance Killer': 'killerenhancemat',
+  'Vendor Killer': 'killervendor',
 }
 
 AWAKENING_NAME_MAP = {
