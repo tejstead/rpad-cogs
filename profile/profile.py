@@ -414,7 +414,7 @@ class ProfileSettings(CogSettings):
 
     def clearProfile(self, user, server=None):
         if server is None:
-            self.profiles().remove(user)
+            self.profiles().pop(user, None)
         else:
             self.getProfile(user, server).clear()
         self.save_settings()
