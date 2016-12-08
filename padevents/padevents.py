@@ -160,8 +160,14 @@ class PadEvents:
     @padevents.command(name="testevent", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def _testevent(self, ctx, server):
+        server = normalizeServer(server)
+        if server not in SUPPORTED_SERVERS:
+            await self.bot.say("Unsupported server, pick one of NA, KR, JP")
+            return
+
         te = PgEvent(None, ignore_bad=True)
-        te.server = normalizeServer(server)
+        te.server = server
+
         te.dungeon_code = 1
         te.event_type = EventType.EventTypeGuerrilla
         te.event_seq = 0
@@ -180,6 +186,11 @@ class PadEvents:
     @padevents.command(name="addchannel", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def _addchannel(self, ctx, server):
+        server = normalizeServer(server)
+        if server not in SUPPORTED_SERVERS:
+            await self.bot.say("Unsupported server, pick one of NA, KR, JP")
+            return
+
         channel_id = ctx.message.channel.id
         if self.settings.checkGuerrillaReg(channel_id, server):
             await self.bot.say("Channel already active.")
@@ -191,6 +202,11 @@ class PadEvents:
     @padevents.command(name="rmchannel", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def _rmchannel(self, ctx, server):
+        server = normalizeServer(server)
+        if server not in SUPPORTED_SERVERS:
+            await self.bot.say("Unsupported server, pick one of NA, KR, JP")
+            return
+
         channel_id = ctx.message.channel.id
         if not self.settings.checkGuerrillaReg(channel_id, server):
             await self.bot.say("Channel is not active.")
@@ -202,6 +218,11 @@ class PadEvents:
     @padevents.command(name="addchanneldaily", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def _addchanneldaily(self, ctx, server):
+        server = normalizeServer(server)
+        if server not in SUPPORTED_SERVERS:
+            await self.bot.say("Unsupported server, pick one of NA, KR, JP")
+            return
+
         channel_id = ctx.message.channel.id
         if self.settings.checkDailyReg(channel_id, server):
             await self.bot.say("Channel already active.")
@@ -213,6 +234,11 @@ class PadEvents:
     @padevents.command(name="rmchanneldaily", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def _rmchanneldaily(self, ctx, server):
+        server = normalizeServer(server)
+        if server not in SUPPORTED_SERVERS:
+            await self.bot.say("Unsupported server, pick one of NA, KR, JP")
+            return
+
         channel_id = ctx.message.channel.id
         if not self.settings.checkDailyReg(channel_id, server):
             await self.bot.say("Channel is not active.")
