@@ -391,18 +391,17 @@ class Monster:
         self.is_gfe = self.series_id == '34'
 
         self.roma_subname = None
-        if self.name_jp == self.name_na and '・' in self.name_jp:
-            subname = self.name_jp.split('・')[-1]
-            try:
-                roma_subname = romkan.to_roma(subname)
-                hepburn_subname = romkan.to_hepburn(subname)
-                self.debug_info += '| roma: {} | hepburn: {}'.format(roma_subname, hepburn_subname)
-
-                if roma_subname != subname:
-                    self.roma_subname = roma_subname
-                    self.debug_info += '| picked roma name'
-            except:
-                pass
+        if self.name_jp == self.name_na and ('・' in self.name_jp or '＝' in self.name_jp):
+            subname = self.name_jp.replace('＝', '')
+            adjusted_subname = ''
+            for part in subname.split('・'):
+                roma_part = romkan.to_roma(part)
+                if part != roma_part and not containsJp(roma_part):
+                    adjusted_subname += ' ' + roma_part.strip('-')
+            adjusted_subname = adjusted_subname.strip()
+            if adjusted_subname:
+                self.roma_subname = adjusted_subname
+                self.debug_info += '| roma: ' + adjusted_subname
 
         self.attr1 = None
         self.attr2 = None
@@ -686,7 +685,7 @@ def addPrefixes(m: Monster):
 
     # TODO add prefixes based on type
 
-    if m.name_na.lower() == m.name_na:
+    if m.name_na.lower() == m.name_na and m.name_na != m.name_jp:
         prefixes.append('chibi')
 
     if 'awoken' in m.name_na.lower():
@@ -860,7 +859,7 @@ class PgDataWrapper:
                     self.maybeAdd(self.two_word_entries, p + ' ' + alt_nickname, m)
 
             if m.roma_subname:
-                # print('adding', m.roma_subname)
+                # print(m.name_jp, 'adding', m.roma_subname)
                 self.maybeAdd(self.all_entries, m.roma_subname, m)
 
     def buildMonsterGroup(self, m: Monster, mg: MonsterGroup):
