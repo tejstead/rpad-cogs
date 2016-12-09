@@ -860,7 +860,7 @@ class PgDataWrapper:
                     self.maybeAdd(self.two_word_entries, p + ' ' + alt_nickname, m)
 
             if m.roma_subname:
-                print('adding', m.roma_subname)
+                # print('adding', m.roma_subname)
                 self.maybeAdd(self.all_entries, m.roma_subname, m)
 
     def buildMonsterGroup(self, m: Monster, mg: MonsterGroup):
