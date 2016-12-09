@@ -28,6 +28,7 @@ from setuptools.command.alias import alias
 
 from __main__ import user_allowed, send_cmd_help
 
+from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
