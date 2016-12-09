@@ -239,12 +239,20 @@ class PadInfo:
 
         # TODO: refactor 2nd search characteristcs for 2nd word
 
-        # full name contains, take max id
+        # full name contains on nickname, take max id
         for nickname, m in self.pginfo.all_entries.items():
             if query in m.name_na.lower() or query in m.name_jp.lower():
                 matches.append(m)
         if len(matches):
-            return pickBestMonster(matches), None, 'Full name match, max of {}'.format(len(matches))
+            return pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(len(matches))
+
+        # full name contains on full monster list, take max id
+
+        for m in self.pginfo.full_monster_list:
+            if query in m.name_na.lower() or query in m.name_jp.lower():
+                matches.append(m)
+        if len(matches):
+            return pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(len(matches))
 
         # couldn't find anything
         return None, "Could not find a match for: " + query, None
