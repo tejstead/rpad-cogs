@@ -35,12 +35,12 @@ class AutoMod2:
         self.settings = AutoMod2Settings("automod2")
 
     @commands.group(pass_context=True, no_pm=True)
-    async def automod(self, context):
-        """AutoMod tools."""
+    async def automod2(self, context):
+        """AutoMod2 tools."""
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
-    @automod.command(name="addpattern", pass_context=True, no_pm=True)
+    @automod2.command(name="addpattern", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addPattern(self, ctx, name, include_pattern, exclude_pattern=''):
         re.compile(include_pattern)
@@ -48,37 +48,37 @@ class AutoMod2:
         self.settings.addPattern(ctx, name, include_pattern, exclude_pattern)
         await self.bot.say(inline('Added pattern'))
 
-    @automod.command(name="rmpattern", pass_context=True, no_pm=True)
+    @automod2.command(name="rmpattern", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmPattern(self, ctx, name):
         self.settings.rmPattern(ctx, name)
         await self.bot.say(inline('Removed pattern'))
 
-    @automod.command(name="addwhitelist", pass_context=True, no_pm=True)
+    @automod2.command(name="addwhitelist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addWhitelist(self, ctx, name):
         self.settings.addWhitelist(ctx, name)
         await self.bot.say(inline('Added whitelist config for: ' + name))
 
-    @automod.command(name="rmwhitelist", pass_context=True, no_pm=True)
+    @automod2.command(name="rmwhitelist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmWhitelist(self, ctx, name):
         self.settings.rmWhitelist(ctx, name)
         await self.bot.say(inline('Removed whitelist config for: ' + name))
 
-    @automod.command(name="addblacklist", pass_context=True, no_pm=True)
+    @automod2.command(name="addblacklist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addBlacklist(self, ctx, name):
         self.settings.addBlacklist(ctx, name)
         await self.bot.say(inline('Added blacklist config for: ' + name))
 
-    @automod.command(name="rmblacklist", pass_context=True, no_pm=True)
+    @automod2.command(name="rmblacklist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmBlacklist(self, ctx, name):
         self.settings.rmBlacklist(ctx, name)
         await self.bot.say(inline('Removed blacklist config for: ' + name))
 
-    @automod.command(name="listrules", pass_context=True, no_pm=True)
+    @automod2.command(name="listrules", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def listRules(self, ctx):
         whitelists, blacklists = self.settings.getRulesForChannel(ctx)
@@ -95,7 +95,7 @@ class AutoMod2:
 
         await self.bot.say(box(output))
 
-    @automod.command(name="listpatterns", pass_context=True, no_pm=True)
+    @automod2.command(name="listpatterns", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def listPatterns(self, ctx):
         patterns = self.settings.getPatterns(ctx)
