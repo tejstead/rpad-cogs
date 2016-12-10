@@ -697,11 +697,17 @@ def addPrefixes(m: Monster):
     if m.name_na.lower() == m.name_na and m.name_na != m.name_jp:
         prefixes.append('chibi')
 
-    if 'awoken' in m.name_na.lower():
+    if 'awoken' in m.name_na.lower() or '覚醒' in m.name_na:
         prefixes.append('a')
 
-    if 'reincarnated' in m.name_na.lower():
+    if '覚醒' in m.name_na:
+        prefixes.append('awoken')
+
+    if 'reincarnated' in m.name_na.lower() or '転生' in m.name_na:
         prefixes.append('revo')
+
+    if '転生' in m.name_na:
+        prefixes.append('reincarnated')
 
     m.prefixes = prefixes
     m.debug_info += ' | Prefixes ({})'.format(','.join(prefixes))
