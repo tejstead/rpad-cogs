@@ -192,6 +192,7 @@ class TrUtils:
         embed.add_field(name="About the bot", value=about, inline=False)
         embed.add_field(name="Using the bot", value=using, inline=False)
         embed.add_field(name="Avatar credits", value=avatar, inline=False)
+        embed.set_thumbnail(url=self.bot.user.avatar_url)
 
         try:
             await self.bot.say(embed=embed)
