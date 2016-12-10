@@ -139,6 +139,66 @@ class TrUtils:
         self.settings.clearRainbow(ctx.message.server.id, role.id)
         await self.bot.say('`done`')
 
+    @commands.command()
+    async def userhelp(self):
+        """Shows a summary of the useful user features"""
+        about = (
+            "Check back later"
+        )
+        await self.bot.whisper(inline(about))
+
+    @commands.command()
+    async def modhelp(self):
+        """Shows a summary of the useful moderator features"""
+        about = (
+            "Check back later"
+        )
+        await self.bot.whisper(inline(about))
+
+    @commands.command()
+    async def credits(self):
+        """Shows info about this bot"""
+        author_repo = "https://github.com/Twentysix26"
+        red_repo = author_repo + "/Red-DiscordBot"
+        rpad_invite = "https://discord.gg/pad"
+
+        about = (
+            "This is an instance of [the Rede Discord bot]({}), "
+            "use the 'info' command for more info. "
+            "The various PAD related cogs were created by tactical_retreat. "
+            "This bot was created for the [PAD subreddit discord]({}) but "
+            "is available for other servers on request."
+            "".format(red_repo, rpad_invite))
+
+        baby_miru_url = "http://www.pixiv.net/member_illust.php?illust_id=57613867&mode=medium"
+        baby_miru_author = "BOW @ Pixiv"
+        cute_miru_url = "https://www.dropbox.com/s/0wlfx3g4mk8c8bg/Screenshot%202016-12-03%2018.39.37.png?dl=0"
+        cute_miru_author = "Pancaaake18 @ the MantasticPAD server on discord"
+        avatar = (
+            "Bot avatars supplied by:\n"
+            "\t[Baby Miru]({}): {}\n"
+            "\t[Cute Miru]({}): {}"
+            "".format(baby_miru_url, baby_miru_author,
+                      cute_miru_url, cute_miru_author))
+
+        using = (
+             "You can use ^help to get a full list of commands.\n"
+             "Use ^userhelp to get a summary of useful user features.\n"
+             "Use ^modhelp to get info on moderator-only features."
+        )
+
+        embed = discord.Embed()
+        embed.add_field(name="Instance owned by", value='tactical_retreat')
+        embed.add_field(name="About the bot", value=about, inline=False)
+        embed.add_field(name="Using the bot", value=using, inline=False)
+        embed.add_field(name="Avatar credits", value=avatar, inline=False)
+
+        try:
+            await self.bot.say(embed=embed)
+        except discord.HTTPException:
+            await self.bot.say("I need the `Embed links` permission "
+                               "to send this")
+
     def _get_role(self, roles, role_string):
         if role_string.lower() == "everyone":
             role_string = "@everyone"
