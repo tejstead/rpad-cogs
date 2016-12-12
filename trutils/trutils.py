@@ -163,7 +163,7 @@ class TrUtils:
         rpad_invite = "https://discord.gg/pad"
 
         about = (
-            "This is an instance of [the Rede Discord bot]({}), "
+            "This is an instance of [the Red Discord bot]({}), "
             "use the 'info' command for more info. "
             "The various PAD related cogs were created by tactical_retreat. "
             "This bot was created for the [PAD subreddit discord]({}) but "
@@ -182,9 +182,9 @@ class TrUtils:
                       cute_miru_url, cute_miru_author))
 
         using = (
-             "You can use ^help to get a full list of commands.\n"
-             "Use ^userhelp to get a summary of useful user features.\n"
-             "Use ^modhelp to get info on moderator-only features."
+             "You can use `^help` to get a full list of commands.\n"
+             "Use `^userhelp` to get a summary of useful user features.\n"
+             "Use `^modhelp` to get info on moderator-only features."
         )
 
         embed = discord.Embed()
@@ -229,6 +229,43 @@ class TrUtils:
 
     def _get_server_from_id(self, serverid):
         return discord.utils.get(self.bot.servers, id=serverid)
+
+    @commands.command(pass_context=True, hidden=True)
+    @checks.is_owner()
+    async def superdebug(self, ctx, *, code):
+        """Evaluates code"""
+        def check(m):
+            if m.content.strip().lower() == "more":
+                return True
+
+        author = ctx.message.author
+        channel = ctx.message.channel
+
+        code = code.strip('` ')
+        result = None
+
+        global_vars = globals().copy()
+        global_vars['bot'] = self.bot
+        global_vars['ctx'] = ctx
+        global_vars['message'] = ctx.message
+        global_vars['author'] = ctx.message.author
+        global_vars['channel'] = ctx.message.channel
+        global_vars['server'] = ctx.message.server
+
+        local_vars = locals().copy()
+        local_vars['to_await'] = list()
+
+        try:
+            eval(compile(code, '<string>', 'exec'), global_vars, local_vars)
+            to_await = local_vars['to_await']
+        except Exception as e:
+            await self.bot.say(box('{}: {}'.format(type(e).__name__, str(e)),
+                                   lang="py"))
+            return
+
+        for result in to_await:
+            if asyncio.iscoroutine(result):
+                result = await result
 
 def setup(bot):
     print('trutils bot setup')
