@@ -94,7 +94,7 @@ class PadGlobal:
         else:
             await self.bot.say("PAD command doesn't exist.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True)
     async def pad(self, ctx):
         """Shows PAD global command list"""
         cmdlist = self.c_commands
