@@ -32,3 +32,39 @@ JP_REGEX = re.compile(JP_REGEX_STR)
 def containsJp(txt):
     return JP_REGEX.search(txt)
 
+
+class RoleNotFound(PermissionsError):
+    """
+    Thrown when we can't get a valid role from a list and given name
+    """
+    pass
+
+def _get_role(roles, role_string):
+    if role_string.lower() == "everyone":
+        role_string = "@everyone"
+
+    role = discord.utils.find(
+        lambda r: r.name.lower() == role_string.lower(), roles)
+
+    if role is None:
+        raise RoleNotFound(roles[0].server, role_string)
+
+    return role
+
+def _get_role_from_id(bot, server, roleid):
+    try:
+        roles = server.roles
+    except AttributeError:
+        server = _get_server_from_id(bot, server)
+        try:
+            roles = server.roles
+        except AttributeError:
+            raise RoleNotFound(server, roleid)
+
+    role = discord.utils.get(roles, id=roleid)
+    if role is None:
+        raise RoleNotFound(server, roleid)
+    return role
+
+def _get_server_from_id(bot, serverid):
+    return discord.utils.get(bot.servers, id=serverid)

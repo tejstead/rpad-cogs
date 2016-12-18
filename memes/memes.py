@@ -6,6 +6,7 @@ from discord.ext import commands
 
 from __main__ import user_allowed, send_cmd_help
 
+from .rpadutils import *
 from .utils import checks
 from .utils.cog_settings import *
 from .utils.dataIO import dataIO
@@ -95,7 +96,7 @@ class Memes:
         Example:
         !setmemerole Regular"""
 
-        role = self._get_role(ctx.message.server.roles, rolename)
+        role = _get_role(ctx.message.server.roles, rolename)
         self.settings.setPrivileged(ctx.message.server.id, role.id)
         await self.bot.say("done")
 
@@ -136,7 +137,7 @@ class Memes:
         # MEME CODE
         role_id = self.settings.getPrivileged(message.server.id)
         if role_id is not None:
-            role = self._get_role_from_id(message.server, role_id)
+            role = _get_role_from_id(message.server, role_id)
             if role not in message.author.roles:
                 return
         # MEME CODE
@@ -189,37 +190,6 @@ class Memes:
         else:
             return raw_result
         return str(getattr(first, second, raw_result))
-
-    def _get_role(self, roles, role_string):
-        if role_string.lower() == "everyone":
-            role_string = "@everyone"
-
-        role = discord.utils.find(
-            lambda r: r.name.lower() == role_string.lower(), roles)
-
-        if role is None:
-            raise RoleNotFound(roles[0].server, role_string)
-
-        return role
-
-    def _get_role_from_id(self, server, roleid):
-        try:
-            roles = server.roles
-        except AttributeError:
-            server = self._get_server_from_id(server)
-            try:
-                roles = server.roles
-            except AttributeError:
-                raise RoleNotFound(server, roleid)
-
-        role = discord.utils.get(roles, id=roleid)
-        if role is None:
-            raise RoleNotFound(server, roleid)
-        return role
-
-    def _get_server_from_id(self, serverid):
-        return discord.utils.get(self.bot.servers, id=serverid)
-
 
 def check_folders():
     if not os.path.exists("data/memes"):
