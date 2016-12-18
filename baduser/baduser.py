@@ -11,6 +11,7 @@ from discord.ext import commands
 from __main__ import send_cmd_help
 from __main__ import settings
 
+from .rpadutils import *
 from .utils import checks
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
@@ -35,14 +36,14 @@ class BadUser:
     @baduser.command(name="addrole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addRole(self, ctx, role):
-        role = self._get_role(ctx.message.server.roles, role)
+        role = _get_role(ctx.message.server.roles, role)
         self.settings.addPunishmentRole(ctx.message.server.id, role.id)
         await self.bot.say(inline('Added punishment role "' + role.name + '"'))
 
     @baduser.command(name="rmrole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmRole(self, ctx, role):
-        role = self._get_role(ctx.message.server.roles, role)
+        role = _get_role(ctx.message.server.roles, role)
         self.settings.rmPunishmentRole(ctx.message.server.id, role.id)
         await self.bot.say(inline('Removed punishment role "' + role.name + '"'))
 
@@ -65,7 +66,7 @@ class BadUser:
         output = 'Punishment roles:\n'
         for role_id in role_ids:
             try:
-                role = self._get_role_from_id(ctx.message.server, role_id)
+                role = _get_role_from_id(self.bot, ctx.message.server, role_id)
                 output += '\t' + role.name
             except Exception as e:
                 output += str(e)
@@ -133,37 +134,6 @@ class BadUser:
             await self.bot.send_message(channel_obj, box(msg))
             await self.bot.send_message(channel_obj, 'Hey @here please leave a note explaining why this user is punished')
             await self.bot.send_message(channel_obj, 'This user now has {} strikes'.format(strikes))
-
-
-    def _get_role(self, roles, role_string):
-        if role_string.lower() == "everyone":
-            role_string = "@everyone"
-
-        role = discord.utils.find(
-            lambda r: r.name.lower() == role_string.lower(), roles)
-
-        if role is None:
-            raise RoleNotFound(roles[0].server, role_string)
-
-        return role
-
-    def _get_role_from_id(self, server, roleid):
-        try:
-            roles = server.roles
-        except AttributeError:
-            server = self._get_server_from_id(server)
-            try:
-                roles = server.roles
-            except AttributeError:
-                raise RoleNotFound(server, roleid)
-
-        role = discord.utils.get(roles, id=roleid)
-        if role is None:
-            raise RoleNotFound(server, roleid)
-        return role
-
-    def _get_server_from_id(self, serverid):
-        return discord.utils.get(self.bot.servers, id=serverid)
 
 
 def setup(bot):
