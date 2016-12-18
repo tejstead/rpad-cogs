@@ -16,6 +16,7 @@ from discord.ext import commands
 
 from __main__ import user_allowed, send_cmd_help
 
+from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
@@ -82,7 +83,7 @@ class TrUtils:
             server = self._get_server_from_id(server_id)
             rainbow_ids = self.settings.rainbow(server_id)
             for role_id in rainbow_ids:
-                role = self._get_role_from_id(server, role_id)
+                role = _get_role_from_id(self.bot, server, role_id)
                 color = random.choice(self.colors)
                 try:
                     await self.bot.edit_role(server, role, color=color)
@@ -128,14 +129,14 @@ class TrUtils:
     @commands.command(name="rainbow", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def rainbow(self, ctx, role_name):
-        role = self._get_role(ctx.message.server.roles, role_name)
+        role = _get_role(ctx.message.server.roles, role_name)
         self.settings.setRainbow(ctx.message.server.id, role.id)
         await self.bot.say('`done`')
 
     @commands.command(name="clearrainbow", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def clearrainbow(self, ctx, role_name):
-        role = self._get_role(ctx.message.server.roles, role_name)
+        role = _get_role(ctx.message.server.roles, role_name)
         self.settings.clearRainbow(ctx.message.server.id, role.id)
         await self.bot.say('`done`')
 
@@ -200,35 +201,11 @@ class TrUtils:
             await self.bot.say("I need the `Embed links` permission "
                                "to send this")
 
-    def _get_role(self, roles, role_string):
-        if role_string.lower() == "everyone":
-            role_string = "@everyone"
-
-        role = discord.utils.find(
-            lambda r: r.name.lower() == role_string.lower(), roles)
-
-        if role is None:
-            raise RoleNotFound(roles[0].server, role_string)
-
-        return role
-
-    def _get_role_from_id(self, server, roleid):
-        try:
-            roles = server.roles
-        except AttributeError:
-            server = self._get_server_from_id(server)
-            try:
-                roles = server.roles
-            except AttributeError:
-                raise ValueError()
-
-        role = discord.utils.get(roles, id=roleid)
-        if role is None:
-            raise RoleNotFound(server, roleid)
-        return role
-
-    def _get_server_from_id(self, serverid):
-        return discord.utils.get(self.bot.servers, id=serverid)
+    @commands.command(pass_context=True, hidden=True)
+    @checks.is_owner()
+    async def supersecretdebug(self, ctx, *, code):
+        await self.superdebug(ctx, code=code)
+        await self.bot.delete_message(ctx.message)
 
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
