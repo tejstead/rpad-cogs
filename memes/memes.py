@@ -137,7 +137,7 @@ class Memes:
         # MEME CODE
         role_id = self.settings.getPrivileged(message.server.id)
         if role_id is not None:
-            role = _get_role_from_id(message.server, role_id)
+            role = _get_role_from_id(self.bot, message.server, role_id)
             if role not in message.author.roles:
                 return
         # MEME CODE
