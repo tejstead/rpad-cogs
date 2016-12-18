@@ -28,6 +28,7 @@ from setuptools.command.alias import alias
 
 from __main__ import user_allowed, send_cmd_help
 
+from . import padguide
 from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
@@ -274,84 +275,7 @@ class PadInfoSettings(CogSettings):
         config = {}
         return config
 
-def loadJsonToItem(filename, itemtype):
-    json_data = fileIO('data/padevents/' + filename, 'load')
-    results = list()
-    for item in json_data['items']:
-        results.append(itemtype(item))
-    return results
 
-class PgAttribute:
-    def __init__(self, item):
-        self.name = item['TA_NAME_US']
-        self.attribute_id = item['TA_SEQ']
-
-class PgAwakening:
-    def __init__(self, item):
-        self.deleted = item['DEL_YN']
-        self.monster_id = item['MONSTER_NO']
-        self.order = int(item['ORDER_IDX'])
-        self.tma_seq = item['TMA_SEQ']
-        self.awakening_id = item['TS_SEQ']
-
-class PgEvo:
-    def __init__(self, item):
-        self.monster_id = item['MONSTER_NO']
-        self.to_monster_id = item['TO_NO']
-        self.tv_seq = item['TV_SEQ']
-        self.tv_type = item['TV_TYPE']
-
-class PgMonsterAddInfo:
-    def __init__(self, item):
-        self.monster_id = item['MONSTER_NO']
-        self.sub_type = item['SUB_TYPE']
-
-class PgMonsterInfo:
-    def __init__(self, item):
-        self.monster_id = item['MONSTER_NO']
-        self.on_us = item['ON_US']
-        self.series_id = item['TSR_SEQ']
-
-class PgBaseMonster:
-    def __init__(self, item):
-        self.monster_id = item['MONSTER_NO']
-        self.monster_id_na = int(item['MONSTER_NO_US'])
-        self.monster_id_jp = int(item['MONSTER_NO_JP'])
-
-        self.hp = item['HP_MAX']
-        self.atk = item['ATK_MAX']
-        self.rcv = item['RCV_MAX']
-
-        self.active_id = item['TS_SEQ_SKILL']
-        self.leader_id = item['TS_SEQ_LEADER']
-
-        self.rarity = item['RARITY']
-        self.cost = item['COST']
-        self.max_level = item['LEVEL']
-
-        self.name_na = item['TM_NAME_US']
-        self.name_jp = item['TM_NAME_JP']
-
-        self.attr1 = item['TA_SEQ']
-        self.attr2 = item['TA_SEQ_SUB']
-
-        self.te_seq = item['TE_SEQ']
-
-        self.type1 = item['TT_SEQ']
-        self.type2 = item['TT_SEQ_SUB']
-
-class PgSkill:
-    def __init__(self, item):
-        self.skill_id = item['TS_SEQ']
-        self.name = item['TS_NAME_US']
-        self.desc = item['TS_DESC_US']
-        self.turn_min = item['TURN_MIN']
-        self.turn_max = item['TURN_MAX']
-
-class PgType:
-    def __init__(self, item):
-        self.type_id = item['TT_SEQ']
-        self.name = item['TT_NAME_US']
 
 HIGH_SELECTION_PRIORITY = 2
 LOW_SELECTION_PRIORITY = 1
@@ -733,14 +657,14 @@ class MonsterGroup:
 
 class PgDataWrapper:
     def __init__(self):
-        attribute_list = loadJsonToItem('attributeList.jsp', PgAttribute)
-        awoken_list = loadJsonToItem('awokenSkillList.jsp', PgAwakening)
-        evolution_list = loadJsonToItem('evolutionList.jsp', PgEvo)
-        monster_add_info_list = loadJsonToItem('monsterAddInfoList.jsp', PgMonsterAddInfo)
-        monster_info_list = loadJsonToItem('monsterInfoList.jsp', PgMonsterInfo)
-        base_monster_list = loadJsonToItem('monsterList.jsp', PgBaseMonster)
-        skill_list = loadJsonToItem('skillList.jsp', PgSkill)
-        type_list = loadJsonToItem('typeList.jsp', PgType)
+        attribute_list = padguide.loadJsonToItem('attributeList.jsp', padguide.PgAttribute)
+        awoken_list = padguide.loadJsonToItem('awokenSkillList.jsp', padguide.PgAwakening)
+        evolution_list = padguide.loadJsonToItem('evolutionList.jsp', padguide.PgEvo)
+        monster_add_info_list = padguide.loadJsonToItem('monsterAddInfoList.jsp', padguide.PgMonsterAddInfo)
+        monster_info_list = padguide.loadJsonToItem('monsterInfoList.jsp', padguide.PgMonsterInfo)
+        base_monster_list = padguide.loadJsonToItem('monsterList.jsp', padguide.PgBaseMonster)
+        skill_list = padguide.loadJsonToItem('skillList.jsp', padguide.PgSkill)
+        type_list = padguide.loadJsonToItem('typeList.jsp', padguide.PgType)
 
         attribute_map = {x.attribute_id: x for x in attribute_list}
 
