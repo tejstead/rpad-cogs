@@ -33,7 +33,7 @@ def containsJp(txt):
     return JP_REGEX.search(txt)
 
 
-class RoleNotFound(PermissionsError):
+class RoleNotFound:
     """
     Thrown when we can't get a valid role from a list and given name
     """
@@ -68,3 +68,7 @@ def _get_role_from_id(bot, server, roleid):
 
 def _get_server_from_id(bot, serverid):
     return discord.utils.get(bot.servers, id=serverid)
+
+def normalizeServer(server):
+    server = server.upper()
+    return 'NA' if server == 'US' else server
