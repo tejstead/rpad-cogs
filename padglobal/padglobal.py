@@ -222,8 +222,10 @@ class PadGlobalSettings(CogSettings):
         admins = self.admins()
         if user_id not in admins:
             admins.append(user_id)
+            self.save_settings()
 
     def rmAdmin(self, user_id):
         admins = self.admins()
         if user_id in admins:
             admins.remove(user_id)
+            self.save_settings()
