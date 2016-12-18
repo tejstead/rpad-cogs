@@ -28,7 +28,9 @@ from setuptools.command.alias import alias
 
 from __main__ import user_allowed, send_cmd_help
 
+from . import padguide
 from .padinfo import EXPOSED_PAD_INFO
+from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
@@ -36,14 +38,7 @@ from .utils.dataIO import fileIO
 from .utils.padguide import *
 from .utils.twitter_stream import *
 
-
-# from copy import deepcopy
-def normalizeServer(server):
-    server = server.upper()
-    return 'NA' if server == 'US' else server
-
 SUPPORTED_SERVERS = ["NA", "JP"]
-
 
 class PadRem:
     def __init__(self, bot):
@@ -233,108 +228,6 @@ class PadRemSettings(CogSettings):
         self.getBoosts()[machine_id] = int(boost)
         self.save_settings()
 
-def loadJsonToItem(filename, itemtype):
-    json_data = fileIO('data/padevents/' + filename, 'load')
-    results = list()
-    for item in json_data['items']:
-        results.append(itemtype(item))
-    return results
-
-
-class RemType(Enum):
-     godfest = '1'
-     rare = '2'
-     pal = '3'
-     unknown1 = '4'
-
-class RemRowType(Enum):
-     subsection = '0'
-     divider = '1'
-
-# eggTitleList.jsp
-#       {
-#            "DEL_YN": "N",
-#            "END_DATE": "2016-10-24 07:59:00",
-#            "ORDER_IDX": "0",
-#            "SERVER": "US",
-#            "SHOW_YN": "Y",
-#            "START_DATE": "2016-10-17 08:00:00",
-#            "TEC_SEQ": "2",
-#            "TET_SEQ": "64",
-#            "TSTAMP": "1476490114488",
-#            "TYPE": "1"
-#        },
-class PgEggInstance:
-    def __init__(self, item):
-        self.server = normalizeServer(item['SERVER'])
-        self.delete = item['DEL_YN']  # Y, N
-        self.show = item['SHOW_YN']  # Y, N
-        self.rem_type = RemType(item['TEC_SEQ'])  # matches RemType
-        self.egg_id = item['TET_SEQ']  # primary key
-        self.row_type = RemRowType(item['TYPE'])  # 0-> row with just name, 1-> row with date
-
-        self.order = int(item["ORDER_IDX"])
-        self.start_date_str = item['START_DATE']
-        self.end_date_str = item['END_DATE']
-
-        tz = pytz.UTC
-        self.start_datetime = None
-        self.end_datetime = None
-        self.open_date_str = None
-
-        self.pt_date_str = None
-        if len(self.start_date_str):
-            self.start_datetime = datetime.strptime(self.start_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
-            self.end_datetime = datetime.strptime(self.end_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
-
-            if self.server == 'NA':
-                pt_tz_obj = pytz.timezone('America/Los_Angeles')
-                self.open_date_str = self.start_datetime.replace(tzinfo=pt_tz_obj).strftime('%m/%d')
-            if self.server == 'JP':
-                jp_tz_obj = pytz.timezone('Asia/Tokyo')
-                self.open_date_str = self.start_datetime.replace(tzinfo=jp_tz_obj).strftime('%m/%d')
-
-# eggTitleNameList.jsp
-#        {
-#            "DEL_YN": "N",
-#            "LANGUAGE": "US",
-#            "NAME": "Batman Egg",
-#            "TETN_SEQ": "183",
-#            "TET_SEQ": "64",
-#            "TSTAMP": "1441589491425"
-#        },
-class PgEggName:
-    def __init__(self, item):
-        self.name = item['NAME']
-        self.language = item['LANGUAGE']  # US, JP, KR
-        self.delete = item['DEL_YN']  # Y, N
-        self.primary_id = item['TETN_SEQ']  # primary key
-        self.egg_id = item['TET_SEQ']  # fk to PgEggInstance
-
-def makeBlankEggName(egg_id):
-    return PgEggName({
-      'NAME': '',
-      'LANGUAGE': 'US',
-      'DEL_YN': 'N',
-      'TETN_SEQ': '',
-      'TET_SEQ': egg_id
-    })
-
-# eggMonsterList.jsp
-#        {
-#            "DEL_YN": "Y",
-#            "MONSTER_NO": "120",
-#            "ORDER_IDX": "1",
-#            "TEM_SEQ": "1",
-#            "TET_SEQ": "1",
-#            "TSTAMP": "1405245537715"
-#        },
-class PgEggMonster:
-    def __init__(self, item):
-        self.delete = item['DEL_YN']
-        self.monster_id = item['MONSTER_NO']
-        self.primary_id = item['TEM_SEQ']  # primary key
-        self.egg_id = item['TET_SEQ']  # fk to PgEggInstance
 
 class PgEggMachine:
     def __init__(self, egg_instance, egg_name, egg_monster_list):
@@ -342,19 +235,17 @@ class PgEggMachine:
         self.egg_name = egg_name
         self.egg_monster_list = egg_monster_list
 
-# rem simulator
-
 class PgRemWrapper:
     def __init__(self):
-        egg_instance_list = loadJsonToItem('eggTitleList.jsp', PgEggInstance)
-        egg_name_list = loadJsonToItem('eggTitleNameList.jsp', PgEggName)
-        egg_monster_list = loadJsonToItem('eggMonsterList.jsp', PgEggMonster)
+        egg_instance_list = padguide.loadJsonToItem('eggTitleList.jsp', padguide.PgEggInstance)
+        egg_name_list = padguide.loadJsonToItem('eggTitleNameList.jsp', padguide.PgEggName)
+        egg_monster_list = padguide.loadJsonToItem('eggMonsterList.jsp', padguide.PgEggMonster)
 
         # Make sure machine is live
         egg_instance_list = list(filter(lambda x: x.show == 'Y' and x.delete == 'N', egg_instance_list))
 
         # Make sure machine is not PAL
-        egg_instance_list = list(filter(lambda x: x.rem_type in (RemType.godfest, RemType.rare), egg_instance_list))
+        egg_instance_list = list(filter(lambda x: x.rem_type in (padguide.RemType.godfest, padguide.RemType.rare), egg_instance_list))
 
         # Get rid of Korea, no one plays there
         egg_instance_list = list(filter(lambda x: x.server != 'KR', egg_instance_list))
@@ -375,7 +266,7 @@ class PgRemWrapper:
         for egg_instance in egg_instance_list:
             egg_name = egg_id_to_egg_name.get(egg_instance.egg_id)
             if egg_name is None:
-                egg_name = makeBlankEggName(egg_instance.egg_id)
+                egg_name = padguide.makeBlankEggName(egg_instance.egg_id)
             monster_list = egg_id_to_egg_monster[egg_instance.egg_id]
             egg_machines.append(PgEggMachine(egg_instance, egg_name, monster_list))
 
@@ -412,7 +303,7 @@ class PgRemWrapper:
                     if m.monster_id_jp not in PADGUIDE_EXCLUSIVE_MISTAKES:
                         global_rem_list.append(m)
             else:
-                if egg_instance.row_type == RemRowType.divider:
+                if egg_instance.row_type == padguide.RemRowType.divider:
                     current_list = list()
                     modifier_list.append(EggMachineModifier(egg_instance, egg_name, current_list, boost_rate))
 
@@ -651,17 +542,17 @@ class EggMachineModifier:
             self.boost_rate = 3
 
     def isGodfest(self):
-        return self.rem_type == RemType.godfest
+        return self.rem_type == padguide.RemType.godfest
 
     def isRare(self):
-        return self.rem_type == RemType.rare
+        return self.rem_type == padguide.RemType.rare
 
     def isCarnival(self):
         name = self.name.lower()
         return self.isRare() and ('gala' in name or 'carnival' in name)
 
     def getName(self):
-        if self.rem_type == RemType.godfest.value:
+        if self.rem_type == padguide.RemType.godfest.value:
             return 'Godfest x{}'.format(self.boost_rate)
         else:
             return self.name
