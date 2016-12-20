@@ -33,13 +33,35 @@ def containsJp(txt):
     return JP_REGEX.search(txt)
 
 
-class RoleNotFound:
+class PermissionsError(CommandNotFound):
+    """
+    Base exception for all others in this module
+    """
+
+
+class BadCommand(PermissionsError):
+    """
+    Thrown when we can't decipher a command from string into a command object.
+    """
+    pass
+
+
+class RoleNotFound(PermissionsError):
     """
     Thrown when we can't get a valid role from a list and given name
     """
     pass
 
-def _get_role(roles, role_string):
+
+class SpaceNotation(BadCommand):
+    """
+    Throw when, with some certainty, we can say that a command was space
+        notated, which would only occur when some idiot...fishy...tries to
+        surround a command in quotes.
+    """
+    pass
+
+def get_role(roles, role_string):
     if role_string.lower() == "everyone":
         role_string = "@everyone"
 
@@ -51,11 +73,11 @@ def _get_role(roles, role_string):
 
     return role
 
-def _get_role_from_id(bot, server, roleid):
+def get_role_from_id(bot, server, roleid):
     try:
         roles = server.roles
     except AttributeError:
-        server = _get_server_from_id(bot, server)
+        server = get_server_from_id(bot, server)
         try:
             roles = server.roles
         except AttributeError:
@@ -66,7 +88,7 @@ def _get_role_from_id(bot, server, roleid):
         raise RoleNotFound(server, roleid)
     return role
 
-def _get_server_from_id(bot, serverid):
+def get_server_from_id(bot, serverid):
     return discord.utils.get(bot.servers, id=serverid)
 
 def normalizeServer(server):

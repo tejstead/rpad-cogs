@@ -80,10 +80,10 @@ class TrUtils:
     async def doRefreshRainbow(self):
         servers = self.settings.servers()
         for server_id, server_data in servers.items():
-            server = self._get_server_from_id(server_id)
+            server = get_server_from_id(self.bot, server_id)
             rainbow_ids = self.settings.rainbow(server_id)
             for role_id in rainbow_ids:
-                role = _get_role_from_id(self.bot, server, role_id)
+                role = get_role_from_id(self.bot, server, role_id)
                 color = random.choice(self.colors)
                 try:
                     await self.bot.edit_role(server, role, color=color)
@@ -129,14 +129,14 @@ class TrUtils:
     @commands.command(name="rainbow", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def rainbow(self, ctx, role_name):
-        role = _get_role(ctx.message.server.roles, role_name)
+        role = get_role(ctx.message.server.roles, role_name)
         self.settings.setRainbow(ctx.message.server.id, role.id)
         await self.bot.say('`done`')
 
     @commands.command(name="clearrainbow", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def clearrainbow(self, ctx, role_name):
-        role = _get_role(ctx.message.server.roles, role_name)
+        role = get_role(ctx.message.server.roles, role_name)
         self.settings.clearRainbow(ctx.message.server.id, role.id)
         await self.bot.say('`done`')
 

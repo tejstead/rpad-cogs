@@ -43,7 +43,7 @@ class Memes:
             dataIO.save_json(self.file_path, self.c_commands)
             await self.bot.say("Custom command successfully added.")
         else:
-            await self.bot.say("This command already exists. Use editcom to edit it.")
+            await self.bot.say("This command already exists. Use editmeme to edit it.")
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
@@ -63,9 +63,9 @@ class Memes:
                 dataIO.save_json(self.file_path, self.c_commands)
                 await self.bot.say("Custom command successfully edited.")
             else:
-                await self.bot.say("That command doesn't exist. Use addcom [command] [text]")
+                await self.bot.say("That command doesn't exist. Use addmeme [command] [text]")
         else:
-             await self.bot.say("There are no custom commands in this server. Use addcom [command] [text]")
+             await self.bot.say("There are no custom memes in this server. Use addmeme [command] [text]")
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
@@ -96,7 +96,7 @@ class Memes:
         Example:
         !setmemerole Regular"""
 
-        role = _get_role(ctx.message.server.roles, rolename)
+        role = get_role(ctx.message.server.roles, rolename)
         self.settings.setPrivileged(ctx.message.server.id, role.id)
         await self.bot.say("done")
 
@@ -137,7 +137,7 @@ class Memes:
         # MEME CODE
         role_id = self.settings.getPrivileged(message.server.id)
         if role_id is not None:
-            role = _get_role_from_id(self.bot, message.server, role_id)
+            role = get_role_from_id(self.bot, message.server, role_id)
             if role not in message.author.roles:
                 return
         # MEME CODE

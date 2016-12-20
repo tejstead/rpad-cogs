@@ -36,14 +36,14 @@ class BadUser:
     @baduser.command(name="addrole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addRole(self, ctx, role):
-        role = _get_role(ctx.message.server.roles, role)
+        role = get_role(ctx.message.server.roles, role)
         self.settings.addPunishmentRole(ctx.message.server.id, role.id)
         await self.bot.say(inline('Added punishment role "' + role.name + '"'))
 
     @baduser.command(name="rmrole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmRole(self, ctx, role):
-        role = _get_role(ctx.message.server.roles, role)
+        role = get_role(ctx.message.server.roles, role)
         self.settings.rmPunishmentRole(ctx.message.server.id, role.id)
         await self.bot.say(inline('Removed punishment role "' + role.name + '"'))
 
@@ -66,7 +66,7 @@ class BadUser:
         output = 'Punishment roles:\n'
         for role_id in role_ids:
             try:
-                role = _get_role_from_id(self.bot, ctx.message.server, role_id)
+                role = get_role_from_id(self.bot, ctx.message.server, role_id)
                 output += '\t' + role.name
             except Exception as e:
                 output += str(e)
