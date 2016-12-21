@@ -23,6 +23,132 @@ from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.twitter_stream import *
 
+USER_HELP = """
+Bot user help
+This command gives you an overview of the most commonly used user-focused
+commands, with an emphasis on the ones unique to this bot.
+
+Use ^help to get a full list of help commands. Execute any command with no
+arguments to get more details on how they work.
+
+Info commands:
+^credits   some info about the bot
+^userhelp  this message
+^modhelp   bot help specifically for mods
+
+General:
+^pad             lists the pad-specific global commands
+^customcommands  lists the custom commands added by the administrators of your server
+^memes           works the same way, but is restricted per-server to a privileged memer-only group
+^serverinfo      stats for the current server
+^userinfo        stats for a specific user
+
+Monster Info:
+^id      search for a monster by ID, full name, nickname, etc
+^idz     text-only version if id (the legacy version, for mobile users)
+^helpid  gets more info on how monster lookup works, including the nickname submission link
+^pic     prints a link to a a monster image on puzzledragonx, which discord will inline
+^img     same as pic
+
+REM Simulation:
+^remlist     lists all the REMs available
+^reminfo     lists info for a specific REM
+^rollrem     simulate a roll for a REM
+^rollremfor  roll a REM until you get the desired monster
+
+Profile:
+Miru will store your personal PAD details, and provide them on request.
+Use the series of commands starting with ^profile to configure your own profile.
+
+Use one of the following commands to retrieve data.
+^idme            print your profile to the current channel
+^idfor           get profile data for a specific user
+^idto            have Miru DM your profile to a user
+^profile search  search the list of configured (visible) profiles
+
+Time conversion:
+^time    get the current time in a different timezone
+^timeto  calculate the how long until another time in another timezone
+"""
+
+MOD_HELP = """
+Bot Moderator Help
+~~~~~~~~~~~~~~~~~~~~~~
+
+If you need help setting your server up, feel free to ping me (tactical_retreat).
+
+Miru is a set of plugins inside the Red Discord bot, running on discord.py. There
+are some custom ones, but a lot of them are generic to all Red Discord bots, so
+things you've used elsewhere will probably also work here.
+
+If there is a feature you're missing, let me know and I can check to see if it's
+already available in some public plugin. If not, and I think it's valuable, I might
+write it.
+
+~~~~~~~~~~~~~~~~~~~~~~
+
+Check out the ^help command from inside your server. You'll see a wider list of
+commands than normal users do.
+
+If you've just added Miru to your server, start with the ^modset command. You
+might want to configure an Admin and a Mod role (they can be the same thing).
+
+~~~~~~~~~~~~~~~~~~~~~~
+Interesting features
+~~~~~~~~~~~~~~~~~~~~~~
+
+Twitter:
+If you'd like a twitter feed mirrored in your server, contact tactical_retreat
+
+Self applied roles:
+You can configure which roles a user can add to themself using ^selfrole via ^adminset
+
+Message logs:
+Discord doesn't save deleted/edited messages anywhere. Using ^adminlogs you can
+retrieve the last 1k log messages from any channel Miru can read (since the last
+Miru restart, logs are stored in memory).
+
+Contrast this with ^logs which uses the Discord API, and can retrieve a significantly
+larger log history, but it reflects what you would see in Discord by scrolling back.
+
+Auto Moderation:
+The ^automod2 command allows you to configure a set of rules (defined as regular expressions)
+that match messages. You can then apply these rules as either a blacklist or a whitelist to
+a specific channel. This allows you to force users to format their messages a specific way,
+or to prevent them from saying certain things (the bot deletes violators, and notifies them
+via DM).
+
+Bad user tools:
+Allows you to specify a set of roles that are applied as punishments to users, generally
+restricting them from seeing or speaking in certain channels. If a punishment role is
+applied to a user, the last 10 things they said (and where they said it) are recorded, and
+a strike is added to their record.
+
+You can configure a channel where Miru will log when these moderation events occur, and ping
+@here asking for an explanation. She will also track when a user with a strike leaves the
+server, and when they rejoin the server (as this is generally done to evade negative roles).
+
+Custom commands:
+Miru supports three types of custom commands, you can find the list of associated commands via ^help.
+* CustomCommands: Added by server mods, executable by anyone
+* Memes: Added by server mods, executable only by people with a specific Role (configured by mods)
+* Pad: Added by specific users (configured by tactical_retreat) and executable by users in any server
+
+PAD Event announcement:
+You can use the ^padevents commands to configure PAD related announcements for specific channels.
+
+Using '^padevents addchannel NA' you can enable guerrilla announcements for the current channel.
+Using '^padevents addchanneldaily NA' you can enable a dump of the currently active events,
+including things like skillup rate, daily descends, daily guerrillas, etc. This typically ticks
+over twice daily.
+
+Use the rmchannel* commands to disable those subscriptions. ^padevents listchannels shows the
+set of subscriptions for the current server. You can also subscribe to JP events if desired.
+
+Limiting command execution:
+The '^p' command can be used to prevent users from executing specific commands on the server,
+in specific channels, or unless they have specific roles. Read the documentation carefully.
+"""
 
 class TrUtils:
     def __init__(self, bot):
@@ -143,18 +269,15 @@ class TrUtils:
     @commands.command()
     async def userhelp(self):
         """Shows a summary of the useful user features"""
-        about = (
-            "Check back later"
-        )
-        await self.bot.whisper(inline(about))
+        for page in pagify(USER_HELP, delims=['\n'], shorten_by=8):
+            await self.bot.whisper(box(page))
 
     @commands.command()
+    @checks.mod()
     async def modhelp(self):
         """Shows a summary of the useful moderator features"""
-        about = (
-            "Check back later"
-        )
-        await self.bot.whisper(inline(about))
+        for page in pagify(MOD_HELP, delims=['\n'], shorten_by=8):
+            await self.bot.whisper(box(page))
 
     @commands.command()
     async def credits(self):

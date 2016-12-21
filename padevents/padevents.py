@@ -158,7 +158,7 @@ class PadEvents:
         print("done reload_events")
 
     @padevents.command(name="testevent", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
+    @checks.is_owner()
     async def _testevent(self, ctx, server):
         server = normalizeServer(server)
         if server not in SUPPORTED_SERVERS:
