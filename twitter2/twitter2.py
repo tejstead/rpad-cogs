@@ -57,6 +57,7 @@ and starts following a user if one was set upon construction."""
         print("done with on_ready")
 
     @commands.group(pass_context=True, no_pm=True)
+    @checks.is_owner()
     async def twitter2(self, ctx):
         """Manage twitter feed mirroring"""
         if ctx.invoked_subcommand is None:
@@ -76,7 +77,6 @@ and starts following a user if one was set upon construction."""
 #         await self.follow(tuser, ctx.message.channel)
 
     @twitter2.command(name="addchannel", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
     async def _addchannel(self, ctx, twitter_user):
         twitter_user = twitter_user.lower()
         already_following = twitter_user in self.channel_ids
@@ -100,7 +100,6 @@ and starts following a user if one was set upon construction."""
 
 
     @twitter2.command(name="rmchannel", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
     async def _rmchannel(self, ctx, twitter_user):
         twitter_user = twitter_user.lower()
         channel_id = ctx.message.channel.id
@@ -121,7 +120,6 @@ and starts following a user if one was set upon construction."""
         self.save_config()
 
     @twitter2.command(name="resend", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
     async def _resend(self, ctx, idx : int=1):
         last_tweet = self.stream.last(idx)
         if last_tweet:
@@ -168,7 +166,6 @@ Returns False if the user does not exist, True otherwise."""
 
 
     @twitter2.command(name="testmsg", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
     async def _testmsg(self, ctx, twitter_user):
         data = {
             'text' : 'test msg',
