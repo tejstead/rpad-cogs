@@ -28,7 +28,7 @@ class FancySay:
     @fancysay.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_channels=True)
     async def title_description_image_footer(self, ctx, title, description, image, footer):
-        """[channel] [title] [description] [image_url] [footer_text]
+        """[title] [description] [image_url] [footer_text]
 
         You must specify a title. You can omit any of description, image, or footer.
         To omit an item use empty quotes. For the text fields, wrap your text in quotes.
