@@ -498,6 +498,16 @@ attr_prefix_long_map = {
   'Dark':'dark',
 }
 
+series_to_prefix_map = {
+  '130' : ['halloween'],
+  '136' : ['xmas', 'christmas'],
+  '125' : ['summer', 'beach'],
+  '114' : ['school'],
+  '139' : ['new years', 'ny'],
+  '149' : ['wedding', 'bride'],
+  '154' : ['padr'],
+}
+
 AWAKENING_NAME_MAP_RPAD = {
   'Enhanced Fire Orbs': 'oe6fire',
   'Enhanced Water Orbs': 'oe5water',
@@ -647,6 +657,10 @@ def addPrefixes(m: Monster):
 
     if '転生' in m.name_na:
         prefixes.add('reincarnated')
+
+    # Add collab prefixes
+    if m.series_id in series_to_prefix_map:
+        prefixes.update(series_to_prefix_map[m.series_id])
 
     m.prefixes = prefixes
     m.debug_info += ' | Prefixes ({})'.format(','.join(prefixes))
