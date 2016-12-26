@@ -490,6 +490,14 @@ attr_prefix_map = {
   'Dark':'d',
 }
 
+attr_prefix_long_map = {
+  'Fire':'red',
+  'Water':'blue',
+  'Wood':'green',
+  'Light':'light',
+  'Dark':'dark',
+}
+
 AWAKENING_NAME_MAP_RPAD = {
   'Enhanced Fire Orbs': 'oe6fire',
   'Enhanced Water Orbs': 'oe5water',
@@ -606,32 +614,39 @@ def addNickname(m: Monster):
     m.nickname = nickname.strip()
 
 def addPrefixes(m: Monster):
-    prefixes = list()
+    prefixes = set()
 
     attr1 = attr_prefix_map[m.attr1]
-    prefixes.append(attr1)
+    prefixes.add(attr1)
+
+    # Add long color names like red/blue
+    long_attr = attr_prefix_long_map[m.attr1]
+    prefixes.add(long_attr)
+
+    # Add long attr names like fire/water
+    prefixes.add(m.attr1.lower())
 
     if m.attr2 is not None:
         attr2 = attr_prefix_map[m.attr2]
-        prefixes.append(attr1 + attr2)
-        prefixes.append(attr1 + '/' + attr2)
+        prefixes.add(attr1 + attr2)
+        prefixes.add(attr1 + '/' + attr2)
 
     # TODO add prefixes based on type
 
     if m.name_na.lower() == m.name_na and m.name_na != m.name_jp:
-        prefixes.append('chibi')
+        prefixes.add('chibi')
 
     if 'awoken' in m.name_na.lower() or '覚醒' in m.name_na:
-        prefixes.append('a')
+        prefixes.add('a')
 
     if '覚醒' in m.name_na:
-        prefixes.append('awoken')
+        prefixes.add('awoken')
 
     if 'reincarnated' in m.name_na.lower() or '転生' in m.name_na:
-        prefixes.append('revo')
+        prefixes.add('revo')
 
     if '転生' in m.name_na:
-        prefixes.append('reincarnated')
+        prefixes.add('reincarnated')
 
     m.prefixes = prefixes
     m.debug_info += ' | Prefixes ({})'.format(','.join(prefixes))
