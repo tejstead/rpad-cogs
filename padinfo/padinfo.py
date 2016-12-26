@@ -502,7 +502,7 @@ series_to_prefix_map = {
   '130' : ['halloween'],
   '136' : ['xmas', 'christmas'],
   '125' : ['summer', 'beach'],
-  '114' : ['school'],
+  '114' : ['school', 'academy', 'gakuen'],
   '139' : ['new years', 'ny'],
   '149' : ['wedding', 'bride'],
   '154' : ['padr'],
