@@ -34,11 +34,9 @@ from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
-from .utils.padguide import *
 from .utils.twitter_stream import *
 
 
-# from copy import deepcopy
 class OrderedCounter(Counter, OrderedDict):
     """Counter that remembers the order elements are first seen"""
     def __repr__(self):
@@ -46,6 +44,12 @@ class OrderedCounter(Counter, OrderedDict):
 
     def __reduce__(self):
         return self.__class__, (OrderedDict(self),)
+
+def dl_nicknames():
+    # one hour expiry
+    expiry_secs = 1 * 60 * 60
+    file_url = "https://docs.google.com/spreadsheets/d/1EyzMjvf8ZCQ4K-gJYnNkiZlCEsT9YYI9dUd-T5qCirc/pub?gid=1926254248&single=true&output=csv"
+    return makeCachedPlainRequest('nicknames.csv', file_url, expiry_secs)
 
 
 EXPOSED_PAD_INFO = None
@@ -353,11 +357,9 @@ class Monster:
         if additional_info and additional_info.sub_type != '0':
             self.type3 = type_map[additional_info.sub_type].name
 
-        self.active_text = None
-        if active_skill:
-            self.active_text = active_skill.desc
-            self.active_min = active_skill.turn_min
-            self.active_max = active_skill.turn_max
+        self.active_skill = active_skill
+        self.server_actives = {}
+        self.server_skillups = {}
 
         self.leader_text = None
         if leader_skill:
@@ -404,8 +406,8 @@ def monsterToInfoText(m: Monster):
         ls_row += 'None/Missing'
 
     active_row = 'AS: '
-    if m.active_text:
-        active_row += '({}->{}): {}'.format(m.active_max, m.active_min, m.active_text)
+    if m.active_skill:
+        active_row += '({}->{}): {}'.format(m.active_skill.turn_max, m.active_skill.turn_min, m.active_skill.desc)
     else:
         active_row += 'None/Missing'
 
@@ -469,16 +471,27 @@ def monsterToEmbed(m: Monster, server):
 
     embed.description = awakenings_row
 
-    active_header = 'Active Skill'
-    active_body = 'None/Missing'
-    if m.active_text:
-        active_header = 'Active Skill ({} -> {})'.format(m.active_max, m.active_min, m.active_text)
-        active_body = m.active_text
-    embed.add_field(name=active_header, value=active_body, inline=False)
+    if len(m.server_actives) >= 2:
+        for server, active in m.server_actives.items():
+            active_header = '({} Server) Active Skill ({} -> {})'.format(server, active.turn_max, active.turn_min)
+            active_body = active.desc
+            embed.add_field(name=active_header, value=active_body, inline=False)
+    else:
+        active_header = 'Active Skill'
+        active_body = 'None/Missing'
+        if m.active_skill:
+            active_header = 'Active Skill ({} -> {})'.format(m.active_skill.turn_max, m.active_skill.turn_min)
+            active_body = m.active_skill.desc
+        embed.add_field(name=active_header, value=active_body, inline=False)
 
     ls_row = m.leader_text if m.leader_text else 'None/Missing'
     embed.add_field(name='Leader Skill', value=ls_row, inline=False)
 
+    if not len(m.server_actives):
+        for server, skillup in m.server_skillups.items():
+            skillup_header = 'Skillup in ' + server
+            skillup_body = 'No. {} {}'.format(skillup.monster_id_na, skillup.name_na)
+            embed.add_field(name=skillup_header, value=skillup_body, inline=True)
 
     return embed
 
@@ -802,9 +815,47 @@ class PgDataWrapper:
         self.buildNicknameLists(self.hp_monsters)
         self.buildNicknameLists(self.lp_monsters)
 
-        self.id_to_monster = {}
+        self.id_to_monster = {m.monster_id_na : m for m in self.full_monster_list}
+
+        skill_rotation = padguide.loadJsonToItem('skillRotationList.jsp', padguide.PgSkillRotation)
+        dated_skill_rotation = padguide.loadJsonToItem('skillRotationListList.jsp', padguide.PgDatedSkillRotation)
+
+        id_to_skill_rotation = {sr.tsr_seq : sr for sr in skill_rotation}
+        merged_rotation = [padguide.PgMergedRotation(id_to_skill_rotation[dsr.tsr_seq], dsr) for dsr in dated_skill_rotation]
+
+        skill_id_to_monsters = defaultdict(list)
         for m in self.full_monster_list:
-            self.id_to_monster[m.monster_id_na] = m
+            if m.active_skill:
+                skill_id_to_monsters[m.active_skill.skill_id].append(m)
+
+        monster_id_to_monster = {m.monster_id : m for m in self.full_monster_list}
+        self.computeCurrentRotations(merged_rotation, 'US', NA_TZ_OBJ, monster_id_to_monster, skill_map, skill_id_to_monsters)
+        self.computeCurrentRotations(merged_rotation, 'JP', JP_TZ_OBJ, monster_id_to_monster, skill_map, skill_id_to_monsters)
+
+    def computeCurrentRotations(self, merged_rotation, server, server_tz, monster_id_to_monster, skill_map, skill_id_to_monsters):
+        server_now = datetime.now().replace(tzinfo=server_tz).date()
+        active_rotation = [mr for mr in merged_rotation if mr.server == server and mr.rotation_date <= server_now]
+        server = normalizeServer(server)
+
+        monsters_to_rotations = defaultdict(list)
+        for ar in active_rotation:
+            monsters_to_rotations[ar.monster_id].append(ar)
+
+        cur_rotations = list()
+        for _, rotations in monsters_to_rotations.items():
+            cur_rotations.append(max(rotations, key=lambda x: x.rotation_date))
+
+        for mr in cur_rotations:
+            mr.resolved_monster = monster_id_to_monster[mr.monster_id]
+            mr.resolved_active = skill_map[mr.active_id]
+
+            mr.resolved_monster.server_actives[server] = mr.resolved_active
+            monsters_with_skill = skill_id_to_monsters[mr.resolved_active.skill_id]
+            for m in monsters_with_skill:
+                if m.monster_id != mr.resolved_monster.monster_id:
+                    m.server_skillups[server] = mr.resolved_monster
+
+        return cur_rotations
 
     def maybeAdd(self, name_map, name, monster):
         if name not in name_map:
