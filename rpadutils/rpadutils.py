@@ -2,6 +2,7 @@ import re
 
 import discord
 from discord.ext import commands
+from .utils.padguide_api import *
 
 
 class RpadUtils:
@@ -12,6 +13,13 @@ def setup(bot):
     print('rpadutils setup')
     n = RpadUtils(bot)
     bot.add_cog(n)
+
+# TZ used for PAD NA
+NA_TZ_OBJ = pytz.timezone('America/Los_Angeles')
+
+# TZ used for PAD JP
+JP_TZ_OBJ = pytz.timezone('Asia/Tokyo')
+
 
 # https://gist.github.com/ryanmcgrath/982242
 # UNICODE RANGE : DESCRIPTION
@@ -94,3 +102,56 @@ def get_server_from_id(bot, serverid):
 def normalizeServer(server):
     server = server.upper()
     return 'NA' if server == 'US' else server
+
+cache_folder = 'data/padevents'
+
+def shouldDownload(file_path, expiry_secs):
+    if not os.path.exists(file_path):
+        print("file does not exist, downloading " + file_path)
+        return True
+
+    ftime = os.path.getmtime(file_path)
+    file_age = time.time() - ftime
+    print("for " + file_path + " got " + str(ftime) + ", age " + str(file_age) + " against expiry of " + str(expiry_secs))
+
+    if file_age > expiry_secs:
+        print("file too old, download it")
+        return True
+    else:
+        return False
+
+def writeJsonFile(file_path, js_data):
+    with open(file_path, "w") as f:
+        json.dump(js_data, f, sort_keys=True, indent=4)
+
+def readJsonFile(file_path):
+    with open(file_path, "r") as f:
+        return json.load(f)
+
+def makeCachedPadguideRequest(time_ms, endpoint, expiry_secs):
+    file_path = cache_folder + '/' + endpoint
+    if shouldDownload(file_path, expiry_secs):
+        resp = makePadguideTsRequest(time_ms, endpoint)
+        writeJsonFile(file_path, resp)
+    return readJsonFile(file_path)
+
+
+def writePlainFile(file_path, text_data):
+    with open(file_path, "wt", encoding='utf-8') as f:
+        f.write(text_data)
+
+def readPlainFile(file_path):
+    with open(file_path, "r", encoding='utf-8') as f:
+        return f.read()
+
+def makePlainRequest(file_url):
+    response = urllib.request.urlopen(file_url)
+    data = response.read()  # a `bytes` object
+    return data.decode('utf-8')
+
+def makeCachedPlainRequest(file_name, file_url, expiry_secs):
+    file_path = cache_folder + '/' + file_name
+    if shouldDownload(file_path, expiry_secs):
+        resp = makePlainRequest(file_url)
+        writePlainFile(file_path, resp)
+    return readPlainFile(file_path)
