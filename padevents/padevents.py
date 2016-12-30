@@ -21,20 +21,80 @@ import pytz
 
 from __main__ import user_allowed, send_cmd_help
 
+from . import padguide
+from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
-from .utils.padguide import *
 from .utils.twitter_stream import *
 
 
-# from copy import deepcopy
-def normalizeServer(server):
-    server = server.upper()
-    return 'NA' if server == 'US' else server
-
 SUPPORTED_SERVERS = ["NA", "KR", "JP", "fake"]
+
+def dl_events():
+    # two hours expiry
+    expiry_secs = 2 * 60 * 60
+    # pull last two weeks of events
+    time_ms = int(round(time.time() * 1000)) - 14 * 24 * 60 * 60 * 1000
+    resp = makeCachedPadguideRequest(time_ms, "scheduleList.jsp", expiry_secs)
+    events = list()
+    for item in resp["items"]:
+        events.append(padguide.PgEvent(item))
+    return events
+
+def dl_event_type_map():
+    # eight hours expiry
+    expiry_secs = 8 * 60 * 60
+    # pull for all-time
+    time_ms = 0
+    resp = makeCachedPadguideRequest(time_ms, "eventList.jsp", expiry_secs)
+    etype_map = dict()
+    for item in resp["items"]:
+        etype = padguide.PgEventType(item)
+        etype_map[etype.seq] = etype
+    return etype_map
+
+
+def dl_dungeon_map():
+    # eight hours expiry
+    expiry_secs = 8 * 60 * 60
+    # pull for all-time
+    time_ms = 0
+    resp = makeCachedPadguideRequest(time_ms, "dungeonList.jsp", expiry_secs)
+    dungeons_map = dict()
+    for item in resp["items"]:
+        dungeon = padguide.PgDungeon(item)
+        dungeons_map[dungeon.seq] = dungeon
+    return dungeons_map
+
+
+def dl_extras():
+    # three days expiry
+    expiry_secs = 3 * 24 * 60 * 60
+    # pull for all-time
+    time_ms = 0
+    makeCachedPadguideRequest(time_ms, "monsterList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "evolutionList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "skillList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "attributeList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "typeList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "awokenSkillList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "monsterInfoList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "dungeonTypeList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "monsterAddInfoList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "seriesList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "skillLeaderDataList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "skillDataList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "eggCategoryList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "eggCategoryNameList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "eggTitleList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "eggTitleList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "eggTitleNameList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "eggMonsterList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "skillRotationList.jsp", expiry_secs)
+    makeCachedPadguideRequest(time_ms, "skillRotationListList.jsp", expiry_secs)
+
 
 class PadEvents:
     def __init__(self, bot):
@@ -97,7 +157,7 @@ class PadEvents:
                 daily_refresh_servers = set()
                 for e in events:
                     self.started_events.add(e.uid)
-                    if e.event_type in [EventType.EventTypeGuerrilla, EventType.EventTypeGuerrillaNew]:
+                    if e.event_type in [padguide.EventType.EventTypeGuerrilla, padguide.EventType.EventTypeGuerrillaNew]:
                         print("its a guerrilla")
                         for gr in self.settings.listGuerrillaReg():
                             if e.server == gr['server']:
@@ -165,7 +225,7 @@ class PadEvents:
             await self.bot.say("Unsupported server, pick one of NA, KR, JP")
             return
 
-        te = PgEvent(None, ignore_bad=True)
+        te = padguide.PgEvent(None, ignore_bad=True)
         te.server = server
 
         te.dungeon_code = 1
@@ -280,20 +340,20 @@ class PadEvents:
         await self.pageOutput(msg)
 
     def makeActiveText(self, server):
-        server_events = PgEventList(self.events).withServer(server)
+        server_events = padguide.PgEventList(self.events).withServer(server)
         active_events = server_events.activeOnly()
         pending_events = server_events.pendingOnly()
         available_events = server_events.availableOnly()
 
         msg = "Listing all events for " + server
 
-        special_events = active_events.withType(EventType.EventTypeSpecial).itemsByCloseTime()
+        special_events = active_events.withType(padguide.EventType.EventTypeSpecial).itemsByCloseTime()
         if len(special_events) > 0:
             msg += "\n\n" + self.makeActiveOutput('Special Events', special_events)
 
-        all_etc_events = active_events.withType(EventType.EventTypeEtc)
+        all_etc_events = active_events.withType(padguide.EventType.EventTypeEtc)
 
-        etc_events = all_etc_events.withDungeonType(DungeonType.Etc).excludeUnwantedEvents().itemsByCloseTime()
+        etc_events = all_etc_events.withDungeonType(padguide.DungeonType.Etc).excludeUnwantedEvents().itemsByCloseTime()
         if len(etc_events) > 0:
             msg += "\n\n" + self.makeActiveOutput('Etc Events', etc_events)
 
@@ -301,27 +361,27 @@ class PadEvents:
 #         if len(etc_events) > 0:
 #             msg += "\n\n" + self.makeActiveOutput('Technical Events', tech_events)
 
-        active_guerrilla_events = active_events.withType(EventType.EventTypeGuerrilla).items()
+        active_guerrilla_events = active_events.withType(padguide.EventType.EventTypeGuerrilla).items()
         if len(active_guerrilla_events) > 0:
             msg += "\n\n" + self.makeActiveGuerrillaOutput('Active Guerrillas', active_guerrilla_events)
 
-        guerrilla_events = pending_events.withType(EventType.EventTypeGuerrilla).items()
+        guerrilla_events = pending_events.withType(padguide.EventType.EventTypeGuerrilla).items()
         if len(guerrilla_events) > 0:
             msg += "\n\n" + self.makeFullGuerrillaOutput('Guerrilla Events', guerrilla_events)
 
-        week_events = available_events.withType(EventType.EventTypeWeek).items()
+        week_events = available_events.withType(padguide.EventType.EventTypeWeek).items()
         if len(week_events):
             msg += "\n\n" + "Found " + str(len(week_events)) + " unexpected week events!"
 
-        special_week_events = available_events.withType(EventType.EventTypeSpecialWeek).items()
+        special_week_events = available_events.withType(padguide.EventType.EventTypeSpecialWeek).items()
         if len(special_week_events):
             msg += "\n\n" + "Found " + str(len(special_week_events)) + " unexpected special week events!"
 
-        active_guerrilla_new_events = active_events.withType(EventType.EventTypeGuerrillaNew).items()
+        active_guerrilla_new_events = active_events.withType(padguide.EventType.EventTypeGuerrillaNew).items()
         if len(active_guerrilla_new_events) > 0:
             msg += "\n\n" + self.makeActiveGuerrillaOutput('Active New Guerrillas', active_guerrilla_new_events)
 
-        guerrilla_new_events = pending_events.withType(EventType.EventTypeGuerrillaNew).items()
+        guerrilla_new_events = pending_events.withType(padguide.EventType.EventTypeGuerrillaNew).items()
         if len(guerrilla_new_events) > 0:
             msg += "\n\n" + self.makeFullGuerrillaOutput('New Guerrilla Events', guerrilla_new_events, new_guerrilla=True)
 
@@ -414,7 +474,7 @@ class PadEvents:
             await self.bot.say("Unsupported server, pick one of NA, KR, JP")
             return
 
-        events = PgEventList(self.events)
+        events = padguide.PgEventList(self.events)
         events = events.withServer(server)
         events = events.withType(EventType.EventTypeGuerrilla)
 
