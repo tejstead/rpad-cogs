@@ -229,7 +229,7 @@ class PadEvents:
         te.server = server
 
         te.dungeon_code = 1
-        te.event_type = EventType.EventTypeGuerrilla
+        te.event_type = padguide.EventType.EventTypeGuerrilla
         te.event_seq = 0
         self.fake_uid = self.fake_uid - 1
         te.uid = self.fake_uid
@@ -476,7 +476,7 @@ class PadEvents:
 
         events = padguide.PgEventList(self.events)
         events = events.withServer(server)
-        events = events.withType(EventType.EventTypeGuerrilla)
+        events = events.withType(padguide.EventType.EventTypeGuerrilla)
 
         active_events = events.activeOnly().itemsByOpenTime(reverse=True)
         pending_events = events.pendingOnly().itemsByOpenTime(reverse=True)
