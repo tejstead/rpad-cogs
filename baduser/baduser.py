@@ -201,7 +201,7 @@ class BadUser:
             try:
                 dm_msg = ('You were assigned the punishment role "{}" in the server "{}".\n'
                          'The Mods will contact you shortly regarding this.\n'
-                         'Attempting to clear this role yourself will result in punishment.')
+                         'Attempting to clear this role yourself will result in punishment.').format(role_name, member.server.name)
                 await self.bot.send_message(member, box(dm_msg))
                 await self.bot.send_message(channel_obj, 'User successfully notified')
             except Exception as e:
@@ -306,6 +306,7 @@ class BadUserSettings(CogSettings):
     def clearUserStrikes(self, server_id, user_id):
         badusers = self.getBadUsers(server_id)
         badusers.pop(user_id, None)
+        self.save_settings()
 
     def getUserStrikes(self, server_id, user_id):
         badusers = self.getBadUsers(server_id)
