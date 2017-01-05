@@ -99,6 +99,33 @@ class BadUser:
         strikes = self.settings.countUserStrikes(ctx.message.server.id, user.id)
         await self.bot.say(box('User {} has {} strikes'.format(user.name, strikes)))
 
+    @baduser.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def addstrike(self, ctx, user : discord.Member, strike_text : str):
+        timestamp = str(ctx.message.timestamp)[:-7]
+        msg = 'Manually added by {} ({}): {}'.format(ctx.message.author.name, timestamp, strike_text)
+        self.settings.updateBadUser(user.server.id, user.id, msg)
+        strikes = self.settings.countUserStrikes(ctx.message.server.id, user.id)
+        await self.bot.say(box('Done. User {} now has {} strikes'.format(user.name, strikes)))
+
+    @baduser.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def clearstrikes(self, ctx, user : discord.Member):
+        self.settings.clearUserStrikes(ctx.message.server.id, user.id)
+        await self.bot.say(box('Cleared strikes for {}'.format(user.name)))
+
+    @baduser.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def printstrikes(self, ctx, user : discord.Member):
+        strikes = self.settings.getUserStrikes(ctx.message.server.id, user.id)
+        if not strikes:
+            await self.bot.say(box('No strikes for {}'.format(user.name)))
+            return
+
+        for idx, strike in enumerate(strikes):
+            await self.bot.say(inline('Strike {} of {}:'.format(idx + 1, len(strikes))))
+            await self.bot.say(box(strike))
+
     async def mod_message(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
@@ -132,26 +159,28 @@ class BadUser:
                 await self.bot.send_message(channel_obj, msg)
 
     async def check_punishment(self, before, after):
-        if before.roles != after.roles:
-            bad_role_ids = self.settings.getPunishmentRoles(after.server.id)
-            for role in after.roles:
-                if role.id in bad_role_ids:
-                    await self.recordBadUser(after, role.name)
-                    return
+        if before.roles == after.roles:
+            return
 
-            new_roles = set(after.roles).difference(before.roles)
-            removed_roles = set(before.roles).difference(after.roles)
-            positive_role_ids = self.settings.getPositiveRoles(after.server.id)
+        new_roles = set(after.roles).difference(before.roles)
+        removed_roles = set(before.roles).difference(after.roles)
 
-            for role in new_roles:
-                if role.id in positive_role_ids:
-                    await self.recordRoleChange(after, role.name, True)
-                    return
+        bad_role_ids = self.settings.getPunishmentRoles(after.server.id)
+        positive_role_ids = self.settings.getPositiveRoles(after.server.id)
 
-            for role in removed_roles:
-                if role.id in positive_role_ids:
-                    await self.recordRoleChange(after, role.name, False)
-                    return
+        for role in new_roles:
+            if role.id in bad_role_ids:
+                await self.recordBadUser(after, role.name)
+                return
+
+            if role.id in positive_role_ids:
+                await self.recordRoleChange(after, role.name, True)
+                return
+
+        for role in removed_roles:
+            if role.id in positive_role_ids:
+                await self.recordRoleChange(after, role.name, False)
+                return
 
     async def recordBadUser(self, member, role_name):
         latest_messages = self.logs.get(member.id, "")
@@ -264,6 +293,14 @@ class BadUserSettings(CogSettings):
             return 0
         else:
             return len(badusers[user_id])
+
+    def clearUserStrikes(self, server_id, user_id):
+        badusers = self.getBadUsers(server_id)
+        badusers.pop(user_id, None)
+
+    def getUserStrikes(self, server_id, user_id):
+        badusers = self.getBadUsers(server_id)
+        return badusers.get(user_id, [])
 
     def updateChannel(self, server_id, channel_id):
         server = self.getServer(server_id)
