@@ -198,6 +198,15 @@ class BadUser:
             await self.bot.send_message(channel_obj, 'Hey @here please leave a note explaining why this user is punished')
             await self.bot.send_message(channel_obj, 'This user now has {} strikes'.format(strikes))
 
+            try:
+                dm_msg = ('You were assigned the punishment role "{}" in the server "{}".\n'
+                         'The Mods will contact you shortly regarding this.\n'
+                         'Attempting to clear this role yourself will result in punishment.')
+                await self.bot.send_message(member, box(dm_msg))
+                await self.bot.send_message(channel_obj, 'User successfully notified')
+            except Exception as e:
+                await self.bot.send_message(channel_obj, 'Failed to notify the user! I might be blocked\n' + box(str(e)))
+
     async def recordRoleChange(self, member, role_name, is_added):
         msg = 'Detected role {} : Name={} Nick={} ID={} Joined={} Role={}'.format(
            "Added" if is_added else "Removed", member.name, member.nick, member.id, member.joined_at, role_name)
