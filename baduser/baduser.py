@@ -101,7 +101,7 @@ class BadUser:
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addstrike(self, ctx, user : discord.Member, strike_text : str):
+    async def addstrike(self, ctx, user : discord.Member, *, strike_text : str):
         timestamp = str(ctx.message.timestamp)[:-7]
         msg = 'Manually added by {} ({}): {}'.format(ctx.message.author.name, timestamp, strike_text)
         self.settings.updateBadUser(user.server.id, user.id, msg)
