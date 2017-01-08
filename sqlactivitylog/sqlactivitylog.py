@@ -90,10 +90,12 @@ class SqlActivityLogger(object):
           VALUES(:timestamp, :server_id, :channel_id, :user_id, :msg_type, :content, :clean_content)
         '''
         timestamp = 0
+        server_id = message.server.id if message.server else -1
+        channel_id = message.channel.id if message.channel else -1
         values = {
           'timestamp': message.timestamp,
-          'server_id': message.server.id,
-          'channel_id': message.channel.id,
+          'server_id': server_id,
+          'channel_id': channel_id,
           'user_id': message.author.id,
           'msg_type': msg_type,
           'content': message.content,
