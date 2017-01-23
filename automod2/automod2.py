@@ -161,8 +161,33 @@ def matchesPattern(pattern, txt):
     if not len(pattern):
         return False
 
+    try:
+        if pattern[0] == pattern[-1] == ':':
+            print(pattern[1:-1])
+            check_method = globals().get(pattern[1:-1])
+            if check_method:
+                return check_method(txt)
+    except:
+        print('Failed method pattern match:', pattern, txt)
+        return False
+
     p = re.compile(pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL)
     return p.match(txt)
+
+def starts_with_code(txt):
+    txt = txt.replace(' ', '')
+    if len(txt) < 8:
+        return False
+    return pad_checkdigit(txt[0:8])
+
+def pad_checkdigit(n):
+    n = str(n)
+    checkdigit = int(n[7])
+    sum = 7
+    for idx in range(0, 7):
+        sum += int(n[idx])
+    calcdigit = sum % 10
+    return checkdigit == calcdigit
 
 def matchesIncludeExclude(include_pattern, exclude_pattern, txt):
     if matchesPattern(include_pattern, txt):
