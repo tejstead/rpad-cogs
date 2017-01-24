@@ -327,13 +327,16 @@ class TrUtils:
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
     async def supersecretdebug(self, ctx, *, code):
-        await self.superdebug(ctx, code=code)
+        await self._superdebug(ctx, code=code)
         await self.bot.delete_message(ctx.message)
 
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
     async def superdebug(self, ctx, *, code):
         """Evaluates code"""
+        await self._superdebug(ctx, code=code)
+
+    async def _superdebug(self, ctx, *, code):
         def check(m):
             if m.content.strip().lower() == "more":
                 return True
