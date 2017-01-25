@@ -546,6 +546,7 @@ AWAKENING_NAME_MAP_RPAD = {
   'Multi Boost': 'awakening_multiboost',
   'Recover Bind': 'row1bindclear',
   'Extend Time': 'awakening_te',
+  'Enhanced Combo': 'combo_boost',
 
   'Resistance-Bind': 'awakening_bindres',
   'Resistance-Dark': 'awakening_blindres',
