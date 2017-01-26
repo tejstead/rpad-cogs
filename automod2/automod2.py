@@ -175,7 +175,10 @@ def matchesPattern(pattern, txt):
     return p.match(txt)
 
 def starts_with_code(txt):
+    # ignore spaces before or in code
     txt = txt.replace(' ', '')
+    # ignore tilde, some users use them to cross out rooms
+    txt = txt.replace('~', '')
     if len(txt) < 8:
         return False
     return pad_checkdigit(txt[0:8])
