@@ -28,7 +28,6 @@ class PadGlobal:
             await send_cmd_help(context)
 
     @padglobal.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(administrator=True)
     async def add(self, ctx, command : str, *, text):
         """Adds a PAD global command
 
@@ -54,7 +53,6 @@ class PadGlobal:
             await self.bot.say("This command already exists. Use editpad to edit it.")
 
     @padglobal.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(administrator=True)
     async def edit(self, ctx, command : str, *, text):
         """Edits a PAD global command
 
@@ -75,7 +73,6 @@ class PadGlobal:
             await self.bot.say("PAD command doesn't exist. Use addpad [command] [text]")
 
     @padglobal.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(administrator=True)
     async def delete(self, ctx, command : str):
         """Deletes a PAD global command
 
