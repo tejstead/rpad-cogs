@@ -221,6 +221,11 @@ class SqlActivityLogger(object):
         if len(column_data) == 0:
             column_data = ALL_COLUMNS
 
+        results_columns = [d[0] for d in cursor.description]
+        column_data = [r for r in column_data if r[0] in results_columns]
+        for missing_col in [col for col in results_columns if col not in [c[0] for c in column_data]]:
+            column_data.append((missing_col, missing_col))
+
         column_names = [c[0] for c in column_data]
         column_headers = [c[1] for c in column_data]
 
