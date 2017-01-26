@@ -296,6 +296,7 @@ def cleanDungeonNames(name):
     name = name.replace('Enhanced ', 'Enh ')
     name = name.replace('All Att. Req.', 'All Att.')
     name = name.replace('Extreme King Metal Dragon', 'Extreme KMD')
+    name = name.replace('Golden Mound-Tricolor [Fr/Wt/Wd Only]', 'Golden Mound')
     return name
 
 class PgDungeon:
