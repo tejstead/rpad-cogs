@@ -20,13 +20,13 @@ class FancySay:
         self.bot = bot
 
     @commands.group(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_channels=True)
     async def fancysay(self, context):
         """Make the bot say fancy things (via embeds)."""
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
     @fancysay.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_channels=True)
     async def title_description_image_footer(self, ctx, title, description, image, footer):
         """[title] [description] [image_url] [footer_text]
 
