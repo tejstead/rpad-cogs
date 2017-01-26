@@ -21,6 +21,14 @@ PATH = os.path.join(*PATH_LIST)
 JSON = os.path.join(*PATH_LIST, "settings.json")
 DB = os.path.join(*PATH_LIST, "log.db")
 
+ALL_COLUMNS = [
+          ('timestamp', 'Time (PT)'),
+          ('server_id', 'Server'),
+          ('channel_id', 'Channel'),
+          ('user_id', 'User'),
+          ('msg_type', 'Type'),
+          ('clean_content', 'Message'),
+]
 
 CREATE_TABLE = '''
 CREATE TABLE IF NOT EXISTS messages(
@@ -94,16 +102,7 @@ class SqlActivityLogger(object):
     @commands.command(pass_context=True)
     @checks.is_owner()
     async def rawquery(self, ctx, *, query : str):
-        result_text = ""
-        cursor = self.con.execute(query)
-        rows = cursor.fetchall()
-        result_text = "{} rows in result".format(len(rows))
-        for idx, row in enumerate(rows):
-            if idx >= 1000:
-                break
-            result_text += "\n" + str(row)
-        for p in pagify(result_text):
-            await self.bot.say(box(p))
+        await self.queryAndPrint(ctx.message.server, query, {}, {})
 
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -215,9 +214,12 @@ class SqlActivityLogger(object):
 
         await self.queryAndPrint(server, CONTENT_QUERY, values, column_data)
 
-    async def queryAndPrint(self, server, query, values, column_data):
+    async def queryAndPrint(self, server, query, values, column_data, max_rows=MAX_LOGS * 2):
         cursor = self.con.execute(query, values)
         rows = cursor.fetchall()
+
+        if len(column_data) == 0:
+            column_data = ALL_COLUMNS
 
         column_names = [c[0] for c in column_data]
         column_headers = [c[1] for c in column_data]
@@ -227,9 +229,15 @@ class SqlActivityLogger(object):
         tbl.vrules = prettytable.NONE
         tbl.align = 'l'
 
-        for row in rows:
+        for idx, row in enumerate(rows):
+            if idx > max_rows:
+                break;
+
             table_row = list()
             for col in column_names:
+                if col not in row.keys():
+                    table_row.append('')
+                    continue
                 raw_value = row[col]
                 value = str(raw_value)
                 if col == 'timestamp':
@@ -244,6 +252,9 @@ class SqlActivityLogger(object):
                 if col == 'user_id':
                     member = server.get_member(value)
                     value = member.name if member else value
+                if col == 'server_id':
+                    server_obj = self.bot.get_server(value)
+                    value = server_obj.name if server_obj else value
                 if col == 'clean_content':
                     value = value.replace('`', '\`')
                 table_row.append(value)
