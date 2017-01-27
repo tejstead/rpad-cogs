@@ -111,6 +111,7 @@ class PadGlobal:
 
         good_prefixes = [cmd for cmd, cnt in prefixes.items() if cnt > 1]
         prefix_to_suffix = defaultdict(list)
+        prefix_to_other = defaultdict(list)
 
         i = 0
         msg = "Global PAD commands:\n"
@@ -122,6 +123,9 @@ class PadGlobal:
                     suffix = m.group(2)
                     prefix_to_suffix[prefix].append(suffix)
                     continue
+            for good_prefix in good_prefixes:
+                if cmd.startswith(good_prefix):
+                    prefix_to_other[prefix].append(cmd)
 
             msg += " {}{}\n".format(ctx.prefix, cmd)
 
@@ -131,6 +135,11 @@ class PadGlobal:
 
             for suffix in sorted(map(int, prefix_to_suffix[prefix])):
                 msg += " {}{}".format(prefix, suffix)
+
+            if len(prefix_to_other[prefix]):
+                msg += "\n"
+                for cmd in sorted(prefix_to_other[prefix]):
+                    msg += " {}{}".format(ctx.prefix, cmd)
             msg += "\n\n"
 
         for page in pagify(msg):
