@@ -123,9 +123,14 @@ class PadGlobal:
                     suffix = m.group(2)
                     prefix_to_suffix[prefix].append(suffix)
                     continue
+
+            should_skip = False
             for good_prefix in good_prefixes:
                 if cmd.startswith(good_prefix):
                     prefix_to_other[prefix].append(cmd)
+                    should_skip = True
+                    break;
+            if should_skip: continue
 
             msg += " {}{}\n".format(ctx.prefix, cmd)
 
