@@ -22,13 +22,13 @@ class PadGlobal:
         self.c_commands = dataIO.load_json(self.file_path)
         self.settings = PadGlobalSettings("padglobal")
 
-    @commands.group(pass_context=True, no_pm=True)
+    @commands.group(pass_context=True)
     async def padglobal(self, context):
         """PAD global custom commands."""
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
-    @padglobal.command(pass_context=True, no_pm=True)
+    @padglobal.command(pass_context=True)
     async def add(self, ctx, command : str, *, text):
         """Adds a PAD global command
 
@@ -53,7 +53,7 @@ class PadGlobal:
         else:
             await self.bot.say("This command already exists. Use editpad to edit it.")
 
-    @padglobal.command(pass_context=True, no_pm=True)
+    @padglobal.command(pass_context=True)
     async def edit(self, ctx, command : str, *, text):
         """Edits a PAD global command
 
@@ -73,7 +73,7 @@ class PadGlobal:
         else:
             await self.bot.say("PAD command doesn't exist. Use addpad [command] [text]")
 
-    @padglobal.command(pass_context=True, no_pm=True)
+    @padglobal.command(pass_context=True)
     async def delete(self, ctx, command : str):
         """Deletes a PAD global command
 
@@ -129,7 +129,7 @@ class PadGlobal:
         for prefix in sorted(prefix_to_suffix.keys()):
             msg += " {}{}[n]:\n  ".format(ctx.prefix, prefix)
 
-            for suffix in sorted(prefix_to_suffix[prefix]):
+            for suffix in sorted(map(int, prefix_to_suffix[prefix])):
                 msg += " {}{}".format(prefix, suffix)
             msg += "\n\n"
 
