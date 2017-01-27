@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import re
 
@@ -95,21 +96,45 @@ class PadGlobal:
     async def pad(self, ctx):
         """Shows PAD global command list"""
         cmdlist = self.c_commands
-        if cmdlist:
-            i = 0
-            msg = ["```Global PAD commands:\n"]
-            for cmd in sorted([cmd for cmd in cmdlist.keys()]):
-                if len(msg[i]) + len(ctx.prefix) + len(cmd) + 5 > 2000:
-                    msg[i] += "```"
-                    i += 1
-                    msg.append("``` {}{}\n".format(ctx.prefix, cmd))
-                else:
-                    msg[i] += " {}{}\n".format(ctx.prefix, cmd)
-            msg[i] += "```"
-            for cmds in msg:
-                await self.bot.whisper(cmds)
-        else:
+        if not cmdlist:
             await self.bot.say("There are no padglobal commands yet")
+            return
+
+        commands = list(cmdlist.keys())
+        prefixes = defaultdict(int)
+
+        for c in commands:
+            m = re.match(r'^([a-zA-Z]+)\d+$', c)
+            if m:
+                grp = m.group(1)
+                prefixes[grp] = prefixes[grp] + 1
+
+        good_prefixes = [cmd for cmd, cnt in prefixes.items() if cnt > 1]
+        prefix_to_suffix = defaultdict(list)
+
+        i = 0
+        msg = "Global PAD commands:\n"
+        for cmd in sorted([cmd for cmd in cmdlist.keys()]):
+            m = re.match(r'^([a-zA-Z]+)(\d+)$', cmd)
+            if m:
+                prefix = m.group(1)
+                if prefix in good_prefixes:
+                    suffix = m.group(2)
+                    prefix_to_suffix[prefix].append(suffix)
+                    continue
+
+            msg += " {}{}\n".format(ctx.prefix, cmd)
+
+        msg += "\nThe following commands are indexed:\n"
+        for prefix in sorted(prefix_to_suffix.keys()):
+            msg += " {}{}[n]:\n  ".format(ctx.prefix, prefix)
+
+            for suffix in sorted(prefix_to_suffix[prefix]):
+                msg += " {}{}".format(prefix, suffix)
+            msg += "\n\n"
+
+        for page in pagify(msg):
+            await self.bot.whisper(box(page))
 
     @padglobal.command(pass_context=True)
     @checks.is_owner()
