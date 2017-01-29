@@ -158,31 +158,34 @@ class PadEvents:
                 for e in events:
                     self.started_events.add(e.uid)
                     if e.event_type in [padguide.EventType.EventTypeGuerrilla, padguide.EventType.EventTypeGuerrillaNew]:
-                        print("its a guerrilla")
                         for gr in self.settings.listGuerrillaReg():
                             if e.server == gr['server']:
-                                message = "Server " + e.server + ", group " + e.group + " : " + e.nameAndModifier()
-                                chan = gr['channel_id']
                                 try:
-                                    await self.bot.send_message(discord.Object(chan), box(message))
+                                    message = box("Server " + e.server + ", group " + e.group + " : " + e.nameAndModifier())
+                                    channel = self.bot.get_channel(gr['channel_id'])
+
+                                    try:
+                                        role_name = '{}_group_{}'.format(e.server, e.group)
+                                        role = get_role(channel.server.roles, role_name)
+                                        if role and role.mentionable:
+                                            message = "{} `: {} is starting`".format(role.mention, e.nameAndModifier())
+                                    except:
+                                        pass  # do nothing if role is missing
+
+                                    await self.bot.send_message(channel, message)
                                 except Exception as e:
                                     traceback.print_exc()
                                     print("caught exception while sending guerrilla msg " + str(e))
-                                    print('for ' + chan + ' sending ' + message)
+                                    print('for ' + channel.name + ' sending ' + message)
                     else:
                         if not e.isForNormal():
-                            print("it's not a guerrilla or normal")
                             daily_refresh_servers.add(e.server)
 
                 for server in daily_refresh_servers:
-                    print("refreshing daily server " + server)
                     msg = self.makeActiveText(server)
                     for gr in self.settings.listDailyReg():
-                        print("processing daily reg for " + gr['server'] + " -> " + gr['channel_id'])
                         if server == gr['server']:
-                            print("got server!")
                             await self.pageOutput(msg, channel_id=gr['channel_id'])
-#                             await self.pageOutput(msg, channel_id=gr['channel_id'], format_type=inline)
             except Exception as e:
                 traceback.print_exc()
                 print("caught exception while checking guerrillas " + str(e))
