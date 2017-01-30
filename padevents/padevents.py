@@ -173,9 +173,9 @@ class PadEvents:
                                         pass  # do nothing if role is missing
 
                                     await self.bot.send_message(channel, message)
-                                except Exception as e:
+                                except Exception as ex:
                                     traceback.print_exc()
-                                    print("caught exception while sending guerrilla msg " + str(e))
+                                    print("caught exception while sending guerrilla msg " + str(ex))
                                     print('for ' + channel.name + ' sending ' + message)
                     else:
                         if not e.isForNormal():
@@ -186,16 +186,16 @@ class PadEvents:
                     for gr in self.settings.listDailyReg():
                         if server == gr['server']:
                             await self.pageOutput(msg, channel_id=gr['channel_id'])
-            except Exception as e:
+            except Exception as ex:
                 traceback.print_exc()
-                print("caught exception while checking guerrillas " + str(e))
+                print("caught exception while checking guerrillas " + str(ex))
 
             try:
                 await asyncio.sleep(10)
-            except Exception as e:
+            except Exception as ex:
                 traceback.print_exc()
-                print("check event loop caught exception " + str(e))
-                raise e
+                print("check event loop caught exception " + str(ex))
+                raise ex
         print("done check_started")
 
     async def reload_events(self):
