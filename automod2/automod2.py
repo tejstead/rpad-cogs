@@ -163,7 +163,6 @@ def matchesPattern(pattern, txt):
 
     try:
         if pattern[0] == pattern[-1] == ':':
-            print(pattern[1:-1])
             check_method = globals().get(pattern[1:-1])
             if check_method:
                 return check_method(txt)
@@ -270,9 +269,7 @@ class AutoMod2Settings(CogSettings):
 
     def checkPatternUsed(self, ctx, name):
         server = self.getServer(ctx)
-        print(server)
         for channel_id, channel_config in server['channels'].items():
-            print(channel_config)
             if name in channel_config['whitelist']:
                 return True
             if name in channel_config['blacklist']:
