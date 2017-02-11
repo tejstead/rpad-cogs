@@ -66,7 +66,7 @@ class StreamCopy:
                 game = after.game
                 new_game = discord.Game(name=game.name, url=game.url, type=game.type)
                 await self.bot.change_presence(game=new_game)
-            else:
+            elif self.is_playing(before):
                 await self.bot.change_presence(game=None)
         except ex:
             print("Stream checking failed", ex)
