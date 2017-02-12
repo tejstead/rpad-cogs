@@ -2,6 +2,7 @@ from collections import defaultdict
 from collections import deque
 import copy
 import os
+import random
 import re
 from time import time
 
@@ -41,20 +42,13 @@ class StreamCopy:
         self.settings.rmUser(user.id)
         await self.bot.say(inline('Done'))
 
-    @streamcopy.command(name="refresh", pass_context=True, no_pm=True)
-    async def refresh(self, ctx):
-        for user_id in self.settings.users().keys():
-            member = ctx.message.server.get_member(user_id)
-            if member and self.is_playing(member):
-                game = member.game
-                new_game = discord.Game(name=game.name, url=game.url, type=game.type)
-                await self.bot.change_presence(game=new_game)
-                await self.bot.say(inline('Updated stream'))
-                return
-
-        await self.bot.change_presence(game=None)
-        await self.bot.say(inline('Could not find a streamer'))
-
+    @streamcopy.command(name="refresh")
+    async def refresh(self):
+        other_stream = await self.do_refresh()
+        if other_stream:
+            await self.bot.say(inline('Updated stream'))
+        else:
+            await self.bot.say(inline('Could not find a streamer'))
 
     async def check_stream(self, before, after):
         try:
@@ -63,18 +57,35 @@ class StreamCopy:
                 return
 
             if self.is_playing(after):
-                game = after.game
-                new_game = discord.Game(name=game.name, url=game.url, type=game.type)
-                await self.bot.change_presence(game=new_game)
-            elif self.is_playing(before):
-                await self.bot.change_presence(game=None)
+                await self.copy_playing(after.game)
+                return
+
+            await self.do_refresh()
         except ex:
             print("Stream checking failed", ex)
 
+    async def do_refresh(self):
+        other_stream = self.find_stream()
+        if other_stream:
+            await self.copy_playing(other_stream)
+        else:
+            await self.bot.change_presence(game=None)
+        return other_stream
+
+    def find_stream(self):
+        user_ids = self.settings.users().keys()
+        members = {x.id: x for x in self.bot.get_all_members() if x.id in user_ids and self.is_playing(x)}
+        games = [x.game for x in members.values()]
+        random.shuffle(games)
+        return games[0] if len(games) else None
 
     def is_playing(self, member : discord.Member):
-        game = member.game
-        return game and game.type == 1 and game.url
+        return member and member.game and member.game.type == 1 and member.game.url
+
+    async def copy_playing(self, game : discord.Game):
+        new_game = discord.Game(name=game.name, url=game.url, type=game.type)
+        await self.bot.change_presence(game=new_game)
+
 
 
 def setup(bot):
