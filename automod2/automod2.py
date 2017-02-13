@@ -7,9 +7,11 @@ from time import time
 
 import discord
 from discord.ext import commands
+import prettytable
 
 from __main__ import send_cmd_help
 from __main__ import settings
+from .rpadutils import *
 
 from .utils import checks
 from .utils.cog_settings import *
@@ -36,7 +38,47 @@ class AutoMod2:
 
     @commands.group(pass_context=True, no_pm=True)
     async def automod2(self, context):
-        """AutoMod2 tools."""
+        """AutoMod2 tools.
+
+        This cog works by creating named global patterns, and then applying them in
+        specific channels as either whitelist or blacklist rules. This allows you
+        to customize what text can be typed in a channel. Text from moderators is
+        always ignored by this cog.
+
+        Check out [p]listpatterns to see the current server-specific list of patterns.
+
+        Each pattern has an 'include' component and an 'exclude' component. If text
+        matches the include, then the rule matches. If it subsequently matches the
+        exclude, then it does not match.
+
+        Here's an example pattern:
+        Rule Name                              Include regex        Exclude regex
+        -----------------------------------------------------------------------------
+        messages must start with a room code   ^\d{4}\s?\d{4}.*     .*test.*
+
+        This pattern will match values like:
+          12345678 foo fiz
+          1234 5678 bar baz
+
+        However, if the pattern contains 'test', it won't match:
+          12345678 foo fiz test bar baz
+
+        To add the pattern, you'd use the following command:
+        [p]automod2 addpattern "messages must start with a room code" "^\d{4}\s?\d{4}.*" ".*test.*"
+
+        Remember that to bundle multiple words together you need to surround the
+        argument with quotes, as above.
+
+        Once you've added a pattern, you need to enable it in a channel using one
+        of [p]addwhitelist or [p]addblacklist, e.g.:
+          ^automod2 addwhitelist "messages must start with a room code"
+
+        If a channel has any whitelists, then text typed in the channel must match
+        AT LEAST one whitelist, or it will be deleted. If ANY blacklist is matched
+        the text will be deleted.
+
+        You can see what patterns are enabled in a channel using [p]automod2 listrules
+        """
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
@@ -82,30 +124,21 @@ class AutoMod2:
     @checks.mod_or_permissions(manage_server=True)
     async def listRules(self, ctx):
         whitelists, blacklists = self.settings.getRulesForChannel(ctx)
-
         output = 'AutoMod configs for this channel\n\n'
         output += 'Whitelists:\n'
-        for value in whitelists:
-            output += '\t"{}" -> includes=[ {} ] excludes=[ {} ]\n'.format(
-               value['name'], value['include_pattern'], value['exclude_pattern'])
+        output += self.patternsToTableText(whitelists)
+        output += '\n\n\n'
         output += 'Blacklists:\n'
-        for value in blacklists:
-            output += '\t"{}" -> includes=[ {} ] excludes=[ {} ]\n'.format(
-               value['name'], value['include_pattern'], value['exclude_pattern'])
-
-        await self.bot.say(box(output))
+        output += self.patternsToTableText(blacklists)
+        await boxPagifySay(self.bot.say, output)
 
     @automod2.command(name="listpatterns", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def listPatterns(self, ctx):
         patterns = self.settings.getPatterns(ctx)
-
-        output = 'AutoMod patterns for this server\n'
-        for name, value in patterns.items():
-            output += '\t"{}" -> includes=[ {} ] excludes=[ {} ]\n'.format(
-               value['name'], value['include_pattern'], value['exclude_pattern'])
-
-        await self.bot.say(box(output))
+        output = 'AutoMod patterns for this server\n\n'
+        output += self.patternsToTableText(patterns.values())
+        await boxPagifySay(self.bot.say, output)
 
     async def mod_message_edit(self, before, after):
         await self.mod_message(after)
@@ -156,6 +189,16 @@ class AutoMod2:
         except Exception as e:
             print('Failure while deleting message from {}, tried to send : {}'.format(delete_msg.author.name, outgoing_msg))
             print(str(e))
+
+    def patternsToTableText(self, patterns):
+        tbl = prettytable.PrettyTable(["Rule Name", "Include regex", "Exclude regex"])
+        tbl.hrules = prettytable.HEADER
+        tbl.vrules = prettytable.NONE
+        tbl.align = "l"
+
+        for value in patterns:
+            tbl.add_row([value['name'], value['include_pattern'], value['exclude_pattern']])
+        return tbl.get_string()
 
 def matchesPattern(pattern, txt):
     if not len(pattern):

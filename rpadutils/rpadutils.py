@@ -3,6 +3,9 @@ import re
 import discord
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound
+
+from cogs.utils.chat_formatting import *
+
 from .utils.padguide_api import *
 
 
@@ -16,7 +19,8 @@ def setup(bot):
     bot.add_cog(n)
 
 # TZ used for PAD NA
-NA_TZ_OBJ = pytz.timezone('America/Los_Angeles')
+# NA_TZ_OBJ = pytz.timezone('America/Los_Angeles')
+NA_TZ_OBJ = pytz.timezone('US/Pacific')
 
 # TZ used for PAD JP
 JP_TZ_OBJ = pytz.timezone('Asia/Tokyo')
@@ -156,3 +160,7 @@ def makeCachedPlainRequest(file_name, file_url, expiry_secs):
         resp = makePlainRequest(file_url)
         writePlainFile(file_path, resp)
     return readPlainFile(file_path)
+
+async def boxPagifySay(say_fn, msg):
+    for page in pagify(msg, delims=["\n"]):
+        await say_fn(box(page))
