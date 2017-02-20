@@ -132,6 +132,7 @@ class Stickers:
             return
 
         cmdlist = self.c_commands
+        image_url = None
         cmd = message.content[len(prefix):]
         if cmd in cmdlist.keys():
             image_url = cmdlist[cmd]
