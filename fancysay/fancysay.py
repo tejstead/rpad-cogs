@@ -27,6 +27,22 @@ class FancySay:
             await send_cmd_help(context)
 
     @fancysay.command(pass_context=True, no_pm=True)
+    async def emoji(self, ctx, *, text):
+        """Speak the provided text as emojis, deleting the original request"""
+        await self.bot.delete_message(ctx.message)
+        new_msg = ""
+        for char in text:
+            if char.isalpha():
+                new_msg += ':regional_indicator_{}: '.format(char)
+            elif char == ' ':
+                new_msg += '   '
+            elif char.isspace():
+                new_msg += char
+
+        if len(new_msg):
+            await self.bot.say(new_msg)
+
+    @fancysay.command(pass_context=True, no_pm=True)
     async def title_description_image_footer(self, ctx, title, description, image, footer):
         """[title] [description] [image_url] [footer_text]
 
