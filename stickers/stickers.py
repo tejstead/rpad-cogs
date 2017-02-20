@@ -103,6 +103,7 @@ class Stickers:
 
             for suffix in sorted(prefixes_list[prefix]):
                 msg += " {}".format(suffix)
+            msg += "\n\n"
 
         for page in pagify(msg):
             await self.bot.whisper(box(page))
