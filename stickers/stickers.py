@@ -145,8 +145,8 @@ class Stickers:
             sticker_msg = await self.bot.send_message(message.channel, embed=embed)
 
             await self.bot.delete_message(message)
-            await asyncio.sleep(15)
-            await self.bot.delete_message(sticker_msg)
+#             await asyncio.sleep(15)
+#             await self.bot.delete_message(sticker_msg)
 
     def get_prefix(self, message):
         for p in self.bot.settings.get_prefixes(message.server):
