@@ -43,6 +43,10 @@ General:
 ^serverinfo      stats for the current server
 ^userinfo        stats for a specific user
 
+Events:
+^[events|eventsna] Prints pending/active PAD events for NA
+^eventsjp           Prints pending/active PAD events for JP
+
 Monster Info:
 ^id      search for a monster by ID, full name, nickname, etc
 ^idz     text-only version if id (the legacy version, for mobile users)
@@ -69,6 +73,9 @@ Use one of the following commands to retrieve data.
 Time conversion:
 ^time    get the current time in a different timezone
 ^timeto  calculate the how long until another time in another timezone
+
+Translation:
+^[jpen|jpus|jaen|jaus] <text>  translate text from japanese to english
 """
 
 MOD_HELP = """
@@ -187,7 +194,6 @@ class TrUtils:
         self.rainbow_task.cancel()
 
     async def refresh_rainbow(self):
-        print("rainbow refresher")
         while "TrUtils" in self.bot.cogs:
             try:
                 await asyncio.sleep(10)
@@ -298,6 +304,10 @@ class TrUtils:
         baby_miru_author = "BOW @ Pixiv"
         cute_miru_url = "https://www.dropbox.com/s/0wlfx3g4mk8c8bg/Screenshot%202016-12-03%2018.39.37.png?dl=0"
         cute_miru_author = "Pancaaake18 @ the MantasticPAD server on discord"
+        cute_miru_url = "https://www.dropbox.com/s/0wlfx3g4mk8c8bg/Screenshot%202016-12-03%2018.39.37.png?dl=0"
+        cute_miru_author = "Pancaaake18 on discord"
+        bot_miru_url = "https://puu.sh/urTm8/c3bdf993bd.png"
+        bot_miru_author = "graps on discord"
         avatar = (
             "Bot avatars supplied by:\n"
             "\t[Baby Miru]({}): {}\n"
