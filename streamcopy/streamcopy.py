@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 from collections import deque
 import copy
@@ -25,6 +26,17 @@ class StreamCopy:
         self.settings = StreamCopySettings("streamcopy")
         self.current_user_id = None
 
+    async def refresh_stream(self):
+        await self.bot.wait_until_ready()
+        while self == self.bot.get_cog('StreamCopy'):
+            try:
+                await self.do_refresh()
+            except Exception as e:
+                traceback.print_exc()
+
+            await asyncio.sleep(60 * 3)
+        print("done refresh_stream")
+
     @commands.group(pass_context=True)
     @checks.is_owner()
     async def streamcopy(self, context):
@@ -41,6 +53,17 @@ class StreamCopy:
     async def rmUser(self, ctx, user : discord.User):
         self.settings.rmUser(user.id)
         await self.bot.say(inline('Done'))
+
+    @streamcopy.command(name="list", pass_context=True)
+    async def list(self, ctx):
+        user_ids = self.settings.users().keys()
+        members = {x.id: x for x in self.bot.get_all_members() if x.id in user_ids}
+
+        output = "Users:"
+        for m_id, m in members.items():
+            output += "\n{} ({})".format(m.name, 'online' if self.is_playing(m) else 'offline')
+
+        await self.bot.say(box(output))
 
     @streamcopy.command(name="refresh")
     async def refresh(self):
@@ -89,12 +112,10 @@ class StreamCopy:
 
 
 def setup(bot):
-    print('streamcopy bot setup')
     n = StreamCopy(bot)
     bot.add_listener(n.check_stream, "on_member_update")
+    bot.loop.create_task(n.refresh_stream())
     bot.add_cog(n)
-    print('done adding streamcopy bot')
-
 
 class StreamCopySettings(CogSettings):
     def make_default_settings(self):
