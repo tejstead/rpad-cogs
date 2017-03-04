@@ -140,6 +140,12 @@ def makeCachedPadguideRequest(time_ms, endpoint, expiry_secs):
         writeJsonFile(file_path, resp)
     return readJsonFile(file_path)
 
+def rmCachedPadguideRequest(endpoint):
+    file_path = cache_folder + '/' + endpoint
+    try:
+        os.remove(file_path)
+    except:
+        pass
 
 def writePlainFile(file_path, text_data):
     with open(file_path, "wt", encoding='utf-8') as f:

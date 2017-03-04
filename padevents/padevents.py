@@ -68,32 +68,39 @@ def dl_dungeon_map():
         dungeons_map[dungeon.seq] = dungeon
     return dungeons_map
 
+EXTRA_FILES = [
+    "monsterList.jsp",
+    "evolutionList.jsp",
+    "skillList.jsp",
+    "attributeList.jsp",
+    "typeList.jsp",
+    "awokenSkillList.jsp",
+    "monsterInfoList.jsp",
+    "dungeonTypeList.jsp",
+    "monsterAddInfoList.jsp",
+    "seriesList.jsp",
+    "skillLeaderDataList.jsp",
+    "skillDataList.jsp",
+    "eggCategoryList.jsp",
+    "eggCategoryNameList.jsp",
+    "eggTitleList.jsp",
+    "eggTitleNameList.jsp",
+    "eggMonsterList.jsp",
+    "skillRotationList.jsp",
+    "skillRotationListList.jsp",
+]
+
+def clear_extras():
+    for ef in EXTRA_FILES:
+        rmCachedPadguideRequest(ef)
 
 def dl_extras():
     # three days expiry
     expiry_secs = 3 * 24 * 60 * 60
     # pull for all-time
     time_ms = 0
-    makeCachedPadguideRequest(time_ms, "monsterList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "evolutionList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "skillList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "attributeList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "typeList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "awokenSkillList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "monsterInfoList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "dungeonTypeList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "monsterAddInfoList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "seriesList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "skillLeaderDataList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "skillDataList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "eggCategoryList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "eggCategoryNameList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "eggTitleList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "eggTitleList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "eggTitleNameList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "eggMonsterList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "skillRotationList.jsp", expiry_secs)
-    makeCachedPadguideRequest(time_ms, "skillRotationListList.jsp", expiry_secs)
+    for ef in EXTRA_FILES:
+        makeCachedPadguideRequest(time_ms, ef, expiry_secs)
 
 
 class PadEvents:
@@ -245,6 +252,14 @@ class PadEvents:
         self.events.append(te)
 
         await self.bot.say("Fake event injected.")
+
+    @padevents.command(pass_context=True)
+    @checks.is_owner()
+    async def clearcache(self, ctx):
+        clear_extras()
+        await self.bot.say("Cached files cleared. Downloads started.")
+        dl_extras()
+        await self.bot.say("Done.")
 
     @padevents.command(name="addchannel", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
