@@ -484,9 +484,19 @@ class PadEvents:
         header = "Times are PT below\n\n"
         return header + tbl.get_string() + "\n"
 
-    @padevents.command(name="partial", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
+    @padevents.command(name="partial", pass_context=True)
     async def _partial(self, ctx, server):
+        await self.doPartial(ctx, server)
+
+    @commands.command(pass_context=True, aliases=['events'])
+    async def eventsna(self, ctx):
+        await self.doPartial(ctx, 'NA')
+
+    @commands.command(pass_context=True)
+    async def eventsjp(self, ctx):
+        await self.doPartial(ctx, 'JP')
+
+    async def doPartial(self, ctx, server):
         server = normalizeServer(server)
         if server not in SUPPORTED_SERVERS:
             await self.bot.say("Unsupported server, pick one of NA, KR, JP")
@@ -510,23 +520,20 @@ class PadEvents:
 
         if len(active_events) == 0 and len(pending_events) == 0:
             await self.bot.say("No events available for " + server)
+            return
 
-        active_text = ""
+
+        output = "Events for {}".format(server)
+
         if len(active_events) > 0:
-            partial_event_header = "G Remaining Dungeon"
-            active_text = partial_event_header + "\n"
+            output += "\n\n" + "G Remaining Dungeon"
             for e in active_events:
-                active_text += e.toPartialEvent(self) + "\n"
+                output += "\n" + e.toPartialEvent(self)
 
-        pending_text = ""
         if len(pending_events) > 0:
-            partial_event_header = "G PT    ET    ETA     Dungeon"
-            pending_text = partial_event_header + "\n"
+            output += "\n\n" + "G PT    ET    ETA     Dungeon"
             for e in pending_events:
-                pending_text += e.toPartialEvent(self) + "\n"
-
-        output = active_text + "\n" + pending_text
-        output = output.strip()
+                output += "\n" + e.toPartialEvent(self)
 
         await self.bot.say(box(output))
 
