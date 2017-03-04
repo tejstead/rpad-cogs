@@ -312,8 +312,9 @@ class TrUtils:
             "Bot avatars supplied by:\n"
             "\t[Baby Miru]({}): {}\n"
             "\t[Cute Miru]({}): {}"
+            "\t[Bot Miru]({}): {}"
             "".format(baby_miru_url, baby_miru_author,
-                      cute_miru_url, cute_miru_author))
+                      bot_miru_url, bot_miru_author))
 
         using = (
              "You can use `^help` to get a full list of commands.\n"
