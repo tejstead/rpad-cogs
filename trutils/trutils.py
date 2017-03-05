@@ -94,6 +94,15 @@ write it.
 
 ~~~~~~~~~~~~~~~~~~~~~~
 
+If you would like to add the awakening emojis to your server, upload the icons
+in the link (don't change their names) and Miru will automatically begin
+using them:
+https://drive.google.com/drive/folders/0B4BJOUE5gL0USS12a1BnS1pPMkE?usp=sharing
+
+Contact me if you need help evading the 50 emoji limit.
+
+~~~~~~~~~~~~~~~~~~~~~~
+
 Check out the ^help command from inside your server. You'll see a wider list of
 commands than normal users do.
 
@@ -315,7 +324,7 @@ class TrUtils:
             "\t[Bot Miru]({}): {}"
             "".format(baby_miru_url, baby_miru_author,
                       cute_miru_url, cute_miru_author,
-                      bot_miru_url, bot_miru_author))     
+                      bot_miru_url, bot_miru_author))
 
         using = (
              "You can use `^help` to get a full list of commands.\n"
