@@ -214,18 +214,18 @@ class PadInfo:
         if len(query) < 4:
             return None, 'Your query must be at least 4 letters', None
 
-        matches = list()
+        matches = set()
         # prefix search for nicknames, space-preceeded, take max id
         for nickname, m in self.pginfo.all_entries.items():
             if nickname.startswith(query + ' '):
-                matches.append(m)
+                matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, "Space nickname prefix, max of {}".format(len(matches))
 
         # prefix search for nicknames, take max id
         for nickname, m in self.pginfo.all_entries.items():
             if nickname.startswith(query):
-                matches.append(m)
+                matches.add(m)
         if len(matches):
             all_names = ",".join(map(lambda x: x.name_na, matches))
             return pickBestMonster(matches), None, "Nickname prefix, max of {}, matches=({})".format(len(matches), all_names)
@@ -233,7 +233,7 @@ class PadInfo:
         # prefix search for full name, take max id
         for nickname, m in self.pginfo.all_entries.items():
             if m.name_na.lower().startswith(query) or m.name_jp.lower().startswith(query):
-                matches.append(m)
+                matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, "Full name, max of {}".format(len(matches))
 
@@ -247,7 +247,7 @@ class PadInfo:
         # full name contains on nickname, take max id
         for nickname, m in self.pginfo.all_entries.items():
             if query in m.name_na.lower() or query in m.name_jp.lower():
-                matches.append(m)
+                matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(len(matches))
 
@@ -255,7 +255,7 @@ class PadInfo:
 
         for m in self.pginfo.full_monster_list:
             if query in m.name_na.lower() or query in m.name_jp.lower():
-                matches.append(m)
+                matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(len(matches))
 
@@ -522,56 +522,57 @@ series_to_prefix_map = {
 }
 
 AWAKENING_NAME_MAP_RPAD = {
-  'Enhanced Fire Orbs': 'oe6fire',
-  'Enhanced Water Orbs': 'oe5water',
-  'Enhanced Wood Orbs': 'oe4wood',
-  'Enhanced Light Orbs': 'oe3light',
-  'Enhanced Dark Orbs': 'oe2dark',
-  'Enhanced Heal Orbs': 'oe1heart',
-
-  'Enhanced Fire Att.': 'row6fire',
-  'Enhanced Water Att.': 'row5water',
-  'Enhanced Wood Att.': 'row4wood',
-  'Enhanced Light Att.': 'row3light',
-  'Enhanced Dark Att.': 'row2dark',
-
-  'Enhanced HP': 'boost_hp',
   'Enhanced Attack': 'boost_atk',
+  'Enhanced HP': 'boost_hp',
   'Enhanced Heal': 'boost_rcv',
 
-  'Auto-Recover': 'awakening_autoheal',
-  'Skill Boost': 'awakening_sb',
-  'Resistance-Skill Bind': 'awakening_sbr',
-  'Two-Pronged Attack': 'awakening_tpa',
-  'Multi Boost': 'awakening_multiboost',
-  'Recover Bind': 'row1bindclear',
-  'Extend Time': 'awakening_te',
-  'Enhanced Combo': 'combo_boost',
+  'God Killer': 'killer_01_god',
+  'Dragon Killer': 'killer_02_dragon',
+  'Devil Killer': 'killer_03_devil',
+  'Machine Killer': 'killer_04_machine',
+  'Balance Killer': 'killer_05_balance',
+  'Attacker Killer': 'killer_06_attacker',
 
-  'Resistance-Bind': 'awakening_bindres',
-  'Resistance-Dark': 'awakening_blindres',
-  'Resistance-Poison': 'awakening_poisonres',
-  'Resistance-Jammers': 'awakening_jammerres',
+  'Physical Killer': 'killer_07_physical',
+  'Healer Killer': 'killer_08_healer',
+  'Evolve Material Killer': 'killer_09_evomat',
+  'Awoken Killer': 'killer_10_awoken',
+  'Enhance Killer': 'killer_11_enhancemat',
+  'Vendor Killer': 'killer_12_vendor',
 
-  'Reduce Fire Damage': 'reduce_fire',
-  'Reduce Water Damage': 'reduce_water',
-  'Reduce Wood Damage': 'reduce_wood',
-  'Reduce Light Damage': 'reduce_light',
-  'Reduce Dark Damage': 'reduce_dark',
+  'Auto-Recover': 'misc_autoheal',
+  'Recover Bind': 'misc_bindclear',
+  'Enhanced Combo': 'misc_combo_boost',
+  'Guard Break' : 'misc_guard_break',
+  'Multi Boost': 'misc_multiboost',
+  'Skill Boost': 'misc_sb',
+  'Extend Time': 'misc_te',
+  'Two-Pronged Attack': 'misc_tpa',
 
-  'Healer Killer': 'killerhealer',
-  'Machine Killer': 'killermachine',
-  'Dragon Killer': 'killerdragon',
-  'Attacker Killer': 'killerattacker',
-  'Physical Killer': 'killerphysical',
-  'God Killer': 'killergod',
-  'Devil Killer': 'killerdevil',
-  'Balance Killer': 'killerbalance',
+  'Enhanced Fire Orbs': 'oe_1_fire',
+  'Enhanced Water Orbs': 'oe_2_water',
+  'Enhanced Wood Orbs': 'oe_3_wood',
+  'Enhanced Light Orbs': 'oe_4_light',
+  'Enhanced Dark Orbs': 'oe_5_dark',
+  'Enhanced Heal Orbs': 'oe_6_heart',
 
-  'Awoken Killer': 'killerawoken',
-  'Evolve Material Killer': 'killerevomat',
-  'Enhance Killer': 'killerenhancemat',
-  'Vendor Killer': 'killervendor',
+  'Reduce Fire Damage': 'reduce_1_fire',
+  'Reduce Water Damage': 'reduce_2_water',
+  'Reduce Wood Damage': 'reduce_3_wood',
+  'Reduce Light Damage': 'reduce_4_light',
+  'Reduce Dark Damage': 'reduce_5_dark',
+
+  'Resistance-Bind': 'res_bind',
+  'Resistance-Dark': 'res_blind',
+  'Resistance-Jammers': 'res_jammer',
+  'Resistance-Poison': 'res_poison',
+  'Resistance-Skill Bind': 'res_skillbind',
+
+  'Enhanced Fire Att.': 'row_1_fire',
+  'Enhanced Water Att.': 'row_2_water',
+  'Enhanced Wood Att.': 'row_3_wood',
+  'Enhanced Light Att.': 'row_4_light',
+  'Enhanced Dark Att.': 'row_5_dark',
 }
 
 AWAKENING_NAME_MAP = {
@@ -599,9 +600,11 @@ AWAKENING_NAME_MAP = {
   'Multi Boost': 'MULTI-BOOST',
   'Recover Bind': 'RCV-BIND',
   'Extend Time': 'TE',
+  'Enhanced Combo': 'COMBO-BOOST',
+  'Guard Break' : 'DEF-BREAK',
 
   'Resistance-Bind': 'RES-BIND',
-  'Resistance-Dark': 'RES-DARK',
+  'Resistance-Dark': 'RES-BLIND',
   'Resistance-Poison': 'RES-POISON',
   'Resistance-Jammers': 'RES-JAMMER',
 
