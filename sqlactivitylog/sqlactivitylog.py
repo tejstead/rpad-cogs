@@ -84,6 +84,17 @@ LIMIT :row_count
 '''
 
 
+WHOSAYS_QUERY = '''
+SELECT user_id, count(*)
+FROM messages
+WHERE server_id = :server_id
+  AND lower(clean_content) LIKE lower(:content_query)
+  AND user_id <> :bot_id
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT :row_count
+'''
+
 class SqlActivityLogger(object):
     """Log activity seen by bot"""
 
@@ -213,6 +224,30 @@ class SqlActivityLogger(object):
         ]
 
         await self.queryAndPrint(server, CONTENT_QUERY, values, column_data)
+
+    @exlog.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def whosays(self, ctx, query, count=10):
+        """exlog whosays "%:thinking:%" 10
+
+        Case-insensitive search of messages from every user/channel, grouped by user.
+        Put the query in quotes if it is more than one word.
+        Count is optional, with a low default and a maximum value.
+        The bot is excluded from results.
+        """
+        count = min(count, MAX_LOGS)
+        server = ctx.message.server
+        values = {
+          'server_id': server.id,
+          'bot_id': self.bot.user.id,
+          'row_count': count,
+          'content_query': query,
+        }
+        column_data = [
+          ('user_id', 'User'),
+        ]
+
+        await self.queryAndPrint(server, WHOSAYS_QUERY, values, column_data)
 
     async def queryAndPrint(self, server, query, values, column_data, max_rows=MAX_LOGS * 2):
         cursor = self.con.execute(query, values)
