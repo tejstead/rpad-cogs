@@ -99,11 +99,11 @@ class PadBoard:
 
     @commands.command(pass_context=True)
     async def dawnglare(self, ctx):
-        """Prints a dawnglare link"""
+        """Scans your recent messages for images. Attempts to convert the image into a dawnglare link."""
         image_url = self.find_image(ctx.message.author.id)
 
         if not image_url:
-            await self.bot.say(inline("couldn't find an image"))
+            await self.bot.say(inline("Couldn't find an image in your recent messages. Upload or link to one and try again"))
             return
 
         image_data = await self.download_image(image_url)
