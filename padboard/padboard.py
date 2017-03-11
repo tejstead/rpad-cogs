@@ -112,8 +112,12 @@ class PadBoard:
             return
 
         result = self.classify_to_string(image_data)
-        result = result.replace('m', 'p')
-        result = result.replace('u', 'j')
+        if 'm' in result:
+            await self.bot.say(inline('Warning: had to replace mortals with jammers.'))
+            result = result.replace('m', 'p')
+        if 'u' in result:
+            await self.bot.say(inline('Warning: had to replace unknowns with jammers.'))
+            result = result.replace('u', 'j')
         dawnglare_url = "http://pad.dawnglare.com/?patt=" + result
         await self.bot.say(dawnglare_url)
 
