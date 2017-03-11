@@ -114,7 +114,7 @@ class PadBoard:
         result = self.classify_to_string(image_data)
         if 'm' in result:
             await self.bot.say(inline('Warning: had to replace mortals with jammers.'))
-            result = result.replace('m', 'p')
+            result = result.replace('m', 'j')
         if 'u' in result:
             await self.bot.say(inline('Warning: had to replace unknowns with jammers.'))
             result = result.replace('u', 'j')
