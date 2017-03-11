@@ -149,7 +149,6 @@ class PadBoard:
             Unknown.symbol: 0.0
         }
 
-        await self.bot.say(box(board))
         solver = TrPrunedBfs(weights, 300)
         (score, moves, solved_board) = solver.solve(board, 30)
 
@@ -229,7 +228,7 @@ def setup(bot):
     bot.add_listener(n.log_message, "on_message")
     bot.add_cog(n)
 
-# Hacky solver derived from Pruned BFS solver in https://github.com/ethanlu/pazudora-solver 
+# Hacky solver derived from Pruned BFS solver in https://github.com/ethanlu/pazudora-solver
 
 class TrHeuristic(metaclass=ABCMeta):
     def __init__(self, weights):
@@ -306,7 +305,6 @@ class TrPrunedBfs(TrHeuristic):
 
     def _prune(self, solutions):
         sorted_solutions = sorted(solutions, key=lambda x: (x[0], len(x[1])), reverse=True)
-        print(len(sorted_solutions), self._prune_limit)
         return sorted_solutions[0:self._prune_limit]
 
     def _step(self, solutions, depth):
