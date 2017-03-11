@@ -98,12 +98,16 @@ class PadBoard:
         return None
 
     @commands.command(pass_context=True)
-    async def dawnglare(self, ctx):
+    async def dawnglare(self, ctx, user: discord.Member=None):
         """Scans your recent messages for images. Attempts to convert the image into a dawnglare link."""
-        image_url = self.find_image(ctx.message.author.id)
+        user_id = user.id if user else ctx.message.author.id
+        image_url = self.find_image(user_id)
 
         if not image_url:
-            await self.bot.say(inline("Couldn't find an image in your recent messages. Upload or link to one and try again"))
+            if user:
+                await self.bot.say(inline("Couldn't find an image in that user's recent messages."))
+            else:
+                await self.bot.say(inline("Couldn't find an image in your recent messages. Upload or link to one and try again"))
             return
 
         image_data = await self.download_image(image_url)
@@ -113,8 +117,16 @@ class PadBoard:
 
         result = self.classify_to_string(image_data)
         if 'm' in result:
-            await self.bot.say(inline('Warning: had to replace mortals with jammers.'))
-            result = result.replace('m', 'j')
+            if 'j' and 'p' in result:
+                await self.bot.say(inline('Warning: mortals not supported by dawnglare, replaced with jammer even though jammer also present'))
+                result = result.replace('m', 'j')
+            elif 'j' in result:
+                await self.bot.say(inline('Warning: mortals not supported by dawnglare, replaced with poison'))
+                result = result.replace('m', 'p')
+            else:
+                await self.bot.say(inline('Warning: mortals not supported by dawnglare, replaced with jammer'))
+                result = result.replace('m', 'j')
+
         if 'u' in result:
             await self.bot.say(inline('Warning: had to replace unknowns with jammers.'))
             result = result.replace('u', 'j')
