@@ -112,8 +112,8 @@ class PadInfo:
     def download_and_refresh_nicknames(self):
         """Downloads the nickname list from drive, recreates the na_only and combined monster list"""
         self.nickname_text = dl_nicknames()
-        self.pginfo_all = PgDataWrapper()
-        self.pginfo_na = PgDataWrapper(na_only=True)
+        self.pginfo_all = PgDataWrapper(self.settings.groupOverride())
+        self.pginfo_na = PgDataWrapper(self.settings.groupOverride(), na_only=True)
 
         self.pginfo_all.populateWithOverrides(self.nickname_text)
         self.pginfo_na.populateWithOverrides(self.nickname_text)
@@ -198,6 +198,41 @@ class PadInfo:
         helpMsg += "\n\n" + "computed nickname list and overrides: https://docs.google.com/spreadsheets/d/1EyzMjvf8ZCQ4K-gJYnNkiZlCEsT9YYI9dUd-T5qCirc/pubhtml"
         helpMsg += "\n\n" + "submit an override suggestion: https://docs.google.com/forms/d/1kJH9Q0S8iqqULwrRqB9dSxMOMebZj6uZjECqi4t9_z0/edit"
         await self.bot.whisper(box(helpMsg))
+
+
+    @commands.group(pass_context=True)
+    async def padinfo(self, ctx):
+        """PAD info management"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+
+    @padinfo.command(pass_context=True)
+    @checks.is_owner()
+    async def addgroupoverride(self, ctx, monster_id : int, nickname : str):
+        m = self.id_to_monster[monster_id]
+        self.settings.addGroupOverride(monster_id, nickname)
+        output = 'mapped tree for No. {} {} to {}'.format(m.monster_id_na, m.name_na, nickname)
+        await self.bot.say(inline(output))
+
+    @padinfo.command(pass_context=True)
+    @checks.is_owner()
+    async def rmgroupoverride(self, ctx, monster_id : int):
+        monster_id = str(monster_id)
+        if self.settings.checkGroupOverride(monster_id):
+            self.settings.removeGroupOverride(monster_id)
+            await self.bot.say(inline('Done'))
+        else:
+            await self.bot.say(inline('Not an override'))
+
+    @padinfo.command(pass_context=True)
+    @checks.is_owner()
+    async def listgroupoverride(self, ctx):
+        output = 'Monster Overrides:\n'
+        for id, override in self.settings.groupOverride().items():
+            m = self.id_to_monster[int(id)]
+            output += '\t {} -> No. {} {}\n'.format(override, m.monster_id_na, m.name_na)
+        await self.bot.say(box(output))
+
 
     def makeFailureMsg(self, err):
         msg = 'Lookup failed: ' + err + '.\n'
@@ -289,6 +324,23 @@ class PadInfoSettings(CogSettings):
     def make_default_settings(self):
         config = {}
         return config
+
+    def groupOverride(self):
+        if 'group_override' not in self.bot_settings:
+            self.bot_settings['group_override'] = {}
+        return self.bot_settings['group_override']
+
+    def addGroupOverride(self, monster_id, nickname):
+        self.groupOverride()[monster_id] = nickname
+        self.save_settings()
+
+    def checkGroupOverride(self, monster_id):
+        return monster_id in self.groupOverride().keys()
+
+    def removeGroupOverride(self, monster_id):
+        if self.checkGroupOverride(monster_id):
+            self.groupOverride().pop(monster_id)
+            self.save_settings()
 
 
 
@@ -709,11 +761,17 @@ class MonsterGroup:
             m.original_nickname = m.nickname
             m.nickname = self.nickname
             m.debug_info += ' | Original NN ({}) | Final NN ({})'.format(m.original_nickname, m.nickname)
-        # might need something here to deal with all uniques, pick the highest
+
+    def overrideNickname(self, nickname):
+        print(nickname, len(self.monsters))
+        for m in self.monsters:
+            m.original_nickname = m.nickname
+            m.nickname = nickname
+            m.debug_info += ' | Original NN ({}) | Override NN ({})'.format(m.original_nickname, m.nickname)
 
 
 class PgDataWrapper:
-    def __init__(self, na_only=False):
+    def __init__(self, group_overrides, na_only=False):
         attribute_list = padguide.loadJsonToItem('attributeList.jsp', padguide.PgAttribute)
         awoken_list = padguide.loadJsonToItem('awokenSkillList.jsp', padguide.PgAwakening)
         evolution_list = padguide.loadJsonToItem('evolutionList.jsp', padguide.PgEvo)
@@ -796,7 +854,11 @@ class PgDataWrapper:
             self.buildMonsterGroup(full_monster, mg)
 
             # Tag the group with the best nickname
-            mg.computeNickname()
+            str_id = str(full_monster.monster_id_na)
+            if str_id in group_overrides:
+                mg.overrideNickname(group_overrides[str_id])
+            else:
+                mg.computeNickname()
 
             # Push the group size into each monster
             for m in mg.monsters:
