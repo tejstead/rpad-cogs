@@ -48,13 +48,13 @@ class PadRem:
         self.pgrem = PgRemWrapper()
 
         if EXPOSED_PAD_INFO is not None:
-            self.pgrem.populateWithMonsters(EXPOSED_PAD_INFO.pginfo.full_monster_map, self.settings.getBoosts())
+            self.pgrem.populateWithMonsters(EXPOSED_PAD_INFO.pginfo_all.full_monster_map, self.settings.getBoosts())
 
 
     async def on_ready(self):
         """ready"""
         print("started padrem")
-        self.pgrem.populateWithMonsters(EXPOSED_PAD_INFO.pginfo.full_monster_map, self.settings.getBoosts())
+        self.pgrem.populateWithMonsters(EXPOSED_PAD_INFO.pginfo_all.full_monster_map, self.settings.getBoosts())
 
     @commands.command(name="setboost", pass_context=True)
     @checks.mod_or_permissions(manage_server=True)

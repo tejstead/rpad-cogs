@@ -60,11 +60,12 @@ class PadInfo:
 
         self.settings = PadInfoSettings("padinfo")
 
-        self.nickname_text = dl_nicknames()
-        self.pginfo = PgDataWrapper()
-        self.pginfo.populateWithOverrides(self.nickname_text)
+        self.nickname_text = None
+        self.pginfo_all = None
+        self.pginfo_na = None
+        self.id_to_monster = None
 
-        self.id_to_monster = self.pginfo.id_to_monster
+        self.download_and_refresh_nicknames()
 
         global EXPOSED_PAD_INFO
         EXPOSED_PAD_INFO = self
@@ -109,14 +110,15 @@ class PadInfo:
         print("done reload_nicknames")
 
     def download_and_refresh_nicknames(self):
+        """Downloads the nickname list from drive, recreates the na_only and combined monster list"""
         self.nickname_text = dl_nicknames()
-        self.pginfo = PgDataWrapper()
-        self.pginfo.populateWithOverrides(self.nickname_text)
+        self.pginfo_all = PgDataWrapper()
+        self.pginfo_na = PgDataWrapper(na_only=True)
 
-#         self.pgrem = PgRemWrapper()
-#         self.pgrem.populateWithMonsters(self.pginfo.full_monster_map)
+        self.pginfo_all.populateWithOverrides(self.nickname_text)
+        self.pginfo_na.populateWithOverrides(self.nickname_text)
 
-        self.id_to_monster = self.pginfo.id_to_monster
+        self.id_to_monster = self.pginfo_all.id_to_monster
 
     async def on_ready(self):
         """ready"""
@@ -214,61 +216,56 @@ class PadInfo:
                 return m, None, "ID lookup"
             # special handling for na/jp
 
-        region_check = lambda m : not na_only or m.on_us
+        pginfo = self.pginfo_na if na_only else self.pginfo_all
 
         # handle exact nickname match
-        if query in self.pginfo.all_entries :
-            m = self.pginfo.all_entries[query]
-            # This is kind of a shit move. I'd prefer to take the nickname that is NA here
-            # but I'm kind of SOL because of how this dict works. The fallbacks should pick
-            # it up though I hope.
-            if region_check(m):
-                return self.pginfo.all_entries[query], None, "Exact nickname"
+        if query in pginfo.all_entries:
+            return pginfo.all_entries[query], None, "Exact nickname"
 
         if len(query) < 4:
             return None, 'Your query must be at least 4 letters', None
 
         matches = set()
         # prefix search for nicknames, space-preceeded, take max id
-        for nickname, m in self.pginfo.all_entries.items():
-            if nickname.startswith(query + ' ') and region_check(m):
+        for nickname, m in pginfo.all_entries.items():
+            if nickname.startswith(query + ' '):
                 matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, "Space nickname prefix, max of {}".format(len(matches))
 
         # prefix search for nicknames, take max id
-        for nickname, m in self.pginfo.all_entries.items():
-            if nickname.startswith(query) and region_check(m):
+        for nickname, m in pginfo.all_entries.items():
+            if nickname.startswith(query):
                 matches.add(m)
         if len(matches):
             all_names = ",".join(map(lambda x: x.name_na, matches))
             return pickBestMonster(matches), None, "Nickname prefix, max of {}, matches=({})".format(len(matches), all_names)
 
         # prefix search for full name, take max id
-        for nickname, m in self.pginfo.all_entries.items():
-            if (m.name_na.lower().startswith(query) or m.name_jp.lower().startswith(query)) and region_check(m):
+        for nickname, m in pginfo.all_entries.items():
+            if (m.name_na.lower().startswith(query) or m.name_jp.lower().startswith(query)):
                 matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, "Full name, max of {}".format(len(matches))
 
 
         # for nicknames with 2 names, prefix search 2nd word, take max id
-        if query in self.pginfo.two_word_entries and region_check(m):
-            return self.pginfo.two_word_entries[query], None, "Second-word nickname prefix, max of {}".format(len(matches))
+        if query in pginfo.two_word_entries:
+            return pginfo.two_word_entries[query], None, "Second-word nickname prefix, max of {}".format(len(matches))
 
         # TODO: refactor 2nd search characteristcs for 2nd word
 
         # full name contains on nickname, take max id
-        for nickname, m in self.pginfo.all_entries.items():
-            if (query in m.name_na.lower() or query in m.name_jp.lower()) and region_check(m):
+        for nickname, m in pginfo.all_entries.items():
+            if (query in m.name_na.lower() or query in m.name_jp.lower()):
                 matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(len(matches))
 
         # full name contains on full monster list, take max id
 
-        for m in self.pginfo.full_monster_list:
-            if (query in m.name_na.lower() or query in m.name_jp.lower()) and region_check(m):
+        for m in pginfo.full_monster_list:
+            if (query in m.name_na.lower() or query in m.name_jp.lower()):
                 matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(len(matches))
@@ -716,7 +713,7 @@ class MonsterGroup:
 
 
 class PgDataWrapper:
-    def __init__(self):
+    def __init__(self, na_only=False):
         attribute_list = padguide.loadJsonToItem('attributeList.jsp', padguide.PgAttribute)
         awoken_list = padguide.loadJsonToItem('awokenSkillList.jsp', padguide.PgAwakening)
         evolution_list = padguide.loadJsonToItem('evolutionList.jsp', padguide.PgEvo)
@@ -765,6 +762,9 @@ class PgDataWrapper:
                 type_map,
                 attribute_map)
 
+            if na_only and not full_monster.on_na:
+                continue
+
             addNickname(full_monster)
             addPrefixes(full_monster)
 
@@ -775,7 +775,9 @@ class PgDataWrapper:
         # For each monster, populate the list of monsters that they evo from
         for full_monster in self.full_monster_list:
             for evo_to_id in full_monster.evo_to:
-                self.full_monster_map[evo_to_id].evo_from.append(full_monster.monster_id)
+                # Since na_only will be missing some 'to' monsters, safety first
+                if evo_to_id in self.full_monster_map:
+                    self.full_monster_map[evo_to_id].evo_from.append(full_monster.monster_id)
 
 
         self.hp_monster_groups = list()
@@ -896,14 +898,14 @@ class PgDataWrapper:
                     self.maybeAdd(self.two_word_entries, p + ' ' + alt_nickname, m)
 
             if m.roma_subname:
-                # print(m.name_jp, 'adding', m.roma_subname)
                 self.maybeAdd(self.all_entries, m.roma_subname, m)
 
     def buildMonsterGroup(self, m: Monster, mg: MonsterGroup):
         mg.monsters.append(m)
         for mto_id in m.evo_to:
-            mto = self.full_monster_map[mto_id]
-            self.buildMonsterGroup(mto, mg)
+            if mto_id in self.full_monster_map:
+                mto = self.full_monster_map[mto_id]
+                self.buildMonsterGroup(mto, mg)
 
     def populateWithOverrides(self, nickname_text):
         nickname_reader = csv.reader(nickname_text.split('\n'), delimiter=',')
@@ -921,9 +923,9 @@ class PgDataWrapper:
             if approved != 'TRUE' or not mId.isdigit():
                 continue
 
-            monster = self.id_to_monster[int(mId)]
-            self.all_entries[nickname] = monster
-#             print('adding nickname', mId, nickname, monster.name_na)
+            id = int(mId)
+            if id in self.id_to_monster:
+                self.all_entries[nickname] = self.id_to_monster[id]
 
 
 def shouldFilterMonster(m: Monster):
