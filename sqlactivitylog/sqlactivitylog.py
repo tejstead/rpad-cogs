@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import textwrap
 
 import discord
 from discord.ext import commands
@@ -297,6 +298,7 @@ class SqlActivityLogger(object):
                     value = server_obj.name if server_obj else value
                 if col == 'clean_content':
                     value = value.replace('`', '\`')
+                    value = '\n'.join(textwrap.wrap(value, 60))
                 table_row.append(value)
 
             tbl.add_row(table_row)
