@@ -217,7 +217,6 @@ class PadInfo:
     @padinfo.command(pass_context=True)
     @checks.is_owner()
     async def rmgroupoverride(self, ctx, monster_id : int):
-        monster_id = str(monster_id)
         if self.settings.checkGroupOverride(monster_id):
             self.settings.removeGroupOverride(monster_id)
             await self.bot.say(inline('Done'))
@@ -331,13 +330,16 @@ class PadInfoSettings(CogSettings):
         return self.bot_settings['group_override']
 
     def addGroupOverride(self, monster_id, nickname):
+        monster_id = str(monster_id)
         self.groupOverride()[monster_id] = nickname
         self.save_settings()
 
     def checkGroupOverride(self, monster_id):
+        monster_id = str(monster_id)
         return monster_id in self.groupOverride().keys()
 
     def removeGroupOverride(self, monster_id):
+        monster_id = str(monster_id)
         if self.checkGroupOverride(monster_id):
             self.groupOverride().pop(monster_id)
             self.save_settings()
@@ -763,7 +765,6 @@ class MonsterGroup:
             m.debug_info += ' | Original NN ({}) | Final NN ({})'.format(m.original_nickname, m.nickname)
 
     def overrideNickname(self, nickname):
-        print(nickname, len(self.monsters))
         for m in self.monsters:
             m.original_nickname = m.nickname
             m.nickname = nickname
