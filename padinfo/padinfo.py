@@ -123,9 +123,16 @@ class PadInfo:
         print("started padinfo")
 
     @commands.command(name="id", pass_context=True)
-    async def _doid(self, ctx, *query):
+    async def _do_id_all(self, ctx, *query):
+        await self._do_id(ctx, query)
+
+    @commands.command(name="idna", pass_context=True)
+    async def _do_id_na(self, ctx, *query):
+        await self._do_id(ctx, query, na_only=True)
+
+    async def _do_id(self, ctx, query, na_only=False):
         query = " ".join(query)
-        m, err, debug_info = self.findMonster(query)
+        m, err, debug_info = self.findMonster(query, na_only=na_only)
         if m is not None:
             embed = monsterToEmbed(m, ctx.message.server)
             try:
@@ -195,7 +202,7 @@ class PadInfo:
         msg += 'Try one of <id>, <name>, [argbld]/[rgbld] <name>. Unexpected results? Use ^helpid for more info.'
         return box(msg)
 
-    def findMonster(self, query):
+    def findMonster(self, query, na_only=False):
         query = query.lower().strip()
 
         # id search
@@ -207,9 +214,16 @@ class PadInfo:
                 return m, None, "ID lookup"
             # special handling for na/jp
 
+        region_check = lambda m : not na_only or m.on_us
+
         # handle exact nickname match
-        if query in self.pginfo.all_entries:
-            return self.pginfo.all_entries[query], None, "Exact nickname"
+        if query in self.pginfo.all_entries :
+            m = self.pginfo.all_entries[query]
+            # This is kind of a shit move. I'd prefer to take the nickname that is NA here
+            # but I'm kind of SOL because of how this dict works. The fallbacks should pick
+            # it up though I hope.
+            if region_check(m):
+                return self.pginfo.all_entries[query], None, "Exact nickname"
 
         if len(query) < 4:
             return None, 'Your query must be at least 4 letters', None
@@ -217,14 +231,14 @@ class PadInfo:
         matches = set()
         # prefix search for nicknames, space-preceeded, take max id
         for nickname, m in self.pginfo.all_entries.items():
-            if nickname.startswith(query + ' '):
+            if nickname.startswith(query + ' ') and region_check(m):
                 matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, "Space nickname prefix, max of {}".format(len(matches))
 
         # prefix search for nicknames, take max id
         for nickname, m in self.pginfo.all_entries.items():
-            if nickname.startswith(query):
+            if nickname.startswith(query) and region_check(m):
                 matches.add(m)
         if len(matches):
             all_names = ",".join(map(lambda x: x.name_na, matches))
@@ -232,21 +246,21 @@ class PadInfo:
 
         # prefix search for full name, take max id
         for nickname, m in self.pginfo.all_entries.items():
-            if m.name_na.lower().startswith(query) or m.name_jp.lower().startswith(query):
+            if (m.name_na.lower().startswith(query) or m.name_jp.lower().startswith(query)) and region_check(m):
                 matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, "Full name, max of {}".format(len(matches))
 
 
         # for nicknames with 2 names, prefix search 2nd word, take max id
-        if query in self.pginfo.two_word_entries:
+        if query in self.pginfo.two_word_entries and region_check(m):
             return self.pginfo.two_word_entries[query], None, "Second-word nickname prefix, max of {}".format(len(matches))
 
         # TODO: refactor 2nd search characteristcs for 2nd word
 
         # full name contains on nickname, take max id
         for nickname, m in self.pginfo.all_entries.items():
-            if query in m.name_na.lower() or query in m.name_jp.lower():
+            if (query in m.name_na.lower() or query in m.name_jp.lower()) and region_check(m):
                 matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(len(matches))
@@ -254,7 +268,7 @@ class PadInfo:
         # full name contains on full monster list, take max id
 
         for m in self.pginfo.full_monster_list:
-            if query in m.name_na.lower() or query in m.name_jp.lower():
+            if (query in m.name_na.lower() or query in m.name_jp.lower()) and region_check(m):
                 matches.add(m)
         if len(matches):
             return pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(len(matches))
