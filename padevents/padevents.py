@@ -30,7 +30,7 @@ from .utils.dataIO import fileIO
 from .utils.twitter_stream import *
 
 
-SUPPORTED_SERVERS = ["NA", "KR", "JP", "fake"]
+SUPPORTED_SERVERS = ["NA", "KR", "JP", "FAKE"]
 
 def dl_events():
     # two hours expiry
@@ -165,7 +165,7 @@ class PadEvents:
                 for e in events:
                     self.started_events.add(e.uid)
                     if e.event_type in [padguide.EventType.EventTypeGuerrilla, padguide.EventType.EventTypeGuerrillaNew]:
-                        for gr in self.settings.listGuerrillaReg():
+                        for gr in list(self.settings.listGuerrillaReg()):
                             if e.server == gr['server']:
                                 try:
                                     message = box("Server " + e.server + ", group " + e.group + " : " + e.nameAndModifier())
@@ -181,18 +181,28 @@ class PadEvents:
 
                                     await self.bot.send_message(channel, message)
                                 except Exception as ex:
+                                    # deregister gr
                                     traceback.print_exc()
-                                    print("caught exception while sending guerrilla msg " + str(ex))
+                                    print("caught exception while sending guerrilla msg, deregistering " + str(ex))
                                     print('for ' + channel.name + ' sending ' + message)
+                                    self.settings.removeGuerrillaReg(gr['channel_id'], gr['server'])
+
                     else:
                         if not e.isForNormal():
                             daily_refresh_servers.add(e.server)
 
                 for server in daily_refresh_servers:
                     msg = self.makeActiveText(server)
-                    for gr in self.settings.listDailyReg():
-                        if server == gr['server']:
-                            await self.pageOutput(msg, channel_id=gr['channel_id'])
+                    for daily_registration in list(self.settings.listDailyReg()):
+                        try:
+                            if server == daily_registration['server']:
+                                await self.pageOutput(msg, channel_id=daily_registration['channel_id'])
+                        except Exception as ex:
+                            traceback.print_exc()
+                            print("caught exception while sending daily msg, deregistering " + str(ex))
+                            self.settings.removeDailyReg(daily_registration['channel_id'], daily_registration['server'])
+
+
             except Exception as ex:
                 traceback.print_exc()
                 print("caught exception while checking guerrillas " + str(ex))
@@ -230,7 +240,10 @@ class PadEvents:
     @padevents.command(name="testevent", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def _testevent(self, ctx, server):
+        print(SUPPORTED_SERVERS)
+        print(server)
         server = normalizeServer(server)
+        print(server)
         if server not in SUPPORTED_SERVERS:
             await self.bot.say("Unsupported server, pick one of NA, KR, JP")
             return
