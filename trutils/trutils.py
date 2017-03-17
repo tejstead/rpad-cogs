@@ -255,6 +255,17 @@ class TrUtils:
             traceback.print_exc()
             print('failed to check for nickname change' + str(e))
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def dumpmsg(self, ctx, msg_id : int):
+        """Given an ID for a message printed by the bot in the current channel, dumps it boxed with formatting escaped"""
+        msg = await self.bot.get_message(ctx.message.channel, msg_id)
+        content = msg.clean_content.strip()
+        if content.startswith('```') and content.endswith('```'):
+            content = '`\n{}\n`'.format(content)
+        else:
+            content = box(content)
+        await self.bot.say(content)
+
     @commands.command(name="dontchangemyname", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def dontchangemyname(self, ctx, nickname):
