@@ -359,6 +359,7 @@ class Monster:
                  evos,
                  active_skill,
                  leader_skill,
+                 leader_skill_data,
                  type_map,
                  attribute_map):
 
@@ -427,8 +428,12 @@ class Monster:
         self.server_skillups = {}
 
         self.leader_text = None
+        self.multiplier_text = None
         if leader_skill:
             self.leader_text = leader_skill.desc
+            if leader_skill_data:
+                hp, atk, rcv, resist = leader_skill_data.getMaxMultipliers()
+                self.multiplier_text = createMultiplierText(hp, atk, rcv, resist)
 
 def monsterToInfoText(m: Monster):
     header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
@@ -550,7 +555,10 @@ def monsterToEmbed(m: Monster, server):
         embed.add_field(name=active_header, value=active_body, inline=False)
 
     ls_row = m.leader_text if m.leader_text else 'None/Missing'
-    embed.add_field(name='Leader Skill', value=ls_row, inline=False)
+    ls_header = 'Leader Skill'
+    if m.multiplier_text:
+            ls_header += " [ {} ]".format(m.multiplier_text)
+    embed.add_field(name=ls_header, value=ls_row, inline=False)
 
     if not len(m.server_actives):
         for server, skillup in m.server_skillups.items():
@@ -780,6 +788,7 @@ class PgDataWrapper:
         monster_info_list = padguide.loadJsonToItem('monsterInfoList.jsp', padguide.PgMonsterInfo)
         base_monster_list = padguide.loadJsonToItem('monsterList.jsp', padguide.PgBaseMonster)
         skill_list = padguide.loadJsonToItem('skillList.jsp', padguide.PgSkill)
+        skill_leader_data_list = padguide.loadJsonToItem('skillLeaderDataList.jsp', padguide.PgSkillLeaderData)
         type_list = padguide.loadJsonToItem('typeList.jsp', padguide.PgType)
 
         attribute_map = {x.attribute_id: x for x in attribute_list}
@@ -795,6 +804,7 @@ class PgDataWrapper:
         monster_add_info_map = {x.monster_id: x for x in monster_add_info_list}
         monster_info_map = {x.monster_id: x for x in monster_info_list}
         skill_map = {x.skill_id: x for x in skill_list}
+        skill_leader_data_map = {x.leader_id: x for x in skill_leader_data_list}
         type_map = {x.type_id: x for x in type_list}
 
         self.full_monster_list = list()
@@ -809,6 +819,7 @@ class PgDataWrapper:
             monster_info = monster_info_map[monster_id]
             active_skill = skill_map.get(base_monster.active_id)
             leader_skill = skill_map.get(base_monster.leader_id)
+            leader_skill_data = skill_leader_data_map.get(base_monster.leader_id)
 
             full_monster = Monster(
                 base_monster,
@@ -818,6 +829,7 @@ class PgDataWrapper:
                 evos,
                 active_skill,
                 leader_skill,
+                leader_skill_data,
                 type_map,
                 attribute_map)
 
@@ -1012,4 +1024,10 @@ def shouldFilterGroup(mg: MonsterGroup):
 
     return failed_max_rarity
 
-
+def createMultiplierText(hp, atk, rcv, resist):
+    def fmtNum(val):
+        return ('{:.2f}').format(val).strip('0').rstrip('.')
+    text = "{}/{}/{}".format(fmtNum(hp * hp), fmtNum(atk * atk), fmtNum(rcv * rcv))
+    if resist < 1:
+        text += ' Resist {}%'.format(fmtNum(100 * (1 - resist * resist)))
+    return text

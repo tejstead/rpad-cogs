@@ -110,6 +110,57 @@ class PgSkill:
         self.turn_min = item['TURN_MIN']
         self.turn_max = item['TURN_MAX']
 
+
+# PgSkillLeaderData
+# 4 pipe delimited fields, each field is a condition
+# Slashes separate effects for conditions
+# 1: Code 1=HP, 2=ATK, 3=RCV, 4=Reduction
+# 2: Multiplier
+# 3: Color restriction (coded)
+# 4: Type restriction (coded)
+# 5: Combo restriction
+#
+# Reincarnated Izanagi, 4x + 50% for heal cross, 2x atk 2x rcv for god/dragon/balanced
+# {
+#     "LEADER_DATA": "4/0.5///|2/4///|2/2//6,1,2/|3/2//6,1,2/",
+#     "TSTAMP": "1487553365770",
+#     "TS_SEQ": "11695"
+# },
+# Gold Saint, Shion : 4.5X atk when 3+ light combo
+# {
+#     "LEADER_DATA": "2/4.5///3",
+#     "TSTAMP": "1432940060708",
+#     "TS_SEQ": "6661"
+# },
+# Reincarnated Minerva, 3x damage, 2x damage, color resist
+# {
+#     "LEADER_DATA": "2/3/1//|2/2///|4/0.5/1,4,5//",
+#     "TSTAMP": "1475243514648",
+#     "TS_SEQ": "10835"
+# },
+# skillLeaderDataList.jsp
+class PgSkillLeaderData:
+    def __init__(self, item):
+        self.leader_id = item['TS_SEQ']
+        self.leader_data = item['LEADER_DATA']
+
+    def getMaxMultipliers(self):
+        hp, atk, rcv, resist = (1.0,) * 4
+        for mod in self.leader_data.split('|'):
+            items = mod.split('/')
+            code = items[0]
+            mult = float(items[1])
+            if code == '1':
+                hp *= mult
+            if code == '2':
+                atk *= mult
+            if code == '3':
+                rcv *= mult
+            if code == '4':
+                resist *= mult
+        return hp, atk, rcv, resist
+
+
 class PgType:
     def __init__(self, item):
         self.type_id = item['TT_SEQ']
