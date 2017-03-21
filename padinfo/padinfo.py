@@ -1029,5 +1029,5 @@ def createMultiplierText(hp, atk, rcv, resist):
         return ('{:.2f}').format(val).strip('0').rstrip('.')
     text = "{}/{}/{}".format(fmtNum(hp * hp), fmtNum(atk * atk), fmtNum(rcv * rcv))
     if resist < 1:
-        text += ' Resist {}%'.format(fmtNum(100 * (1 - resist * resist)))
+        text += ' Resist {}%'.format(fmtNum(100 * (1 - (1 - resist) * (1 - resist))))
     return text
