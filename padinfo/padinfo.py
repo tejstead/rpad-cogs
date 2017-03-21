@@ -256,9 +256,12 @@ class PadInfo:
         if query in pginfo.all_entries:
             return pginfo.all_entries[query], None, "Exact nickname"
 
-        if len(query) < 4:
+        if len(query) < 2 and containsJp(query):
+            return None, 'Japanese queries must be at least 2 characters', None
+        elif len(query) < 4 and not containsJp(query):
             return None, 'Your query must be at least 4 letters', None
 
+        # TODO: this should be a length-limited priority queue
         matches = set()
         # prefix search for nicknames, space-preceeded, take max id
         for nickname, m in pginfo.all_entries.items():
