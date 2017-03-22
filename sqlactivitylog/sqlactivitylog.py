@@ -270,6 +270,7 @@ class SqlActivityLogger(object):
         tbl.vrules = prettytable.NONE
         tbl.align = 'l'
 
+        tbl_rows = list()
         for idx, row in enumerate(rows):
             if idx > max_rows:
                 break;
@@ -301,7 +302,11 @@ class SqlActivityLogger(object):
                     value = '\n'.join(textwrap.wrap(value, 60))
                 table_row.append(value)
 
-            tbl.add_row(table_row)
+            tbl_rows.append(table_row)
+
+        tbl_rows.reverse()
+        for row in tbl_rows:
+            tbl.add_row(row)
 
         result_text = "{} results\n{}".format(len(rows), tbl.get_string())
         for p in pagify(result_text):
