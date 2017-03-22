@@ -88,7 +88,8 @@ class PadLexer(object):
         raise TypeError("Unknown text '%s'" % (t.value,))
 
     def build(self, **kwargs):
-        self.lexer = lex.lex(module=self, debug=1)
+        # pass debug=1 to enable verbose output
+        self.lexer = lex.lex(module=self)
         return self.lexer
 
 class DamageConfig(object):
