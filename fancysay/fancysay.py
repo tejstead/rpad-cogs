@@ -33,7 +33,7 @@ class FancySay:
         new_msg = ""
         for char in text:
             if char.isalpha():
-                new_msg += ':regional_indicator_{}: '.format(char)
+                new_msg += ':regional_indicator_{}: '.format(char.lower())
             elif char == ' ':
                 new_msg += '   '
             elif char.isspace():
