@@ -55,7 +55,7 @@ class PadLexer(object):
         return t
 
     def t_ROW(self, t):
-        r'row(\(\)|\(\d+\))?'
+        r'row(\(\d*\))?'
         t.value = t.value.strip('row').strip('(').strip(')')
         t.value = int(t.value) if t.value else 6
         if t.value < 6 or t.value > 30:
@@ -69,7 +69,7 @@ class PadLexer(object):
         return t
 
     def t_ORB(self, t):
-        r'orbs?(\([0-9]\))?'
+        r'orbs?(\([0-9]*\))?'
         t.value = t.value.strip('orb').strip('s').strip('(').strip(')')
         t.value = int(t.value) if t.value else 3
         if t.value < 3 or t.value > 30:
