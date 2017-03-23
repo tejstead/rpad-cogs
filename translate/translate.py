@@ -29,6 +29,23 @@ class Translate:
         if api_key:
             self.service = build('translate', 'v2', developerKey=api_key)
 
+    async def checkAutoTranslateJp(self, message):
+        if (message.channel.is_private
+            or not self.service
+            or message.channel.id not in self.settings.autoTranslateJp()
+            or not containsJp(message.clean_content)):
+            return
+
+        for p in self.bot.settings.get_prefixes(message.server):
+            if message.content.startswith(p):
+                return
+
+        message_parts = message.clean_content.split('```')
+        for part in message_parts:
+            if containsJp(part):
+                em = self.translateToEmbed(part)
+                await self.bot.send_message(message.channel, embed=em)
+
     @commands.group(pass_context=True)
     async def translate(self, context):
         """Translation utilities."""
@@ -43,11 +60,26 @@ class Translate:
             await self.bot.say(inline('Set up an API key first!'))
             return
 
+        em = self.translateToEmbed(query)
+        await self.bot.say(embed=em)
+
+    def translateToEmbed(self, query):
         result = self.service.translations().list(source='ja', target='en', format='text', q=query).execute()
         translation = result.get('translations')[0].get('translatedText')
 
-        em = discord.Embed(description='**Original**\n`{}`\n\n**Translation**\n`{}`'.format(query, translation))
-        await self.bot.say(embed=em)
+        return discord.Embed(description='**Original**\n`{}`\n\n**Translation**\n`{}`'.format(query, translation))
+
+    @translate.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def autotranslatejp(self, ctx, channel: discord.Channel=None):
+        channel = channel if channel else ctx.message.channel
+        if channel.id in self.settings.autoTranslateJp():
+            self.settings.rmAutoTranslateJp(channel.id)
+            await self.bot.say(inline('Removed {} from Japanese auto translate'.format(channel.name)))
+        else:
+            self.settings.addAutoTranslateJp(channel.id)
+            await self.bot.say(inline('Added {} to Japanese auto translate'.format(channel.name)))
+
 
     @translate.command(pass_context=True)
     @checks.is_owner()
@@ -59,6 +91,7 @@ class Translate:
 
 def setup(bot):
     n = Translate(bot)
+    bot.add_listener(n.checkAutoTranslateJp, "on_message")
     bot.add_cog(n)
 
 
@@ -68,6 +101,24 @@ class TranslateSettings(CogSettings):
           'google_api_key' : ''
         }
         return config
+
+    def autoTranslateJp(self):
+        key = 'auto_translate_jp'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = []
+        return self.bot_settings[key]
+
+    def addAutoTranslateJp(self, channel_id):
+        auto_translate_jp = self.autoTranslateJp()
+        if channel_id not in auto_translate_jp:
+            auto_translate_jp.append(channel_id)
+            self.save_settings()
+
+    def rmAutoTranslateJp(self, channel_id):
+        auto_translate_jp = self.autoTranslateJp()
+        if channel_id in auto_translate_jp:
+            auto_translate_jp.remove(channel_id)
+            self.save_settings()
 
     def getKey(self):
         return self.bot_settings.get('google_api_key')
