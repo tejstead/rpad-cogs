@@ -351,12 +351,81 @@ def cleanDungeonNames(name):
     name = name.replace('Gods-Awakening Materials Descended', "Awoken Mats")
     return name
 
+# {
+#     "APP_VERSION": "",
+#     "COMMENT_JP": "",
+#     "COMMENT_KR": "",
+#     "COMMENT_US": "",
+#     "DUNGEON_SEQ": "102",
+#     "DUNGEON_TYPE": "1",
+#     "ICON_SEQ": "666",
+#     "NAME_JP": "ECO\u30b3\u30e9\u30dc",
+#     "NAME_KR": "ECO \ucf5c\ub77c\ubcf4",
+#     "NAME_US": "ECO Collab",
+#     "ORDER_IDX": "3",
+#     "SHOW_YN": "1",
+#     "TDT_SEQ": "10",
+#     "TSTAMP": "1373289123410"
+# },
+# dungeonList.jsp
 class PgDungeon:
     def __init__(self, item):
         self.seq = item['DUNGEON_SEQ']
         self.type = DungeonType(int(item['DUNGEON_TYPE']))
         self.name = item['NAME_US']
         self.tdt = item['TDT_SEQ']
+
+# {
+#     "MONSTER_NO": "3427",
+#     "ORDER_IDX": "20",
+#     "STATUS": "0",
+#     "TDMD_SEQ": "967",
+#     "TDM_SEQ": "17816",
+#     "TSTAMP": "1489371218890"
+# },
+# dungeonMonsterDropList.jsp
+# Seems to be dedicated skillups only, like collab drops
+class PgDungeonMonsterDrop:
+    def __init__(self, item):
+        self.monster_id = item['MONSTER_NO']
+        self.status = item['STATUS']  # if 1, good, if 0, bad
+        self.tdmd_seq = item['TDMD_SEQ']  # unique id
+        self.tdm_seq = item['TDM_SEQ']  # PgDungeonMonster id
+
+
+# {
+#     "AMOUNT": "1",
+#     "ATK": "9810",
+#     "COMMENT_JP": "",
+#     "COMMENT_KR": "",
+#     "COMMENT_US": "",
+#     "DEF": "340",
+#     "DROP_NO": "2789",
+#     "DUNGEON_SEQ": "150",
+#     "FLOOR": "5",
+#     "HP": "3011250",
+#     "MONSTER_NO": "2789",
+#     "ORDER_IDX": "50",
+#     "TDM_SEQ": "53122",
+#     "TSD_SEQ": "4564",
+#     "TSTAMP": "1480298353178",
+#     "TURN": "1"
+# },
+# dungeonMonsterList.jsp
+class PgDungeonMonster:
+    def __init__(self, item):
+        self.tdm_seq = item['TDM_SEQ']  # unique id
+        self.drop_monster_id = item['DROP_NO']  # PgMonster unique id
+        self.monster_id = item['MONSTER_NO']  # PgMonster unique id
+        self.dungeon_seq = item['DUNGEON_SEQ']  # PgDungeon uniqueId
+        self.tsd_seq = item['TSD_SEQ']  # ??
+
+class PgMonsterDropInfoCombined:
+    def __init__(self, monster_id, dungeon_monster_drop, dungeon_monster, dungeon):
+        self.monster_id = monster_id
+        self.dungeon_monster_drop = dungeon_monster_drop
+        self.dungeon_monster = dungeon_monster
+        self.dungeon = dungeon
 
 class PgEventList:
     def __init__(self, event_list):

@@ -364,7 +364,8 @@ class Monster:
                  leader_skill,
                  leader_skill_data,
                  type_map,
-                 attribute_map):
+                 attribute_map,
+                 drop_info_list):
 
         self.monster_id = base_monster.monster_id
         # NA is used in puzzledragonx
@@ -437,6 +438,10 @@ class Monster:
             if leader_skill_data:
                 hp, atk, rcv, resist = leader_skill_data.getMaxMultipliers()
                 self.multiplier_text = createMultiplierText(hp, atk, rcv, resist)
+
+        self.directly_farmable = len(drop_info_list) > 0
+        self.farmable = self.directly_farmable
+        self.drop_info_list = drop_info_list
 
 def monsterToInfoText(m: Monster):
     header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
@@ -515,7 +520,12 @@ def monsterToEmbed(m: Monster, server):
     if m.type3:
         info_row_1 += '/' + m.type3
 
-    info_row_2 = '**Rarity** {}\n**Cost** {}'.format(m.rarity, m.cost)
+    farmable_text = 'REM Only'
+    if m.directly_farmable:
+        farmable_text = 'Farmable'
+    elif m.farmable:
+        farmable_text = 'Farmable (alt)'
+    info_row_2 = '**Rarity** {}\n**Cost** {}\n**{}**'.format(m.rarity, m.cost, farmable_text)
     embed.add_field(name=info_row_1, value=info_row_2)
 
     stats_row_1 = 'Weighted {}'.format(m.weighted_stats)
@@ -794,6 +804,10 @@ class PgDataWrapper:
         skill_leader_data_list = padguide.loadJsonToItem('skillLeaderDataList.jsp', padguide.PgSkillLeaderData)
         type_list = padguide.loadJsonToItem('typeList.jsp', padguide.PgType)
 
+        dungeon_monster_list = padguide.loadJsonToItem('dungeonMonsterList.jsp', padguide.PgDungeonMonster)
+        dungeon_monster_drop_list = padguide.loadJsonToItem('dungeonMonsterDropList.jsp', padguide.PgDungeonMonsterDrop)
+        dungeon_list = padguide.loadJsonToItem('dungeonList.jsp', padguide.PgDungeon)
+
         attribute_map = {x.attribute_id: x for x in attribute_list}
 
         monster_awoken_multimap = defaultdict(list)
@@ -810,6 +824,8 @@ class PgDataWrapper:
         skill_leader_data_map = {x.leader_id: x for x in skill_leader_data_list}
         type_map = {x.type_id: x for x in type_list}
 
+        monster_id_to_drop_info_list = self.computeMonsterDropInfoCombined(dungeon_monster_drop_list, dungeon_monster_list, dungeon_list)
+
         self.full_monster_list = list()
         self.full_monster_map = {}
         for base_monster in base_monster_list:
@@ -823,6 +839,7 @@ class PgDataWrapper:
             active_skill = skill_map.get(base_monster.active_id)
             leader_skill = skill_map.get(base_monster.leader_id)
             leader_skill_data = skill_leader_data_map.get(base_monster.leader_id)
+            drop_info_list = monster_id_to_drop_info_list.get(monster_id, [])
 
             full_monster = Monster(
                 base_monster,
@@ -834,7 +851,8 @@ class PgDataWrapper:
                 leader_skill,
                 leader_skill_data,
                 type_map,
-                attribute_map)
+                attribute_map,
+                drop_info_list)
 
             if na_only and not full_monster.on_na:
                 continue
@@ -880,6 +898,14 @@ class PgDataWrapper:
             for m in mg.monsters:
                 m.group_size = len(mg.monsters)
                 m.debug_info += ' | grpsize ' + str(len(mg.monsters))
+
+            # Compute tree farmable status
+            is_farmable = False
+            for m in mg.monsters:
+                is_farmable = is_farmable or m.directly_farmable
+            # Override tree farmable status
+            for m in mg.monsters:
+                m.farmable = is_farmable
 
             # Split monster groups into low or high priority ones
             if shouldFilterMonster(mg.monsters[0]) or shouldFilterGroup(mg):
@@ -1004,6 +1030,30 @@ class PgDataWrapper:
             id = int(mId)
             if id in self.id_to_monster:
                 self.all_entries[nickname] = self.id_to_monster[id]
+
+    def computeMonsterDropInfoCombined(self,
+                                       dungeon_monster_drop_list,  # unused
+                                       dungeon_monster_list,
+                                       dungeon_list):
+        """Stuff for computing monster drops"""
+
+        # TODO: consider merging in dungeon_monster_drop_list info
+        dungeon_id_to_dungeon = {x.seq: x for x in dungeon_list}
+
+        monster_id_to_drop_info = defaultdict(list)
+        for dungeon_monster in dungeon_monster_list:
+            monster_id = dungeon_monster.drop_monster_id
+            dungeon_seq = dungeon_monster.dungeon_seq
+
+            if dungeon_seq not in dungeon_id_to_dungeon:
+                # In case downloaded files are out of sync, skip
+                continue
+            dungeon = dungeon_id_to_dungeon[dungeon_seq]
+
+            info = padguide.PgMonsterDropInfoCombined(monster_id, None, dungeon_monster, dungeon)
+            monster_id_to_drop_info[monster_id].append(info)
+
+        return monster_id_to_drop_info
 
 
 def shouldFilterMonster(m: Monster):
