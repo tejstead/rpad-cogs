@@ -141,7 +141,7 @@ class DamageConfig(object):
             self.combos = 0
 
         if (len(self.row_matches) + len(self.tpa_matches) + len(self.orb_matches)) == 0:
-            raise Exception('You need to specify at least one attack match')
+            raise Exception('You need to specify at least one attack match (orb, tpa, row)')
 
     def setIfType(self, expected_type, given_type, current_value, new_value):
         if expected_type != given_type:
@@ -187,31 +187,42 @@ class DamageCalc:
 
         ^damage <specification string>
 
-        The specification string consists of a series of optional modifiers, followed by
-        a minimum of at least one orb match.
+        The specification string consists of:
+            1) Optional card modifiers
+            2) Orb matches (minimum 1)
 
-        The optional modifiers are: rows(n), tpas(n), atk(n), mult(n)
-        Any modifier left blank is assumed to be 1 or 0 as appropriate.
+        ---------------------------
+        Card Modifiers
 
-        The orb matches are any of: row(n), tpa(), orb(n), combo(n)
-        The orb count for row/orb is optional; by default it will be 6/3.
-        Minimum of 6/3 orbs for row/match, maximum of 30.
-        Specifying 30 orbs automatically counts as a row, and 4 as a tpa.
+        * atk(n)  : Attack value for the card
+        * mult(n) : The full (leader x leader) multiplier to use
+        * rows(n) : Number of row enhances on team
+        * tpas(n) : Number of tpas on card
 
-        You can also leave off the () for row/tpa/orb.
-        Use combo(n) to specify the non-damage combo count.
+        If unspecified, modifiers default to 1 or zero as appropriate.
 
-        A comprehensive example:
-            rows(1) tpas(2) atk(100) mult(2.5) row row() row(8) tpa tpa() orb orb() orb(5) combo(2)
+        ---------------------------
+        Orb Matches
 
-        This uses 1 RE, 2 TPAs, an attack of 100, a multiplier of 2.5 (total, not squared).
-        Then it calculates damage for:
-            two rows of 6 orbs
-            one row of 8 orbs
-            two tpas
-            two matches of 3 orbs
-            one match of 5 orbs
-            two off-color matches
+        * row(n)   : A row of n (default 6) orbs [row, row(), row(n)]
+        * orb(n)   : A non-row match of n (default 3) orbs [orb, orb(), orb(n)]
+        * tpa      : An alias for orb(4) [tpa, tpa()]
+        * combo(n) : Off-color combos that increase multiplier
+
+        ---------------------------
+        Examples
+
+        ^damage atk(100) orb() tpa
+        3-orb match and a 4-orb match with 100 attack, no tpas/row enhance, no multiplier
+
+        ^damage atk(100) mult(2.5) rows(1) tpas(2) row row() row(8) tpa tpa() orb orb() orb(5) combo(2)
+        100 attack, 2.5x,  1 row enhance, 2 tpas
+        2x 6-orb rows
+        8-orb row
+        2x tpa
+        2x 3-orb matches
+        5-orb match
+        2 off-color combos
 
         Resistance, defense, loading by monster id, killers, etc coming soon
         """
