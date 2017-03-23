@@ -13,6 +13,7 @@ class PadLexer(object):
         'ROWS',
         'TPAS',
         'ATK',
+        'OE',
 #         'ID',
         'MULT',
 
@@ -28,6 +29,12 @@ class PadLexer(object):
     def t_ROWS(self, t):
         r'rows\(\d+\)'
         t.value = t.value.strip('rows(').strip(')')
+        t.value = int(t.value)
+        return t
+
+    def t_OE(self, t):
+        r'oe\(\d+\)'
+        t.value = t.value.strip('oe(').strip(')')
         t.value = int(t.value)
         return t
 
@@ -96,6 +103,7 @@ class DamageConfig(object):
 
     def __init__(self, lexer):
         self.rows = None
+        self.oe = None
         self.tpas = None
         self.atk = None
         self.id = None
@@ -110,6 +118,7 @@ class DamageConfig(object):
             type = tok.type
             value = tok.value
             self.rows = self.setIfType('ROWS', type, self.rows, value)
+            self.oe = self.setIfType('OE', type, self.oe, value)
             self.tpas = self.setIfType('TPAS', type, self.tpas, value)
             self.atk = self.setIfType('ATK', type, self.atk, value)
             self.id = self.setIfType('ID', type, self.id, value)
@@ -131,6 +140,8 @@ class DamageConfig(object):
 
         if self.rows is None:
             self.rows = 0
+        if self.oe is None:
+            self.oe = 0
         if self.tpas is None:
             self.tpas = 0
         if self.atk is None:
@@ -156,17 +167,18 @@ class DamageConfig(object):
         # set mult
         pass
 
-    def calculate(self):
+    def calculateMatchDamage(self, match, all_enhanced):
+        orb_damage = (1 + (match - 3) * .25)
+        oe_damage = (1 + .06 * match) * (1 + .05 * self.oe) if all_enhanced else 1
+        tpa_damage = math.pow(1.5, self.tpas) if match == 4 else 1
+        return self.atk * orb_damage * oe_damage * tpa_damage
+
+    def calculate(self, all_enhanced):
         base_damage = 0
-        for row_match in self.row_matches:
-            base_damage += self.atk * (1 + (row_match - 3) * .25)
-        for tpa_match in self.tpa_matches:
-            base_damage += self.atk * (1 + (tpa_match - 3) * .25) * math.pow(1.5, self.tpas)
-        for orb_match in self.orb_matches:
-            base_damage += self.atk * (1 + (orb_match - 3) * .25)
+        for match in (self.row_matches + self.tpa_matches + self.orb_matches):
+            base_damage += self.calculateMatchDamage(match, all_enhanced)
 
         combo_count = len(self.row_matches) + len(self.tpa_matches) + len(self.orb_matches) + self.combos
-
         combo_mult = 1 + (combo_count - 1) * .25
         row_mult = 1 + self.rows / 10 * len(self.row_matches)
 
@@ -197,6 +209,7 @@ class DamageCalc:
         * atk(n)  : Attack value for the card
         * mult(n) : The full (leader x leader) multiplier to use
         * rows(n) : Number of row enhances on team
+        * oe(n)   : Number of orb enhances on team
         * tpas(n) : Number of tpas on card
 
         If unspecified, modifiers default to 1 or zero as appropriate.
@@ -241,8 +254,9 @@ class DamageCalc:
         lexer = PadLexer().build()
         lexer.input(damage_spec)
         config = DamageConfig(lexer)
-        damage = config.calculate()
-        await self.bot.say("`Damage: {}`".format(damage))
+        damage = config.calculate(all_enhanced=False)
+        enhanced_damage = config.calculate(all_enhanced=True)
+        await self.bot.say("```Damage (no enhanced) :  {}\nDamage (all enhanced) : {}```".format(damage, enhanced_damage))
 
 
 def setup(bot):
