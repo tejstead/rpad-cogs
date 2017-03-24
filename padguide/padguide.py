@@ -73,6 +73,8 @@ class PgMonsterInfo:
         self.monster_id = item['MONSTER_NO']
         self.on_us = item['ON_US']
         self.series_id = item['TSR_SEQ']
+        self.in_pem = item['PAL_EGG']
+        self.in_rem = item['RARE_EGG']
 
 class PgBaseMonster:
     def __init__(self, item):

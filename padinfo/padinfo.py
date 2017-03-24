@@ -396,6 +396,10 @@ class Monster:
         self.on_na = monster_info.on_us == '1'
         self.series_id = monster_info.series_id
         self.is_gfe = self.series_id == '34'
+        self.in_pem = monster_info.in_pem == '1'
+        self.in_rem = monster_info.in_rem == '1'
+        self.pem_evo = self.in_pem
+        self.rem_evo = self.in_rem
 
         self.roma_subname = None
         if self.name_jp == self.name_na and ('・' in self.name_jp or '＝' in self.name_jp):
@@ -439,8 +443,8 @@ class Monster:
                 hp, atk, rcv, resist = leader_skill_data.getMaxMultipliers()
                 self.multiplier_text = createMultiplierText(hp, atk, rcv, resist)
 
-        self.directly_farmable = len(drop_info_list) > 0
-        self.farmable = self.directly_farmable
+        self.farmable = len(drop_info_list) > 0
+        self.farmable_evo = self.farmable
         self.drop_info_list = drop_info_list
 
 def monsterToInfoText(m: Monster):
@@ -520,12 +524,24 @@ def monsterToEmbed(m: Monster, server):
     if m.type3:
         info_row_1 += '/' + m.type3
 
-    farmable_text = 'REM Only'
-    if m.directly_farmable:
-        farmable_text = 'Farmable'
-    elif m.farmable:
-        farmable_text = 'Farmable (alt)'
-    info_row_2 = '**Rarity** {}\n**Cost** {}\n**{}**'.format(m.rarity, m.cost, farmable_text)
+    acquire_text = None
+    if m.farmable:
+        acquire_text = 'Farmable'
+    elif m.farmable_evo:
+        acquire_text = 'Farmable Evo'
+    elif m.in_pem:
+        acquire_text = 'In PEM'
+    elif m.pem_evo:
+        acquire_text = 'PEM Evo'
+    elif m.in_rem:
+        acquire_text = 'In REM'
+    elif m.rem_evo:
+        acquire_text = 'REM Evo'
+
+    info_row_2 = '**Rarity** {}\n**Cost** {}'.format(m.rarity, m.cost)
+    if acquire_text:
+        info_row_2 += '\n**{}**'.format(acquire_text)
+
     embed.add_field(name=info_row_1, value=info_row_2)
 
     stats_row_1 = 'Weighted {}'.format(m.weighted_stats)
@@ -900,12 +916,19 @@ class PgDataWrapper:
                 m.debug_info += ' | grpsize ' + str(len(mg.monsters))
 
             # Compute tree farmable status
-            is_farmable = False
+            farmable_evo = False
+            pem_evo = False
+            rem_evo = False
             for m in mg.monsters:
-                is_farmable = is_farmable or m.directly_farmable
+                farmable_evo = farmable_evo or m.farmable
+                pem_evo = pem_evo or m.in_pem
+                rem_evo = rem_evo or m.in_rem
+
             # Override tree farmable status
             for m in mg.monsters:
-                m.farmable = is_farmable
+                m.farmable_evo = farmable_evo
+                m.pem_evo = pem_evo
+                m.rem_evo = rem_evo
 
             # Split monster groups into low or high priority ones
             if shouldFilterMonster(mg.monsters[0]) or shouldFilterGroup(mg):
