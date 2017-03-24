@@ -104,6 +104,21 @@ class PgBaseMonster:
         self.type1 = item['TT_SEQ']
         self.type2 = item['TT_SEQ_SUB']
 
+# {
+#     "DEL_YN": "N",
+#     "NAME_JP": "\u308a\u3093",
+#     "NAME_KR": "\uc2ac\ub77c\uc784",
+#     "NAME_US": "Slime",
+#     "SEARCH_DATA": "\u308a\u3093 Slime \uc2ac\ub77c\uc784",
+#     "TSR_SEQ": "3",
+#     "TSTAMP": "1380587210667"
+# },
+# seriesList.jsp
+class PgSeries:
+    def __init__(self, item):
+        self.series_id = item['TSR_SEQ']
+        self.name = item['NAME_US']
+
 class PgSkill:
     def __init__(self, item):
         self.skill_id = item['TS_SEQ']

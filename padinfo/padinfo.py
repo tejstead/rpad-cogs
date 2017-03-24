@@ -125,15 +125,14 @@ class PadInfo:
         print("started padinfo")
 
     @commands.command(name="id", pass_context=True)
-    async def _do_id_all(self, ctx, *query):
+    async def _do_id_all(self, ctx, *, query):
         await self._do_id(ctx, query)
 
     @commands.command(name="idna", pass_context=True)
-    async def _do_id_na(self, ctx, *query):
+    async def _do_id_na(self, ctx, *, query):
         await self._do_id(ctx, query, na_only=True)
 
     async def _do_id(self, ctx, query, na_only=False):
-        query = " ".join(query)
         m, err, debug_info = self.findMonster(query, na_only=na_only)
         if m is not None:
             embed = monsterToEmbed(m, ctx.message.server)
@@ -146,8 +145,7 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(name="idz", pass_context=True)
-    async def _doidz(self, ctx, *query):
-        query = " ".join(query)
+    async def _doidz(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             info, link = monsterToInfoText(m)
@@ -157,9 +155,7 @@ class PadInfo:
 
     @commands.command(name="debugid", pass_context=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def _dodebugid(self, ctx, *query):
-        query = " ".join(query)
-
+    async def _dodebugid(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             info, link = monsterToInfoText(m)
@@ -169,14 +165,31 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(name="pic", pass_context=True, aliases=['img'])
-    async def _dopic(self, ctx, *query):
-        query = " ".join(query)
+    async def _dopic(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             header, link = monsterToPicText(m)
             await self.bot.say(inline(header) + '\n' + link)
         else:
             await self.bot.say(self.makeFailureMsg(err))
+
+    @commands.command(pass_context=True)
+    async def pantheon(self, ctx, *, query):
+        m, err, debug_info = self.findMonster(query)
+        if m is None:
+            await self.bot.say(self.makeFailureMsg(err))
+            return
+
+        pantheon_list = self.pginfo_all.series_id_to_monsters.get(m.series_id, [])
+        pantheon_list = sorted(pantheon_list, key=lambda x: x.monster_id_na)
+
+        if len(pantheon_list) == 0 or len(pantheon_list) > 6:
+            await self.bot.say(inline('Not a pantheon monster'))
+            return
+        output = 'Pantheon: ' + m.series_name
+        for monster in pantheon_list:
+            output += '\n' + monsterToHeader(monster)
+        await self.bot.say(box(output))
 
 
     @commands.command(name="helpid", pass_context=True, aliases=['helppic', 'helpimg'])
@@ -365,12 +378,14 @@ class Monster:
                  leader_skill_data,
                  type_map,
                  attribute_map,
-                 drop_info_list):
+                 drop_info_list,
+                 series):
 
         self.monster_id = base_monster.monster_id
         # NA is used in puzzledragonx
         self.monster_id_na = base_monster.monster_id_na
         self.monster_id_jp = base_monster.monster_id_jp
+        self.series_name = series.name
 
         self.debug_info = ''
         self.selection_priority = UNKNOWN_SELECTION_PRIORITY
@@ -448,7 +463,7 @@ class Monster:
         self.drop_info_list = drop_info_list
 
 def monsterToInfoText(m: Monster):
-    header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
+    header = monsterToHeader(m)
 
     if m.roma_subname:
         header += ' [{}]'.format(m.roma_subname)
@@ -498,13 +513,15 @@ def monsterToInfoText(m: Monster):
 
     return info_chunk, link_row
 
-def monsterToPicText(m: Monster):
-    header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
-    link = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'.format(m.monster_id_na)
-    return header, link
+def monsterToHeader(m : Monster):
+    return 'No. {} {}'.format(m.monster_id_na, m.name_na)
 
-def monsterToEmbed(m: Monster, server):
-    header = 'No. {} {}'.format(m.monster_id_na, m.name_na)
+def monsterToPicText(m : Monster):
+    link = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'.format(m.monster_id_na)
+    return monsterToHeader(m), link
+
+def monsterToEmbed(m : Monster, server):
+    header = monsterToHeader(m)
 
     if m.roma_subname:
         header += ' [{}]'.format(m.roma_subname)
@@ -819,6 +836,7 @@ class PgDataWrapper:
         skill_list = padguide.loadJsonToItem('skillList.jsp', padguide.PgSkill)
         skill_leader_data_list = padguide.loadJsonToItem('skillLeaderDataList.jsp', padguide.PgSkillLeaderData)
         type_list = padguide.loadJsonToItem('typeList.jsp', padguide.PgType)
+        series_list = padguide.loadJsonToItem('seriesList.jsp', padguide.PgSeries)
 
         dungeon_monster_list = padguide.loadJsonToItem('dungeonMonsterList.jsp', padguide.PgDungeonMonster)
         dungeon_monster_drop_list = padguide.loadJsonToItem('dungeonMonsterDropList.jsp', padguide.PgDungeonMonsterDrop)
@@ -839,6 +857,7 @@ class PgDataWrapper:
         skill_map = {x.skill_id: x for x in skill_list}
         skill_leader_data_map = {x.leader_id: x for x in skill_leader_data_list}
         type_map = {x.type_id: x for x in type_list}
+        series_map = {x.series_id: x for x in series_list}
 
         monster_id_to_drop_info_list = self.computeMonsterDropInfoCombined(dungeon_monster_drop_list, dungeon_monster_list, dungeon_list)
 
@@ -856,6 +875,7 @@ class PgDataWrapper:
             leader_skill = skill_map.get(base_monster.leader_id)
             leader_skill_data = skill_leader_data_map.get(base_monster.leader_id)
             drop_info_list = monster_id_to_drop_info_list.get(monster_id, [])
+            series = series_map[monster_info.series_id]
 
             full_monster = Monster(
                 base_monster,
@@ -868,7 +888,8 @@ class PgDataWrapper:
                 leader_skill_data,
                 type_map,
                 attribute_map,
-                drop_info_list)
+                drop_info_list,
+                series)
 
             if na_only and not full_monster.on_na:
                 continue
@@ -888,6 +909,8 @@ class PgDataWrapper:
                     self.full_monster_map[evo_to_id].evo_from.append(full_monster.monster_id)
 
 
+        self.series_id_to_monsters = defaultdict(list)
+
         self.hp_monster_groups = list()
         self.lp_monster_groups = list()
 
@@ -897,6 +920,9 @@ class PgDataWrapper:
             if len(full_monster.evo_from):
                 full_monster.debug_info += ' | not root'
                 continue
+
+            # Populate pantheon mapping
+            self.series_id_to_monsters[full_monster.series_id].append(full_monster)
 
             full_monster.debug_info += ' | root'
             # Recursively build the monster group
