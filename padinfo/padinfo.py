@@ -417,7 +417,7 @@ class Monster:
         self.rem_evo = self.in_rem
 
         self.roma_subname = None
-        if self.name_jp == self.name_na and ('・' in self.name_jp or '＝' in self.name_jp):
+        if self.name_jp == self.name_na and containsJp(self.name_na):
             subname = self.name_jp.replace('＝', '')
             adjusted_subname = ''
             for part in subname.split('・'):
