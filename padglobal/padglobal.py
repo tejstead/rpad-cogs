@@ -226,7 +226,7 @@ class PadGlobal:
             msg += '\n**{}** : {}'.format(term, definition)
 
         for page in pagify(msg):
-            await self.bot.whisper(box(page))
+            await self.bot.whisper(page)
 
 
     @padglobal.command(pass_context=True)
