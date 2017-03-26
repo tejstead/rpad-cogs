@@ -1,9 +1,11 @@
 from collections import defaultdict
+import difflib
 import os
 import re
 
 import discord
 from discord.ext import commands
+from numpy.doc import glossary
 
 from __main__ import user_allowed, send_cmd_help
 
@@ -12,6 +14,14 @@ from .utils import checks
 from .utils.cog_settings import *
 from .utils.dataIO import dataIO
 
+
+PAD_CMD_HEADER = """
+PAD Global Commands
+^pad      : general command list
+^padfaq   : FAQ command list
+^boards   : optimal boards
+^glossary : common PAD definitions
+"""
 
 class PadGlobal:
     """Global PAD commands."""
@@ -25,6 +35,9 @@ class PadGlobal:
     @commands.group(pass_context=True)
     async def padglobal(self, context):
         """PAD global custom commands."""
+        if not self.settings.checkAdmin(context.message.author.id):
+            await self.bot.say(inline("Not authorized to edit pad global commands"))
+            return
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
@@ -35,10 +48,6 @@ class PadGlobal:
         Example:
         !padglobal add command_name Text you want
         """
-        if not self.settings.checkAdmin(ctx.message.author.id):
-            await self.bot.say(inline("Not authorized to edit pad global commands"))
-            return
-
         command = command.lower()
         if command in self.bot.commands.keys():
             await self.bot.say("That is already a standard command.")
@@ -46,32 +55,9 @@ class PadGlobal:
         if not self.c_commands:
             self.c_commands = {}
         cmdlist = self.c_commands
-        if command not in cmdlist:
-            cmdlist[command] = text
-            dataIO.save_json(self.file_path, self.c_commands)
-            await self.bot.say("PAD command successfully added.")
-        else:
-            await self.bot.say("This command already exists. Use editpad to edit it.")
-
-    @padglobal.command(pass_context=True)
-    async def edit(self, ctx, command : str, *, text):
-        """Edits a PAD global command
-
-        Example:
-        !padglobal edit yourcommand Text you want
-        """
-        if not self.settings.checkAdmin(ctx.message.author.id):
-            await self.bot.say(inline("Not authorized to edit pad global commands"))
-            return
-
-        command = command.lower()
-        cmdlist = self.c_commands
-        if command in cmdlist:
-            cmdlist[command] = text
-            dataIO.save_json(self.file_path, self.c_commands)
-            await self.bot.say("PAD command successfully edited.")
-        else:
-            await self.bot.say("PAD command doesn't exist. Use addpad [command] [text]")
+        cmdlist[command] = text
+        dataIO.save_json(self.file_path, self.c_commands)
+        await self.bot.say("PAD command successfully added/edited.")
 
     @padglobal.command(pass_context=True)
     async def delete(self, ctx, command : str):
@@ -79,10 +65,6 @@ class PadGlobal:
 
         Example:
         !padglobal delete yourcommand"""
-        if not self.settings.checkAdmin(ctx.message.author.id):
-            await self.bot.say(inline("Not authorized to edit pad global commands"))
-            return
-
         command = command.lower()
         cmdlist = self.c_commands
         if command in cmdlist:
@@ -92,10 +74,69 @@ class PadGlobal:
         else:
             await self.bot.say("PAD command doesn't exist.")
 
+    @padglobal.command(pass_context=True)
+    async def setgeneral(self, ctx, command : str):
+        """Sets a command to show up in ^pad (the default).
+
+        Example:
+        ^padglobal setgeneral yourcommand"""
+        command = command.lower()
+        if command not in self.c_commands:
+            await self.bot.say("PAD command doesn't exist.")
+            return
+
+        self.settings.setGeneral(command)
+        await self.bot.say("PAD command set to general.")
+
+    @padglobal.command(pass_context=True)
+    async def setfaq(self, ctx, command : str):
+        """Sets a command to show up in ^padfaq.
+
+        Example:
+        ^padglobal setfaq yourcommand"""
+        command = command.lower()
+        if command not in self.c_commands:
+            await self.bot.say("PAD command doesn't exist.")
+            return
+
+        self.settings.setFaq(command)
+        await self.bot.say("PAD command set to faq.")
+
+
+    @padglobal.command(pass_context=True)
+    async def setboards(self, ctx, command : str):
+        """Sets a command to show up in ^boards.
+
+        Example:
+        ^padglobal setboards yourcommand"""
+        command = command.lower()
+        if command not in self.c_commands:
+            await self.bot.say("PAD command doesn't exist.")
+            return
+
+        self.settings.setBoards(command)
+        await self.bot.say("PAD command set to boards.")
+
     @commands.command(pass_context=True)
     async def pad(self, ctx):
         """Shows PAD global command list"""
-        cmdlist = self.c_commands
+        configured = self.settings.faq() + self.settings.boards()
+        cmdlist = {k:v for k, v in self.c_commands.items() if k not in configured}
+        await self.print_cmdlist(ctx, cmdlist)
+
+    @commands.command(pass_context=True)
+    async def padfaq(self, ctx):
+        """Shows PAD FAQ command list"""
+        cmdlist = {k:v for k, v in self.c_commands.items() if k in self.settings.faq()}
+        await self.print_cmdlist(ctx, cmdlist)
+
+    @commands.command(pass_context=True)
+    async def boards(self, ctx):
+        """Shows PAD Boards command list"""
+        cmdlist = {k:v for k, v in self.c_commands.items() if k in self.settings.boards()}
+        await self.print_cmdlist(ctx, cmdlist)
+
+    async def print_cmdlist(self, ctx, cmdlist, inline=False):
         if not cmdlist:
             await self.bot.say("There are no padglobal commands yet")
             return
@@ -114,7 +155,15 @@ class PadGlobal:
         prefix_to_other = defaultdict(list)
 
         i = 0
-        msg = "Global PAD commands:\n"
+        msg = PAD_CMD_HEADER + "\n"
+
+        if inline:
+            for cmd in sorted([cmd for cmd in cmdlist.keys()]):
+                msg += " {} : {}\n".format(cmd, cmdlist[cmd])
+            for page in pagify(msg):
+                await self.bot.whisper(box(page))
+            return
+
         for cmd in sorted([cmd for cmd in cmdlist.keys()]):
             m = re.match(r'^([a-zA-Z]+)(\d+)$', cmd)
             if m:
@@ -149,6 +198,51 @@ class PadGlobal:
 
         for page in pagify(msg):
             await self.bot.whisper(box(page))
+
+
+    @commands.command(pass_context=True)
+    async def glossary(self, ctx, *, term : str=None):
+        """Shows PAD Glossary entries"""
+        glossary = self.settings.glossary()
+        if term:
+            term = term.lower()
+            definition = glossary.get(term, None)
+
+            if not definition:
+                matches = difflib.get_close_matches(term, glossary.keys(), n=1)
+                if not matches:
+                    await self.bot.say(inline('No definition found'))
+                    return
+                definition = matches[0]
+
+            await self.bot.say(inline('{} : {}'.format(term, definition)))
+            return
+
+        msg = 'PAD Glossary terms (also check out ^pad / ^padfaq / ^boards)'
+        for term in sorted(glossary.keys()):
+            definition = glossary[term]
+            msg += '\n{} : {}'.format(term, definition)
+
+        for page in pagify(msg):
+            await self.bot.whisper(box(page))
+
+
+    @padglobal.command(pass_context=True)
+    async def addglossary(self, ctx, term, *, definition):
+        """Adds a term to the glossary.
+        If you want to use a multiple word term, enclose it in quotes.
+
+        e.x. ^padglobal addglossary alb Awoken Liu Bei
+        e.x. ^padglobal addglossary "never dathena" NA will never get dathena
+        """
+        self.settings.addGlossary(term, definition)
+        await self.bot.say("done")
+
+    @padglobal.command(pass_context=True)
+    async def rmglossary(self, ctx, *, term):
+        """Removes a term from the glossary."""
+        self.settings.rmGlossary(term)
+        await self.bot.say("done")
 
     @padglobal.command(pass_context=True)
     @checks.is_owner()
@@ -243,7 +337,10 @@ def setup(bot):
 class PadGlobalSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'admins' : []
+          'admins' : [],
+          'faq' : [],
+          'boards' : [],
+          'glossary' : {},
         }
         return config
 
@@ -264,4 +361,50 @@ class PadGlobalSettings(CogSettings):
         admins = self.admins()
         if user_id in admins:
             admins.remove(user_id)
+            self.save_settings()
+
+    def faq(self):
+        key = 'faq'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = []
+        return self.bot_settings[key]
+
+    def boards(self):
+        key = 'boards'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = {}
+        return self.bot_settings[key]
+
+    def clearCmd(self, cmd):
+        if cmd in self.faq(): self.faq().remove(cmd)
+        if cmd in self.boards(): self.boards().remove(cmd)
+
+    def setGeneral(self, cmd):
+        self.clearCmd(cmd)
+        self.save_settings()
+
+    def setFaq(self, cmd):
+        self.clearCmd(cmd)
+        self.faq().append(cmd)
+        self.save_settings()
+
+    def setBoards(self, cmd):
+        self.clearCmd(cmd)
+        self.boards().append(cmd)
+        self.save_settings()
+
+    def glossary(self):
+        key = 'glossary'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = {}
+        return self.bot_settings[key]
+
+    def addGlossary(self, term, definition):
+        self.glossary()[term] = definition
+        self.save_settings()
+
+    def rmGlossary(self, term):
+        glossary = self.glossary()
+        if term in glossary:
+            glossary.pop(term)
             self.save_settings()
