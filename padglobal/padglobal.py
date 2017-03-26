@@ -183,18 +183,19 @@ class PadGlobal:
 
             msg += " {}{}\n".format(ctx.prefix, cmd)
 
-        msg += "\nThe following commands are indexed:\n"
-        for prefix in sorted(prefix_to_suffix.keys()):
-            msg += " {}{}[n]:\n  ".format(ctx.prefix, prefix)
+        if prefix_to_suffix:
+            msg += "\nThe following commands are indexed:\n"
+            for prefix in sorted(prefix_to_suffix.keys()):
+                msg += " {}{}[n]:\n  ".format(ctx.prefix, prefix)
 
-            for suffix in sorted(map(int, prefix_to_suffix[prefix])):
-                msg += " {}{}".format(prefix, suffix)
+                for suffix in sorted(map(int, prefix_to_suffix[prefix])):
+                    msg += " {}{}".format(prefix, suffix)
 
-            if len(prefix_to_other[prefix]):
-                msg += "\n"
-                for cmd in sorted(prefix_to_other[prefix]):
-                    msg += " {}{}".format(ctx.prefix, cmd)
-            msg += "\n\n"
+                if len(prefix_to_other[prefix]):
+                    msg += "\n"
+                    for cmd in sorted(prefix_to_other[prefix]):
+                        msg += " {}{}".format(ctx.prefix, cmd)
+                msg += "\n\n"
 
         for page in pagify(msg):
             await self.bot.whisper(box(page))
