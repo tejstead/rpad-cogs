@@ -214,7 +214,8 @@ class PadGlobal:
                 if not matches:
                     await self.bot.say(inline('No definition found'))
                     return
-                definition = matches[0]
+                term = matches[0]
+                definition = glossary[term]
 
             await self.bot.say(inline('{} : {}'.format(term, definition)))
             return
