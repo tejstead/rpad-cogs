@@ -46,42 +46,54 @@ CREATE TABLE IF NOT EXISTS messages(
 MAX_LOGS = 500
 
 USER_QUERY = '''
-SELECT timestamp, channel_id, msg_type, clean_content
-FROM messages
-WHERE server_id = :server_id
-  AND user_id = :user_id
-ORDER BY timestamp DESC
-LIMIT :row_count
+SELECT * FROM (
+    SELECT timestamp, channel_id, msg_type, clean_content
+    FROM messages
+    WHERE server_id = :server_id
+      AND user_id = :user_id
+    ORDER BY timestamp DESC
+    LIMIT :row_count
+)
+ORDER BY timestamp ASC
 '''
 
 CHANNEL_QUERY = '''
-SELECT timestamp, user_id, msg_type, clean_content
-FROM messages
-WHERE server_id = :server_id
-  AND channel_id = :channel_id
-  AND user_id <> :bot_id
-ORDER BY timestamp DESC
-LIMIT :row_count
+SELECT * FROM (
+    SELECT timestamp, user_id, msg_type, clean_content
+    FROM messages
+    WHERE server_id = :server_id
+      AND channel_id = :channel_id
+      AND user_id <> :bot_id
+    ORDER BY timestamp DESC
+    LIMIT :row_count
+)
+ORDER BY timestamp ASC
 '''
 
 USER_CHANNEL_QUERY = '''
-SELECT timestamp, msg_type, clean_content
-FROM messages
-WHERE server_id = :server_id
-  AND user_id = :user_id
-  AND channel_id = :channel_id
-ORDER BY timestamp DESC
-LIMIT :row_count
+SELECT * FROM (
+    SELECT timestamp, msg_type, clean_content
+    FROM messages
+    WHERE server_id = :server_id
+      AND user_id = :user_id
+      AND channel_id = :channel_id
+    ORDER BY timestamp DESC
+    LIMIT :row_count
+)
+ORDER BY timestamp ASC
 '''
 
 CONTENT_QUERY = '''
-SELECT timestamp, channel_id, user_id, msg_type, clean_content
-FROM messages
-WHERE server_id = :server_id
-  AND lower(clean_content) LIKE lower(:content_query)
-  AND user_id <> :bot_id
-ORDER BY timestamp DESC
-LIMIT :row_count
+SELECT * FROM (
+    SELECT timestamp, channel_id, user_id, msg_type, clean_content
+    FROM messages
+    WHERE server_id = :server_id
+      AND lower(clean_content) LIKE lower(:content_query)
+      AND user_id <> :bot_id
+    ORDER BY timestamp DESC
+    LIMIT :row_count
+)
+ORDER BY timestamp ASC
 '''
 
 
@@ -270,7 +282,6 @@ class SqlActivityLogger(object):
         tbl.vrules = prettytable.NONE
         tbl.align = 'l'
 
-        tbl_rows = list()
         for idx, row in enumerate(rows):
             if idx > max_rows:
                 break;
@@ -302,11 +313,8 @@ class SqlActivityLogger(object):
                     value = '\n'.join(textwrap.wrap(value, 60))
                 table_row.append(value)
 
-            tbl_rows.append(table_row)
+            tbl.add_row(table_row)
 
-        tbl_rows.reverse()
-        for row in tbl_rows:
-            tbl.add_row(row)
 
         result_text = "{} results\n{}".format(len(rows), tbl.get_string())
         for p in pagify(result_text):
