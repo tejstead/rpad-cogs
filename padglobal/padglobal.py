@@ -217,13 +217,13 @@ class PadGlobal:
                 term = matches[0]
                 definition = glossary[term]
 
-            await self.bot.say(inline('{} : {}'.format(term, definition)))
+            await self.bot.say('**{}** : {}'.format(term, definition))
             return
 
-        msg = 'PAD Glossary terms (also check out ^pad / ^padfaq / ^boards)'
+        msg = '__**PAD Glossary terms (also check out ^pad / ^padfaq / ^boards)**__'
         for term in sorted(glossary.keys()):
             definition = glossary[term]
-            msg += '\n{} : {}'.format(term, definition)
+            msg += '\n**{}** : {}'.format(term, definition)
 
         for page in pagify(msg):
             await self.bot.whisper(box(page))
@@ -237,13 +237,13 @@ class PadGlobal:
         e.x. ^padglobal addglossary alb Awoken Liu Bei
         e.x. ^padglobal addglossary "never dathena" NA will never get dathena
         """
-        self.settings.addGlossary(term, definition)
+        self.settings.addGlossary(term.lower(), definition)
         await self.bot.say("done")
 
     @padglobal.command(pass_context=True)
     async def rmglossary(self, ctx, *, term):
         """Removes a term from the glossary."""
-        self.settings.rmGlossary(term)
+        self.settings.rmGlossary(term.lower())
         await self.bot.say("done")
 
     @padglobal.command(pass_context=True)
