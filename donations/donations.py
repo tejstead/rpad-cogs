@@ -59,6 +59,28 @@ class Donations:
         self.settings.addCustomCommand(user_id, command, text)
         await self.bot.say(inline('I set up your command: ' + command))
 
+    @commands.command(pass_context=True)
+    async def myembed(self, ctx, command : str, title : str, url : str, footer : str):
+        """Sets your custom embed command (donor only).
+
+        This lets you create a fancier image message. For example you can set up
+        a simple inline image without a link using:
+        ^myembed lewd "" "http://i0.kym-cdn.com/photos/images/original/000/731/885/751.jpg" ""
+
+        Want a title on that image? Fill in the first argument:
+        ^myembed lewd "L-lewd!" "<snip, see above>" ""
+
+        Want a footer? Fill in the last argument:
+        ^myembed lewd "L-lewd!" "<snip, see above>" "source: some managa i read"
+        """
+        user_id = ctx.message.author.id
+        if user_id not in self.settings.donors():
+            await self.bot.say(inline('Only donors can set a personal command'))
+            return
+
+        self.settings.addCustomEmbed(user_id, command, title, url, footer)
+        await self.bot.say(inline('I set up your embed: ' + command))
+
     @commands.group(pass_context=True)
     @checks.admin_or_permissions(manage_server=True)
     async def donations(self, context):
@@ -113,6 +135,7 @@ class Donations:
         patrons = self.settings.patrons()
         donors = self.settings.donors()
         cmds = self.settings.customCommands()
+        embeds = self.settings.customEmbeds()
         disabled_servers = self.settings.disabledServers()
 
         id_to_name = {m.id:m.name for m in self.bot.get_all_members()}
@@ -133,6 +156,7 @@ class Donations:
             msg += '\n\t{} ({})'.format(server.name if server else 'unknown', server_id)
 
         msg += '\n\n{} personal commands are set'.format(len(cmds))
+        msg += '\n{} personal embeds are set'.format(len(cmds))
 
         await self.bot.say(box(msg))
 
@@ -150,17 +174,32 @@ class Donations:
         if user_id not in self.settings.donors():
             return
 
-        user_cmd = self.settings.customCommands().get(user_id)
-        if user_cmd is None:
-            return
-
         server_id = message.server.id
         if server_id in self.settings.disabledServers():
             return
 
+        user_cmd = self.settings.customCommands().get(user_id)
+        user_embed = self.settings.customEmbeds().get(user_id)
+
         cmd = message.content[len(prefix):].lower()
-        if cmd == user_cmd['command']:
-            await self.bot.send_message(message.channel, user_cmd['text'])
+        if user_cmd is not None:
+            if cmd == user_cmd['command']:
+                await self.bot.send_message(message.channel, user_cmd['text'])
+                return
+        if user_embed is not None:
+            if cmd == user_embed['command']:
+                embed = discord.Embed()
+                title = user_embed['title']
+                url = user_embed['url']
+                footer = user_embed['footer']
+                if len(title):
+                    embed.title = title
+                if len(url):
+                    embed.set_image(url=url)
+                if len(footer):
+                    embed.set_footer(text=footer)
+                await self.bot.send_message(message.channel, embed=embed)
+                return
 
 
     def get_prefix(self, message):
@@ -184,6 +223,7 @@ class DonationsSettings(CogSettings):
           'patrons' : [],
           'donors' : [],
           'custom_commands' : {},
+          'custom_embeds' : {},
           'disabled_servers' : [],
         }
         return config
@@ -233,6 +273,25 @@ class DonationsSettings(CogSettings):
         cmds = self.customCommands()
         if user_id in cmds:
             cmds.remove(user_id)
+            self.save_settings()
+
+    def customEmbeds(self):
+        return self.bot_settings['custom_embeds']
+
+    def addCustomEmbed(self, user_id, command, title, url, footer):
+        embeds = self.customEmbeds()
+        embeds[user_id] = {
+            'command' : command.lower().strip(),
+            'title' : title.strip(),
+            'url' : url.strip(),
+            'footer' : footer.strip(),
+        }
+        self.save_settings()
+
+    def rmCustomEmbed(self, user_id):
+        embeds = self.customEmbeds()
+        if user_id in embeds:
+            embeds.remove(user_id)
             self.save_settings()
 
     def disabledServers(self):
