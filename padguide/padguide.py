@@ -48,10 +48,25 @@ class PgEvo:
         self.tv_seq = item['TV_SEQ']
         self.tv_type = item['TV_TYPE']
 
+# Evo'd Ras.
+# Extra Val1 : 2 for nekki?
+# {
+#     "EXTRA_VAL1": "1",
+#     "EXTRA_VAL2": "",
+#     "EXTRA_VAL3": "",
+#     "EXTRA_VAL4": "",
+#     "EXTRA_VAL5": "",
+#     "MONSTER_NO": "3329",
+#     "SUB_TYPE": "0",
+#     "TSTAMP": "1480435906788"
+# },
+# monsterAddInfoList.jsp
 class PgMonsterAddInfo:
     def __init__(self, item):
         self.monster_id = item['MONSTER_NO']
         self.sub_type = item['SUB_TYPE']
+        self.extra_val_1 = item['EXTRA_VAL1']
+        self.is_inheritable = self.extra_val_1 == '1'
 
 # monsterInfoList.jsp
 #         {

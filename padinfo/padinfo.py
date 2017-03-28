@@ -473,6 +473,7 @@ class Monster:
         self.farmable = len(drop_info_list) > 0
         self.farmable_evo = self.farmable
         self.drop_info_list = drop_info_list
+        self.is_inheritable = additional_info.is_inheritable if additional_info else False
 
 def monsterToInfoText(m: Monster):
     header = monsterToHeader(m)
@@ -570,6 +571,8 @@ def monsterToEmbed(m : Monster, server):
     info_row_2 = '**Rarity** {}\n**Cost** {}'.format(m.rarity, m.cost)
     if acquire_text:
         info_row_2 += '\n**{}**'.format(acquire_text)
+    if m.is_inheritable:
+        info_row_2 += '\n**Inheritable**'
 
     embed.add_field(name=info_row_1, value=info_row_2)
 
