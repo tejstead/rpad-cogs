@@ -328,7 +328,7 @@ class PadInfo:
         # Still no decent matches. Try near hits on full name instead
         get_na_name = lambda m: m.name_na.lower()
         na_name_map = {m.name_na.lower() : m for m in pginfo.full_monster_list}
-        matches = difflib.get_close_matches(query, na_name_map.keys(), n=1, cutoff=.8)
+        matches = difflib.get_close_matches(query, na_name_map.keys(), n=1, cutoff=.9)
         if len(matches):
             return na_name_map[matches[0]], None, 'Close name match'
 
