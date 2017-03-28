@@ -5,6 +5,7 @@ from collections import defaultdict
 import csv
 from datetime import datetime
 from datetime import timedelta
+import difflib
 from enum import Enum
 import http.client
 from itertools import groupby
@@ -13,7 +14,6 @@ from operator import itemgetter
 import os
 import re
 import threading
-import time
 import time
 import traceback
 import urllib.parse
@@ -320,6 +320,11 @@ class PadInfo:
         if len(matches):
             return pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(len(matches))
 
+        # No decent matches. Try near hits on nickname instead
+        matches = difflib.get_close_matches(query, pginfo.all_entries.keys(), n=1, cutoff=.8)
+        if len(matches):
+            return pginfo.all_entries[matches[0]], None, "Close nickname match"
+
         # couldn't find anything
         return None, "Could not find a match for: " + query, None
 
@@ -577,8 +582,6 @@ def monsterToEmbed(m : Monster, server):
             awakenings_row += ' {}x{}'.format(mapped_awakening, count)
         else:
             awakenings_row += (' ' + str(mapped_awakening)) * count
-
-
 
     awakenings_row = awakenings_row.strip()
 
