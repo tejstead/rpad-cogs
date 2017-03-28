@@ -323,7 +323,14 @@ class PadInfo:
         # No decent matches. Try near hits on nickname instead
         matches = difflib.get_close_matches(query, pginfo.all_entries.keys(), n=1, cutoff=.8)
         if len(matches):
-            return pginfo.all_entries[matches[0]], None, "Close nickname match"
+            return pginfo.all_entries[matches[0]], None, 'Close nickname match'
+
+        # Still no decent matches. Try near hits on full name instead
+        get_na_name = lambda m: m.name_na.lower()
+        na_name_map = {m.name_na.lower() : m for m in pginfo.full_monster_list}
+        matches = difflib.get_close_matches(query, na_name_map.keys(), n=1, cutoff=.8)
+        if len(matches):
+            return na_name_map[matches[0]], None, 'Close name match'
 
         # couldn't find anything
         return None, "Could not find a match for: " + query, None
