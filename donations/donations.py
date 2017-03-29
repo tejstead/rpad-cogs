@@ -174,8 +174,7 @@ class Donations:
         if user_id not in self.settings.donors():
             return
 
-        server_id = message.server.id
-        if server_id in self.settings.disabledServers():
+        if message.server and message.server.id in self.settings.disabledServers():
             return
 
         user_cmd = self.settings.customCommands().get(user_id)
