@@ -306,7 +306,7 @@ class TrUtils:
             await self.bot.whisper(box(page))
 
     @commands.command()
-    @checks.mod()
+    @checks.mod_or_permissions(manage_server=True)
     async def modhelp(self):
         """Shows a summary of the useful moderator features"""
         for page in pagify(MOD_HELP, delims=['\n'], shorten_by=8):
