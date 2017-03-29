@@ -28,31 +28,39 @@ Bot user help
 This command gives you an overview of the most commonly used user-focused
 commands, with an emphasis on the ones unique to this bot.
 
+Join the Miru Support Server for info, update, and bot support:
+https://discord.gg/zB4QHgn
+
 Use ^help to get a full list of help commands. Execute any command with no
 arguments to get more details on how they work.
 
 Info commands:
 ^credits   some info about the bot
+^donate    info on how to donate to cover hosting fees
 ^userhelp  this message
 ^modhelp   bot help specifically for mods
 
 General:
 ^pad             lists the pad-specific global commands
+^padfaq          lists pad-specific FAQ commands
+^boards          lists common leader optimal board commands
+^glossary        looks up a pad term in the glossary
 ^customcommands  lists the custom commands added by the administrators of your server
 ^memes           works the same way, but is restricted per-server to a privileged memer-only group
 ^serverinfo      stats for the current server
 ^userinfo        stats for a specific user
 
 Events:
-^[events|eventsna] Prints pending/active PAD events for NA
+^[events|eventsna]  Prints pending/active PAD events for NA
 ^eventsjp           Prints pending/active PAD events for JP
 
 Monster Info:
-^id      search for a monster by ID, full name, nickname, etc
-^idz     text-only version if id (the legacy version, for mobile users)
-^helpid  gets more info on how monster lookup works, including the nickname submission link
-^pic     prints a link to a a monster image on puzzledragonx, which discord will inline
-^img     same as pic
+^id        search for a monster by ID, full name, nickname, etc
+^idz       text-only version if id (the legacy version, for mobile users)
+^helpid    gets more info on how monster lookup works, including the nickname submission link
+^pantheon  given a monster, print all the members of the pantheon
+^pic       prints a link to a a monster image on puzzledragonx, which discord will inline
+^img       same as pic
 
 REM Simulation:
 ^remlist     lists all the REMs available
@@ -120,9 +128,8 @@ Self applied roles:
 You can configure which roles a user can add to themself using ^selfrole via ^adminset
 
 Message logs:
-Discord doesn't save deleted/edited messages anywhere. Using ^adminlogs you can
-retrieve the last 1k log messages from any channel Miru can read (since the last
-Miru restart, logs are stored in memory).
+Discord doesn't save deleted/edited messages anywhere. Using ^exlog you can pull
+messages for a user, channel, or search for a term.
 
 Contrast this with ^logs which uses the Discord API, and can retrieve a significantly
 larger log history, but it reflects what you would see in Discord by scrolling back.
