@@ -499,7 +499,7 @@ def monsterToInfoText(m: Monster):
 
     killers = compute_killers(m.type1, m.type2, m.type3)
     if killers:
-        info_row += '  |  Killers: ' + '/'.join(killers)
+        info_row += '  |  Avail. Killers: ' + '/'.join(killers)
 
     stats_row = 'Lv. {}  HP {}  ATK {}  RCV {}  Weighted {}'.format(m.max_level, m.hp, m.atk, m.rcv, m.weighted_stats)
 
@@ -533,31 +533,29 @@ def monsterToInfoText(m: Monster):
 def monsterToHeader(m : Monster):
     return 'No. {} {}'.format(m.monster_id_na, m.name_na)
 
-def monsterToPicText(m : Monster):
-    link = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'.format(m.monster_id_na)
-    return monsterToHeader(m), link
-
-def monsterToEmbed(m : Monster, server):
+def monsterToLongHeader(m : Monster):
     header = monsterToHeader(m)
-
     if m.roma_subname:
         header += ' [{}]'.format(m.roma_subname)
-
     if not m.on_us:
         header += ' (JP only)'
+    return header
 
-    embed = discord.Embed()
-    embed.set_thumbnail(url='http://www.puzzledragonx.com/en/img/book/{}.png'.format(m.monster_id_na))
-    embed.title = header
-    embed.description = 'this is a description'
-    embed.url = 'http://www.puzzledragonx.com/en/monster.asp?n={}'.format(m.monster_id_na)
+def monsterToPicText(m : Monster):
+    APPBANK_PIC_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'
+    PDX_PIC_TEMPLATE = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'
+    link = APPBANK_PIC_TEMPLATE.format(m.monster_id_na)
+    return monsterToHeader(m), link
 
-    info_row_1 = m.type1
+def monsterToTypeString(m : Monster):
+    output = m.type1
     if m.type2:
-        info_row_1 += '/' + m.type2
+        output += '/' + m.type2
     if m.type3:
-        info_row_1 += '/' + m.type3
+        output += '/' + m.type3
+    return output
 
+def monsterToAcquireString(m : Monster):
     acquire_text = None
     if m.farmable:
         acquire_text = 'Farmable'
@@ -571,6 +569,19 @@ def monsterToEmbed(m : Monster, server):
         acquire_text = 'In REM'
     elif m.rem_evo:
         acquire_text = 'REM Evo'
+
+def monsterToEmbed(m : Monster, server):
+    header = monsterToLongHeader(m)
+
+    embed = discord.Embed()
+    GAMEWITH_URL_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
+    PDX_URL_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
+    embed.set_thumbnail(url=GAMEWITH_URL_TEMPLATE.format(m.monster_id_na))
+    embed.title = header
+    embed.url = 'http://www.puzzledragonx.com/en/monster.asp?n={}'.format(m.monster_id_na)
+
+    info_row_1 = monsterToTypeString(m)
+    acquire_text = monsterToAcquireString(m)
 
     info_row_2 = '**Rarity** {}\n**Cost** {}'.format(m.rarity, m.cost)
     if acquire_text:
@@ -603,7 +614,7 @@ def monsterToEmbed(m : Monster, server):
         awakenings_row = 'No Awakenings'
 
     killers = compute_killers(m.type1, m.type2, m.type3)
-    killers_row = '**Killers:** {}'.format(' '.join(killers))
+    killers_row = '**Available Killers:** {}'.format(' '.join(killers))
 
     embed.description = '{}\n{}'.format(awakenings_row, killers_row)
 
