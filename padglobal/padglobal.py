@@ -44,7 +44,7 @@ class PadGlobal:
         Example:
         !padglobal add command_name Text you want
         """
-        if not self.settings.checkAdmin(context.message.author.id):
+        if not self.settings.checkAdmin(ctx.message.author.id):
             await self.bot.say(inline("Not authorized to edit pad global commands"))
             return
 
@@ -65,7 +65,7 @@ class PadGlobal:
 
         Example:
         !padglobal delete yourcommand"""
-        if not self.settings.checkAdmin(context.message.author.id):
+        if not self.settings.checkAdmin(ctx.message.author.id):
             await self.bot.say(inline("Not authorized to edit pad global commands"))
             return
 
@@ -84,7 +84,7 @@ class PadGlobal:
 
         Example:
         ^padglobal setgeneral yourcommand"""
-        if not self.settings.checkAdmin(context.message.author.id):
+        if not self.settings.checkAdmin(ctx.message.author.id):
             await self.bot.say(inline("Not authorized to edit pad global commands"))
             return
 
@@ -102,7 +102,7 @@ class PadGlobal:
 
         Example:
         ^padglobal setfaq yourcommand"""
-        if not self.settings.checkAdmin(context.message.author.id):
+        if not self.settings.checkAdmin(ctx.message.author.id):
             await self.bot.say(inline("Not authorized to edit pad global commands"))
             return
 
@@ -121,7 +121,7 @@ class PadGlobal:
 
         Example:
         ^padglobal setboards yourcommand"""
-        if not self.settings.checkAdmin(context.message.author.id):
+        if not self.settings.checkAdmin(ctx.message.author.id):
             await self.bot.say(inline("Not authorized to edit pad global commands"))
             return
 
