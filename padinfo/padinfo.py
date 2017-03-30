@@ -497,6 +497,10 @@ def monsterToInfoText(m: Monster):
     info_row += '  |  Rarity:' + str(m.rarity)
     info_row += '  |  Cost:' + str(m.cost)
 
+    killers = compute_killers(m.type1, m.type2, m.type3)
+    if killers:
+        info_row += '  |  Killers: ' + '/'.join(killers)
+
     stats_row = 'Lv. {}  HP {}  ATK {}  RCV {}  Weighted {}'.format(m.max_level, m.hp, m.atk, m.rcv, m.weighted_stats)
 
     awakenings_row = ''
@@ -598,7 +602,10 @@ def monsterToEmbed(m : Monster, server):
     if not len(awakenings_row):
         awakenings_row = 'No Awakenings'
 
-    embed.description = awakenings_row
+    killers = compute_killers(m.type1, m.type2, m.type3)
+    killers_row = '**Killers:** {}'.format(' '.join(killers))
+
+    embed.description = '{}\n{}'.format(awakenings_row, killers_row)
 
     if len(m.server_actives) >= 2:
         for server, active in m.server_actives.items():
@@ -641,6 +648,24 @@ attr_prefix_long_map = {
   'Wood':'green',
   'Light':'light',
   'Dark':'dark',
+}
+
+def compute_killers(*types):
+    if 'Balance' in types:
+        return ['Any']
+    killers = set()
+    for t in types:
+        killers.update(type_to_killers_map.get(t, []))
+    return sorted(killers)
+
+type_to_killers_map = {
+  'God' : ['Devil'],
+  'Devil' : ['God'],
+  'Machine' : ['God', 'Balance'],
+  'Dragon' : ['Machine', 'Healer'],
+  'Physical' : ['Machine', 'Healer'],
+  'Attacker' : ['Devil', 'Physical'],
+  'Healer' : ['Dragon', 'Attacker'],
 }
 
 series_to_prefix_map = {
