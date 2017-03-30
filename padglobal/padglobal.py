@@ -5,7 +5,6 @@ import re
 
 import discord
 from discord.ext import commands
-from numpy.doc import glossary
 
 from __main__ import user_allowed, send_cmd_help
 
@@ -35,9 +34,6 @@ class PadGlobal:
     @commands.group(pass_context=True)
     async def padglobal(self, context):
         """PAD global custom commands."""
-        if not self.settings.checkAdmin(context.message.author.id):
-            await self.bot.say(inline("Not authorized to edit pad global commands"))
-            return
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
@@ -48,6 +44,10 @@ class PadGlobal:
         Example:
         !padglobal add command_name Text you want
         """
+        if not self.settings.checkAdmin(context.message.author.id):
+            await self.bot.say(inline("Not authorized to edit pad global commands"))
+            return
+
         command = command.lower()
         if command in self.bot.commands.keys():
             await self.bot.say("That is already a standard command.")
@@ -65,6 +65,10 @@ class PadGlobal:
 
         Example:
         !padglobal delete yourcommand"""
+        if not self.settings.checkAdmin(context.message.author.id):
+            await self.bot.say(inline("Not authorized to edit pad global commands"))
+            return
+
         command = command.lower()
         cmdlist = self.c_commands
         if command in cmdlist:
@@ -80,6 +84,10 @@ class PadGlobal:
 
         Example:
         ^padglobal setgeneral yourcommand"""
+        if not self.settings.checkAdmin(context.message.author.id):
+            await self.bot.say(inline("Not authorized to edit pad global commands"))
+            return
+
         command = command.lower()
         if command not in self.c_commands:
             await self.bot.say("PAD command doesn't exist.")
@@ -94,6 +102,10 @@ class PadGlobal:
 
         Example:
         ^padglobal setfaq yourcommand"""
+        if not self.settings.checkAdmin(context.message.author.id):
+            await self.bot.say(inline("Not authorized to edit pad global commands"))
+            return
+
         command = command.lower()
         if command not in self.c_commands:
             await self.bot.say("PAD command doesn't exist.")
@@ -109,6 +121,10 @@ class PadGlobal:
 
         Example:
         ^padglobal setboards yourcommand"""
+        if not self.settings.checkAdmin(context.message.author.id):
+            await self.bot.say(inline("Not authorized to edit pad global commands"))
+            return
+
         command = command.lower()
         if command not in self.c_commands:
             await self.bot.say("PAD command doesn't exist.")
