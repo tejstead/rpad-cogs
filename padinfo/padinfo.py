@@ -153,6 +153,15 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
+    @commands.command(name="evos", pass_context=True)
+    async def evos(self, ctx, *, query):
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            info = monsterToEvoText(m)
+            await self.bot.say(box(info))
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
     @commands.command(name="debugid", pass_context=True)
     @checks.mod_or_permissions(manage_server=True)
     async def _dodebugid(self, ctx, *, query):
@@ -533,13 +542,29 @@ def monsterToInfoText(m: Monster):
 def monsterToHeader(m : Monster):
     return 'No. {} {}'.format(m.monster_id_na, m.name_na)
 
-def monsterToLongHeader(m : Monster):
-    header = monsterToHeader(m)
+def monsterToJpSuffix(m : Monster):
+    suffix = ""
     if m.roma_subname:
-        header += ' [{}]'.format(m.roma_subname)
+        suffix += ' [{}]'.format(m.roma_subname)
     if not m.on_us:
-        header += ' (JP only)'
-    return header
+        suffix += ' (JP only)'
+    return suffix
+
+def monsterToLongHeader(m : Monster):
+    return monsterToHeader(m) + monsterToJpSuffix(m)
+
+def monsterToLongHeaderWithAttr(m : Monster):
+    header = 'No. {} {} {}'.format(
+        m.monster_id_na,
+        "({}{})".format(attr_prefix_map[m.attr1], "/" + attr_prefix_map[m.attr2] if m.attr2 else ""),
+        m.name_na)
+    return header + monsterToJpSuffix(m)
+
+def monsterToEvoText(m: Monster):
+    output = monsterToLongHeader(m)
+    for ae in sorted(m.alt_evos, key=lambda x: int(x.monster_id)):
+        output += "\n\t- {}".format(monsterToLongHeader(ae))
+    return output
 
 def monsterToPicText(m : Monster):
     APPBANK_PIC_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'
@@ -989,6 +1014,7 @@ class PgDataWrapper:
             for m in mg.monsters:
                 m.group_size = len(mg.monsters)
                 m.debug_info += ' | grpsize ' + str(len(mg.monsters))
+                m.alt_evos = [x for x in mg.monsters if x.monster_id != m.monster_id]
 
             # Compute tree farmable status
             farmable_evo = False
