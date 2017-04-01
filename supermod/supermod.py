@@ -221,6 +221,7 @@ class SuperMod:
         self.settings = SuperModSettings("supermod")
 
         self.server_id_to_last_spoke = defaultdict(dict)
+        self.server_id_to_last_no_thinking = defaultdict(dict)
 
         global SUPERMOD_COG
         SUPERMOD_COG = self
@@ -337,6 +338,7 @@ class SuperMod:
             supermod_count = self.settings.getSupermodCount(server_id)
             new_mods = random.sample(users_spoken, min(len(users_spoken), supermod_count))
             self.server_id_to_last_spoke[server_id].clear()
+            self.server_id_to_last_no_thinking[server_id].clear()
 
             new_mods += permanent_supermods
             new_mods = set(new_mods)
@@ -436,14 +438,19 @@ class SuperMod:
         if not bad_msg and not contains_native_thinking_emoji:
             return
 
-        img_tuple = random.choice(NO_THINKING_IMAGES)
-        embed = discord.Embed()
-        embed.set_image(url=img_tuple[0])
-        embed.set_footer(text=img_tuple[1])
-        color = ''.join([random.choice('0123456789ABCDEF') for x in range(6)])
-        color = int(color, 16)
-        embed.color = discord.Color(value=color)
-        await self.bot.send_message(message.channel, embed=embed)
+
+        user_id = message.author.id
+        if user_id not in self.server_id_to_last_no_thinking[server_id]:
+            self.server_id_to_last_no_thinking[server_id][user_id] = datetime.now()
+            img_tuple = random.choice(NO_THINKING_IMAGES)
+            embed = discord.Embed()
+            embed.set_image(url=img_tuple[0])
+            embed.set_footer(text=img_tuple[1])
+            color = ''.join([random.choice('0123456789ABCDEF') for x in range(6)])
+            color = int(color, 16)
+            embed.color = discord.Color(value=color)
+            await self.bot.send_message(message.channel, embed=embed)
+
         await self.bot.delete_message(message)
 
 
