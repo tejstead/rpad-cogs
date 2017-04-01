@@ -82,20 +82,20 @@ REFRESH_REMOVED_QUIET = ":white_check_mark: :thumbsup: :octagonal_sign: Removed 
 REFRESH_REMOVED_SUPERMOD = ":broken_heart::no_entry_sign:removed :thumbsdown::x::sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles::cop: from :point_right: :point_right: {} :point_left: :point_left: :no_good: :ok_hand: :wave:"
 REFRESH_ADDED_SUPERMOD = ":white_check_mark::ballot_box_with_check: added :heavy_plus_sign: :smiley: :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: to :point_right: :point_right: {} :point_left: :point_left: :cartwheel: :ok_hand:"
 
-USER_RENAME_FAILED_DISABLED = ":frowning: :frowning2: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops: {}, :scream: :cold_sweat:  :point_right: :point_right: {} :point_left: :point_left: :rage: :rage: :rage: :regional_indicator_h: :regional_indicator_a: :regional_indicator_t: :regional_indicator_e: :regional_indicator_s: :rage: :rage: :rage: :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: so :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart:  won't :person_frowning: :person_with_pouting_face: change :recycle: :arrow_forward: their :abc: :abcd: :capital_abcd: name :cold_sweat: :zipper_mouth:"
+USER_RENAME_FAILED_DISABLED = ":frowning: :frowning: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops: {}, :scream: :cold_sweat:  :point_right: :point_right: {} :point_left: :point_left: :rage: :rage: :rage: :regional_indicator_h: :regional_indicator_a: :regional_indicator_t: :regional_indicator_e: :regional_indicator_s: :rage: :rage: :rage: :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: so :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart:  won't :person_frowning: :person_with_pouting_face: change :recycle: :arrow_forward: their :abc: :abcd: :capital_abcd: name :cold_sweat: :zipper_mouth:"
 USER_RENAME_SUCCEEDED = ":sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: {} :arrow_forward: :arrow_heading_down: renamed :tophat: :eyeglasses: :point_right: :point_right: {} :point_left: :point_left: :arrow_heading_up: :recycle: to :point_right: :point_right: {} :point_left: :point_left: :white_check_mark: :ok_hand:"
 USER_RENAME_CLEARED = ":sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: {} :octagonal_sign: :warning: cleared :recycle: :thumbsdown: :regional_indicator_n: :regional_indicator_i: :regional_indicator_c: :regional_indicator_k: :regional_indicator_n: :regional_indicator_a: :regional_indicator_m: :regional_indicator_e: for :zipper_mouth: :point_right: :point_right: {} :point_left: :point_left: :disappointed:"
-USER_RENAME_FAILED = ":frowning: :frowning2: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops: {} :heavy_multiplication_x: :rat: but :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: :warning: couldn't :no_entry_sign: :x: change :recycle: :arrow_forward: the :regional_indicator_n: :regional_indicator_a: :regional_indicator_m: :regional_indicator_e: of :person_frowning: :frowning: :point_right: :point_right: {} :point_left: :point_left: :rage: :imp: to :clown: :cold_sweat: :point_right: :point_right: {} :point_left: :point_left: :sweat_drops: :thumbsdown:"
+USER_RENAME_FAILED = ":frowning: :frowning: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops: {} :heavy_multiplication_x: :rat: but :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: :warning: couldn't :no_entry_sign: :x: change :recycle: :arrow_forward: the :regional_indicator_n: :regional_indicator_a: :regional_indicator_m: :regional_indicator_e: of :person_frowning: :frowning: :point_right: :point_right: {} :point_left: :point_left: :rage: :imp: to :clown: :cold_sweat: :point_right: :point_right: {} :point_left: :point_left: :sweat_drops: :thumbsdown:"
 
-USER_QUIET_FAILED_DISABLED = ":frowning: :frowning2: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops: {}, :point_right: :point_right: {} :point_left: :point_left: :rage: :rage: :rage: :regional_indicator_h: :regional_indicator_a: :regional_indicator_t: :regional_indicator_e: :regional_indicator_s: :rage: :rage: :rage: :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: so :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart:  won't :no_entry_sign: :no_entry: put :point_right: :disappointed: them :family: :family_mmgb: in :sleeping: :sleepy: :zzz: :sleeping_accommodation: :regional_indicator_q: :regional_indicator_u: :regional_indicator_i: :regional_indicator_e: :regional_indicator_t:    :regional_indicator_t: :regional_indicator_i: :regional_indicator_m: :regional_indicator_e: :stopwatch: :alarm_clock: :clock:"
-USER_QUIET_FAILED_SUPERMOD = ":frowning: :frowning2: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops: {}, :point_right: :point_right: {} :point_left: :point_left: is :warning: :rolling_eyes: a :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: :bangbang: :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: :no_entry_sign: can't :no_pedestrians: :no_bicycles: :no_mobile_phones: :muscle:  put :family: :worried:  them :fist: :unamused: in :sleeping: :sleepy: :zzz: :sleeping_accommodation: :regional_indicator_q: :regional_indicator_u: :regional_indicator_i: :regional_indicator_e: :regional_indicator_t:    :regional_indicator_t: :regional_indicator_i: :regional_indicator_m: :regional_indicator_e: :stopwatch: :alarm_clock: :clock:"
+USER_QUIET_FAILED_DISABLED = ":frowning: :frowning: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops: {}, :point_right: :point_right: {} :point_left: :point_left: :rage: :rage: :rage: :regional_indicator_h: :regional_indicator_a: :regional_indicator_t: :regional_indicator_e: :regional_indicator_s: :rage: :rage: :rage: :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: so :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart:  won't :no_entry_sign: :no_entry: put :point_right: :disappointed: them :family: :family_mmgb: in :sleeping: :sleepy: :zzz: :sleeping_accommodation: :regional_indicator_q: :regional_indicator_u: :regional_indicator_i: :regional_indicator_e: :regional_indicator_t:    :regional_indicator_t: :regional_indicator_i: :regional_indicator_m: :regional_indicator_e: :stopwatch: :alarm_clock: :clock:"
+USER_QUIET_FAILED_SUPERMOD = ":frowning: :frowning: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops: {}, :point_right: :point_right: {} :point_left: :point_left: is :warning: :rolling_eyes: a :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: :bangbang: :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: :no_entry_sign: can't :no_pedestrians: :no_bicycles: :no_mobile_phones: :muscle:  put :family: :worried:  them :fist: :unamused: in :sleeping: :sleepy: :zzz: :sleeping_accommodation: :regional_indicator_q: :regional_indicator_u: :regional_indicator_i: :regional_indicator_e: :regional_indicator_t:    :regional_indicator_t: :regional_indicator_i: :regional_indicator_m: :regional_indicator_e: :stopwatch: :alarm_clock: :clock:"
 USER_QUIET_SUCCEEDED = ":sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: {} :ok_hand: :muscle: put :cold_sweat: :point_right: :point_right: {} :point_left: :point_left: in :sleeping: :sleepy: :zzz: :sleeping_accommodation: :regional_indicator_q: :regional_indicator_u: :regional_indicator_i: :regional_indicator_e: :regional_indicator_t:    :regional_indicator_t: :regional_indicator_i: :regional_indicator_m: :regional_indicator_e: :stopwatch: :alarm_clock: :clock:"
 
 CHANNEL_RENAME_SUCCEEDED = ":sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: {} :abc: :abcd: :capital_abcd: renamed :sunglasses: :ok_hand: channel :ear: :lips: :point_right: :point_right: {} :point_left: :point_left: to :arrow_forward: :railway_track: :point_right: :point_right: {} :point_left: :point_left: :ok_hand:"
-CHANNEL_RENAME_FAILED = ":frowning: :frowning2: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops:  {} :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: :rage: can't :rage: :no_entry_sign: :abc: :abcd: :capital_abcd: rename :ocean: :no_bell: channel :point_right: :point_right: {} :point_left: :point_left: to :point_right: :point_right: {} :point_left: :point_left: It's :thumbsdown: :no_mobile_phones: not :imp: :face_palm: a :loudspeaker: :loudspeaker: discussion :loud_sound: :microphone2: channel :telephone: :no_mobile_phones: :ok_hand:"
+CHANNEL_RENAME_FAILED = ":frowning: :frowning: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops:  {} :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: :rage: can't :rage: :no_entry_sign: :abc: :abcd: :capital_abcd: rename :ocean: :no_bell: channel :point_right: :point_right: {} :point_left: :point_left: to :point_right: :point_right: {} :point_left: :point_left: It's :thumbsdown: :no_mobile_phones: not :imp: :face_palm: a :loudspeaker: :loudspeaker: discussion :loud_sound: :microphone2: channel :telephone: :no_mobile_phones: :ok_hand:"
 
 CHANNEL_TOPIC_SUCCEEDED = ":sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop:  {} :arrow_heading_up: :arrow_left: :recycle: changed :bookmark: :bookmark_tabs: channel :mouse_three_button: :ocean: topic :abc: :abcd: :capital_abcd: for :ok_hand: :point_right: :point_right: {} :point_left: :point_left: to :point_right: :point_right: {} :point_left: :point_left: :ok_hand:"
-CHANNEL_TOPIC_FAILED = ":frowning: :frowning2: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops:  {} :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: :rage: can't :rage: :no_entry_sign: change  :abc: :abcd: :capital_abcd: channel :ocean: :no_bell: topic:motorcycle: :rocket:  for :point_right: :point_right: {} :point_left: :point_left: to :point_right: :point_right: {} :point_left: :point_left: It's :thumbsdown: :no_mobile_phones: not :imp: :face_palm: a :loudspeaker: :loudspeaker: discussion :loud_sound: :microphone2: channel :telephone: :no_mobile_phones: :ok_hand:"
+CHANNEL_TOPIC_FAILED = ":frowning: :frowning: :regional_indicator_s: :regional_indicator_o: :regional_indicator_r: :regional_indicator_r: :regional_indicator_y: :broken_heart: :sweat_drops: :sweat_drops:  {} :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: :rage: can't :rage: :no_entry_sign: change  :abc: :abcd: :capital_abcd: channel :ocean: :no_bell: topic:motorcycle: :rocket:  for :point_right: :point_right: {} :point_left: :point_left: to :point_right: :point_right: {} :point_left: :point_left: It's :thumbsdown: :no_mobile_phones: not :imp: :face_palm: a :loudspeaker: :loudspeaker: discussion :loud_sound: :microphone2: channel :telephone: :no_mobile_phones: :ok_hand:"
 
 USER_SET_IGNORE = ":sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: still :heart_decoration: :ok_hand: :heart_eyes: :regional_indicator_l: :regional_indicator_o: :regional_indicator_v: :regional_indicator_e: you :bangbang: :100: But  :sparkling_heart: :sparkling_heart: :regional_indicator_i: :sparkling_heart: :sparkling_heart: will :rage: :rage: ignore :sweat: :cold_sweat: you. :fire: :fire: :fire: :broken_heart: :broken_heart: :broken_heart: :regional_indicator_g: :regional_indicator_o: :regional_indicator_o: :regional_indicator_d: :regional_indicator_b: :regional_indicator_y: :regional_indicator_e: :point_right: :point_right: {} :point_left: :point_left: cannot :earth_africa: :earth_americas: :earth_asia: become :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: :bangbang:"
 USER_CLEARED_IGNORE = ":information_desk_person: :sweat_drops: :fireworks: :regional_indicator_s: :regional_indicator_e: :regional_indicator_n: :regional_indicator_p: :regional_indicator_a: :regional_indicator_i:  :wave:  :regional_indicator_n: :regional_indicator_o: :regional_indicator_t: :regional_indicator_i: :regional_indicator_c: :regional_indicator_e: :regional_indicator_d: :trophy:  :regional_indicator_y: :regional_indicator_o: :regional_indicator_u: :bangbang:  :sparkles:  :heart: :heart_eyes: {} :thumbsup: :ok_hand: can :sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop: again :ballot_box_with_check: :white_check_mark: :sunny:"
@@ -109,7 +109,7 @@ DONE = ":sparkles: :regional_indicator_d: :regional_indicator_o: :regional_indic
 SPACER = ":heavy_plus_sign:  :heavy_plus_sign:"
 ENABLED = ":fire: :fire: :regional_indicator_e: :regional_indicator_n: :regional_indicator_a: :regional_indicator_b: :regional_indicator_l: :regional_indicator_e: :regional_indicator_d: :fire: :fire:"
 DISABLED = ":mobile_phone_off: :mobile_phone_off: :regional_indicator_d: :regional_indicator_i: :regional_indicator_s: :regional_indicator_a: :regional_indicator_b: :regional_indicator_l: :regional_indicator_e: :regional_indicator_d: :mobile_phone_off: :mobile_phone_off:"
-SUPERMOD = ":sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles:"
+SUPERMOD = ":sparkles: :sparkles: :regional_indicator_s: :regional_indicator_u: :regional_indicator_p: :regional_indicator_e: :regional_indicator_r: :regional_indicator_m: :regional_indicator_o: :regional_indicator_d: :sparkles: :sparkles: :cop:"
 THINKING = ":thinking: :thinking: :regional_indicator_n: :regional_indicator_o: :regional_indicator_t: :regional_indicator_h: :regional_indicator_i: :regional_indicator_n: :regional_indicator_k: :regional_indicator_i: :regional_indicator_n: :regional_indicator_g: :thinking: :thinking:"
 
 SUPERMOD_ENABLED = "{} {} {}".format(SUPERMOD, SPACER, ENABLED)
@@ -120,6 +120,71 @@ THINKING_DISABLED = "{} {} {}".format(THINKING, SPACER, DISABLED)
 
 CHANNEL_ENABLED = "{} " + SPACER + " " + ENABLED
 CHANNEL_DISABLED = "{} " + SPACER + " " + DISABLED
+
+def char_to_emoji(c):
+    c = c.lower()
+    if c < 'a' or c > 'z':
+        return c
+
+    base = 127462
+    adjustment = ord(c) - ord('a')
+    return chr(base + adjustment) + ' '
+
+def replace_regional_indicator(s):
+    s = s.replace('regional_indicator_', '')
+    chunks = re.split('(:\w:)', s)
+    result = ''
+    for chunk in chunks:
+        if len(chunk) == 3 and chunk.startswith(':') and chunk.endswith(':'):
+            result += char_to_emoji(chunk.strip(':'))
+        else:
+            result += chunk
+    return result
+
+REFRESH_STARTED = replace_regional_indicator(REFRESH_STARTED)
+REFRESH_REMOVED_QUIET = replace_regional_indicator(REFRESH_REMOVED_QUIET)
+REFRESH_REMOVED_SUPERMOD = replace_regional_indicator(REFRESH_REMOVED_SUPERMOD)
+REFRESH_ADDED_SUPERMOD = replace_regional_indicator(REFRESH_ADDED_SUPERMOD)
+
+USER_RENAME_FAILED_DISABLED = replace_regional_indicator(USER_RENAME_FAILED_DISABLED)
+USER_RENAME_SUCCEEDED = replace_regional_indicator(USER_RENAME_SUCCEEDED)
+USER_RENAME_CLEARED = replace_regional_indicator(USER_RENAME_CLEARED)
+USER_RENAME_FAILED = replace_regional_indicator(USER_RENAME_FAILED)
+
+USER_QUIET_FAILED_DISABLED = replace_regional_indicator(USER_QUIET_FAILED_DISABLED)
+USER_QUIET_FAILED_SUPERMOD = replace_regional_indicator(USER_QUIET_FAILED_SUPERMOD)
+USER_QUIET_SUCCEEDED = replace_regional_indicator(USER_QUIET_SUCCEEDED)
+
+CHANNEL_RENAME_SUCCEEDED = replace_regional_indicator(CHANNEL_RENAME_SUCCEEDED)
+CHANNEL_RENAME_FAILED = replace_regional_indicator(CHANNEL_RENAME_FAILED)
+
+CHANNEL_TOPIC_SUCCEEDED = replace_regional_indicator(CHANNEL_TOPIC_SUCCEEDED)
+CHANNEL_TOPIC_FAILED = replace_regional_indicator(CHANNEL_TOPIC_FAILED)
+
+USER_SET_IGNORE = replace_regional_indicator(USER_SET_IGNORE)
+USER_CLEARED_IGNORE = replace_regional_indicator(USER_CLEARED_IGNORE)
+
+BE_QUIET_1 = replace_regional_indicator(BE_QUIET_1)
+BE_QUIET_2 = replace_regional_indicator(BE_QUIET_2)
+BE_QUIET_3 = replace_regional_indicator(BE_QUIET_3)
+
+DONE = replace_regional_indicator(DONE)
+
+SPACER = replace_regional_indicator(SPACER)
+ENABLED = replace_regional_indicator(ENABLED)
+DISABLED = replace_regional_indicator(DISABLED)
+SUPERMOD = replace_regional_indicator(SUPERMOD)
+THINKING = replace_regional_indicator(THINKING)
+
+SUPERMOD_ENABLED = replace_regional_indicator(SUPERMOD_ENABLED)
+SUPERMOD_DISABLED = replace_regional_indicator(SUPERMOD_DISABLED)
+
+THINKING_ENABLED = replace_regional_indicator(THINKING_ENABLED)
+THINKING_DISABLED = replace_regional_indicator(THINKING_DISABLED)
+
+CHANNEL_ENABLED = replace_regional_indicator(CHANNEL_ENABLED)
+CHANNEL_DISABLED = replace_regional_indicator(CHANNEL_DISABLED)
+
 
 SUPERMOD_MESSAGE = ("You have been chosen as {}\n"
                     "```You now have moderation power over discussion channels. You can:\n"
