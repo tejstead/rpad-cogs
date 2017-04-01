@@ -299,6 +299,7 @@ class SuperMod:
             await self.bot.say(log_text)
 
     async def do_refresh_supermod(self):
+        print('REFRESH STARTING')
         for server_id, server in self.settings.servers().items():
             if not self.settings.serverEnabled(server_id):
                 continue
@@ -403,8 +404,10 @@ class SuperMod:
                     msg = BE_QUIET_2
                 elif shh_count < 15:
                     msg = BE_QUIET_3
-                await self.bot.send_message(message.channel, msg.format(message.author.mention))
+                if msg:
+                    await self.bot.send_message(message.channel, msg.format(message.author.mention))
             except Exception as e:
+                traceback.print_exc()
                 print(e)
 
     async def no_thinking(self, message):
@@ -431,7 +434,6 @@ class SuperMod:
         for banned in banned_emoji_contents:
             emoji_regex = '.*:.*{}.*:.*'.format(banned)
             if re.match(emoji_regex, message.clean_content.lower()):
-                print('matched', emoji_regex)
                 bad_msg = True
                 break
 
@@ -641,8 +643,8 @@ class SuperMod:
         for user_id in quiet_users:
             output += '\n\t{}'.format(self.get_user_name(server, user_id))
 
-
-        await self.bot.say(box(output))
+        for page in pagify(output):
+            await self.bot.say(box(page))
 
     @supermod.command(pass_context=True)
     async def help(self, ctx):
