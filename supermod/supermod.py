@@ -234,7 +234,7 @@ class SuperMod:
             try:
                 await self.do_refresh_supermod()
             except Exception as e:
-                traceback.print_exc()
+                print(e)
 
             await asyncio.sleep(self.settings.getRefreshTimeSec())
 
@@ -272,7 +272,10 @@ class SuperMod:
 
     async def remove_supermod(self, member : discord.Member, supermod_role : discord.Role):
         if supermod_role and self.check_supermod(member, supermod_role):
-            await self.bot.remove_roles(member, supermod_role)
+            try:
+                await self.bot.remove_roles(member, supermod_role)
+            except Exception as e:
+                print("failed to remove supermod", member.name, e)
 
     def get_current_supermods(self, server : discord.Server, supermod_role : discord.Role):
         if supermod_role is None:
@@ -407,7 +410,6 @@ class SuperMod:
                 if msg:
                     await self.bot.send_message(message.channel, msg.format(message.author.mention))
             except Exception as e:
-                traceback.print_exc()
                 print(e)
 
     async def no_thinking(self, message):
