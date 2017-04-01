@@ -67,6 +67,8 @@ class PadInfo:
 
         self.download_and_refresh_nicknames()
 
+        self.menu = Menu(bot)
+
         global EXPOSED_PAD_INFO
         EXPOSED_PAD_INFO = self
 
@@ -157,8 +159,28 @@ class PadInfo:
     async def evos(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            info = monsterToEvoText(m)
-            await self.bot.say(box(info))
+            embed = monsterToEvoEmbed(m)
+            await self.bot.say(embed=embed)
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
+    @commands.command(pass_context=True)
+    async def idmenu(self, ctx, query):
+        timeout = 30
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            id_embed = monsterToEmbed(m, ctx.message.server)
+            evo_embed = monsterToEvoEmbed(m)
+
+            id_emoji = char_to_emoji('i')
+            evo_emoji = char_to_emoji('e')
+            remove_emoji = self.menu.emoji['no']
+            emoji_to_embed = OrderedDict()
+            emoji_to_embed[id_emoji] = id_embed
+            emoji_to_embed[evo_emoji] = evo_embed
+            emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
+
+            await self.menu.custom_menu(ctx, emoji_to_embed, id_emoji)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
@@ -565,6 +587,25 @@ def monsterToEvoText(m: Monster):
     for ae in sorted(m.alt_evos, key=lambda x: int(x.monster_id)):
         output += "\n\t- {}".format(monsterToLongHeader(ae))
     return output
+
+def monsterToEvoEmbed(m : Monster):
+    header = monsterToLongHeader(m)
+    embed = discord.Embed()
+    GAMEWITH_URL_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
+    PDX_URL_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
+    embed.set_thumbnail(url=GAMEWITH_URL_TEMPLATE.format(m.monster_id_na))
+    embed.title = header
+    embed.url = 'http://www.puzzledragonx.com/en/monster.asp?n={}'.format(m.monster_id_na)
+
+    field_name = '{} alternate evos'.format(len(m.alt_evos))
+    field_data = ''
+    for ae in sorted(m.alt_evos, key=lambda x: int(x.monster_id)):
+        field_data += "{}\n".format(monsterToLongHeader(ae))
+
+    embed.add_field(name=field_name, value=field_data)
+
+    return embed
+
 
 def monsterToPicText(m : Monster):
     APPBANK_PIC_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'

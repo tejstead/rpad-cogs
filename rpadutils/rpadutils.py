@@ -1,3 +1,4 @@
+import inspect
 import re
 
 import discord
@@ -170,3 +171,158 @@ def makeCachedPlainRequest(file_name, file_url, expiry_secs):
 async def boxPagifySay(say_fn, msg):
     for page in pagify(msg, delims=["\n"]):
         await say_fn(box(page))
+
+
+class Forbidden():
+    pass
+
+
+def default_check(reaction, user):
+        if user.bot:
+            return False
+        else:
+            return True
+
+
+class Menu():
+    def __init__(self, bot):
+        self.bot = bot
+
+        # Feel free to override this in your cog if you need to
+        self.emoji = {
+            0: "0⃣",
+            1: "1⃣",
+            2: "2⃣",
+            3: "3⃣",
+            4: "4⃣",
+            5: "5⃣",
+            6: "6⃣",
+            7: "7⃣",
+            8: "8⃣",
+            9: "9⃣",
+            10: "🔟",
+            "next": "➡",
+            "back": "⬅",
+            "yes": "✅",
+            "no": "❌",
+        }
+
+    # for use as an action
+    async def reaction_delete_message(self, bot, ctx, message):
+        await bot.delete_message(message)
+
+#     def perms(self, ctx):
+#         user = ctx.message.server.get_member(self.bot.user.id)
+#         return ctx.message.channel.permissions_for(user)
+
+    async def custom_menu(self, ctx, emoji_to_message, selected_emoji, **kwargs):
+        """Creates and manages a new menu
+        Required arguments:
+            Type:
+                1- number menu
+                2- confirmation menu
+                3- info menu (basically menu pagination)
+                4- custom menu. If selected, choices must be a list of tuples.
+            Messages:
+                Strings or embeds to use for the menu.
+                Pass as a list for number menu
+        Optional agruments:
+            page (Defaults to 0):
+                The message in messages that will be displayed
+            timeout (Defaults to 15):
+                The number of seconds until the menu automatically expires
+            check (Defaults to default_check):
+                The same check that wait_for_reaction takes
+            is_open (Defaults to False):
+                Whether or not the menu can take input from any user
+            emoji (Decaults to self.emoji):
+                A dictionary containing emoji to use for the menu.
+                If you pass this, use the same naming scheme as self.emoji
+            message (Defaults to None):
+                The discord.Message to edit if present
+            """
+        return await self._custom_menu(ctx, emoji_to_message, selected_emoji, **kwargs)
+
+    async def show_menu(self,
+                        ctx,
+                        message,
+                        new_message_content):
+        if message:
+            if type(new_message_content) == discord.Embed:
+                return await self.bot.edit_message(message, embed=new_message_content)
+            else:
+                return await self.bot.edit_message(message, new_message_content)
+        else:
+            if type(new_message_content) == discord.Embed:
+                return await self.bot.send_message(ctx.message.channel,
+                                                      embed=new_message_content)
+            else:
+                return await self.bot.say(new_message_content)
+
+    async def _custom_menu(self, ctx, emoji_to_message, selected_emoji, **kwargs):
+        timeout = kwargs.get('timeout', 15)
+        check = kwargs.get('check', default_check)
+        message = kwargs.get('message', None)
+
+        reactions_required = not message
+        new_message_content = emoji_to_message[selected_emoji]
+        message = await self.show_menu(ctx, message, new_message_content)
+
+        if reactions_required:
+            for e in emoji_to_message:
+                try:
+                    print("adding", e)
+                    await self.bot.add_reaction(message, e)
+#                     await self.bot.add_reaction(message, str(e))
+                except Exception as e:
+                    print("failed to add reaction", e)
+#                     return message
+
+        r = await self.bot.wait_for_reaction(
+            emoji=list(emoji_to_message.keys()),
+            message=message,
+            user=ctx.message.author,
+            check=check,
+            timeout=timeout)
+
+        if r is None:
+            try:
+                await self.bot.clear_reactions(message)
+            except Exception as e:
+                print("failed to clear reactions", e)
+            return message
+
+        react_emoji = r.reaction.emoji
+        react_action = emoji_to_message[r.reaction.emoji]
+
+        if inspect.iscoroutinefunction(react_action):
+            message = await react_action(self.bot, ctx, message)
+        elif inspect.isfunction(react_action):
+            message = react_action(ctx, message)
+
+        # user function killed message, quit
+        if not message:
+            return
+
+        try:
+            await self.bot.remove_reaction(message, react_emoji, r.user)
+        except Forbidden:
+            print("failed to clear user reaction")
+#             await self.bot.delete_message(message)
+            return message
+
+        return await self._custom_menu(
+            ctx, emoji_to_message, react_emoji,
+            timeout=timeout,
+            check=check,
+            message=message)
+
+def char_to_emoji(c):
+    c = c.lower()
+    if c < 'a' or c > 'z':
+        return c
+
+    base = 127462
+    adjustment = ord(c) - ord('a')
+    return chr(base + adjustment)
+
