@@ -505,6 +505,7 @@ class Monster:
         self.farmable_evo = self.farmable
         self.drop_info_list = drop_info_list
         self.is_inheritable = additional_info.is_inheritable if additional_info else False
+        self.alt_evos = list()
 
 def monsterToInfoText(m: Monster):
     header = monsterToHeader(m)
@@ -593,9 +594,13 @@ def monsterToEvoEmbed(m : Monster):
     embed = discord.Embed()
     GAMEWITH_URL_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
     PDX_URL_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
-    embed.set_thumbnail(url=GAMEWITH_URL_TEMPLATE.format(m.monster_id_na))
+    embed.set_thumbnail(url=GAMEWITH_URL_TEMPLATE.format(m.monster_id_jp))
     embed.title = header
     embed.url = 'http://www.puzzledragonx.com/en/monster.asp?n={}'.format(m.monster_id_na)
+
+    if not len(m.alt_evos):
+        embed.description = 'No alternate evos'
+        return embed
 
     field_name = '{} alternate evos'.format(len(m.alt_evos))
     field_data = ''
