@@ -263,6 +263,12 @@ class TrUtils:
             print('failed to check for nickname change' + str(e))
 
     @commands.command(pass_context=True)
+    async def revertname(self, ctx):
+        """Unsets your nickname"""
+        await self.bot.change_nickname(ctx.message.author, None)
+        await self.bot.say(inline('Done'))
+
+    @commands.command(pass_context=True)
     async def dumpmsg(self, ctx, msg_id : int):
         """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped"""
         msg = await self.bot.get_message(ctx.message.channel, msg_id)
