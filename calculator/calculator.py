@@ -36,7 +36,9 @@ class Calculator:
 
         calculate_stuff = eval(input)
         if len(str(calculate_stuff)) > 0:
-            em = discord.Embed(color=discord.Color.blue(), description='**Input**\n`{}`\n\n**Result**\n`{}`'.format(input, calculate_stuff))
+            em = discord.Embed(color=discord.Color.blue())
+            em.add_field(name='Input', value='`{}`'.format(input))
+            em.add_field(name='Result', value=calculate_stuff)
             await self.bot.say(embed=em)
 
 
