@@ -41,12 +41,27 @@ class PgAwakening:
         self.tma_seq = item['TMA_SEQ']
         self.awakening_id = item['TS_SEQ']
 
+# evolutionList.jsp
 class PgEvo:
     def __init__(self, item):
         self.monster_id = item['MONSTER_NO']
         self.to_monster_id = item['TO_NO']
-        self.tv_seq = item['TV_SEQ']
-        self.tv_type = item['TV_TYPE']
+        self.evo_id = item['TV_SEQ']  # evo unique id
+        self.tv_type = item['TV_TYPE']  # 0:evo, 1: uevo/uvo/awoken, 2: uuvo, reincarnate
+
+# {
+#     "MONSTER_NO": "153",
+#     "ORDER_IDX": "1",
+#     "TEM_SEQ": "1429",
+#     "TSTAMP": "1371788674011",
+#     "TV_SEQ": "332"
+# },
+# evoMaterialList.jsp
+class PgEvoMaterial:
+    def __init__(self, item):
+        self.evo_id = item['TV_SEQ']  # evo unique id
+        self.monster_id = item['MONSTER_NO']  # material monster
+        self.order = item['ORDER_IDX']  # display order
 
 # Evo'd Ras.
 # Extra Val1 : 2 for nekki?

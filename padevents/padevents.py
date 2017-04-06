@@ -82,6 +82,7 @@ EXTRA_FILES = [
     "eggTitleList.jsp",
     "eggTitleNameList.jsp",
     "evolutionList.jsp",
+    "evoMaterialList.jsp",
     "monsterAddInfoList.jsp",
     "monsterInfoList.jsp",
     "monsterList.jsp",

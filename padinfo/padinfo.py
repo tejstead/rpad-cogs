@@ -36,6 +36,12 @@ from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.twitter_stream import *
 
+INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
+THUMBNAIL_GAMEWITH_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
+THUMBNAIL_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
+FULLPIC_APPBANK_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'
+FULLPIC_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'
+
 
 class OrderedCounter(Counter, OrderedDict):
     """Counter that remembers the order elements are first seen"""
@@ -164,6 +170,15 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
+    @commands.command(name="mats", pass_context=True, aliases=['evomats'])
+    async def evomats(self, ctx, *, query):
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            embed = monsterToEvoMatsEmbed(m)
+            await self.bot.say(embed=embed)
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
     @commands.command(pass_context=True)
     async def idmenu(self, ctx, query):
         timeout = 30
@@ -171,13 +186,16 @@ class PadInfo:
         if m is not None:
             id_embed = monsterToEmbed(m, ctx.message.server)
             evo_embed = monsterToEvoEmbed(m)
+            mats_embed = monsterToEvoMatsEmbed(m)
 
             id_emoji = char_to_emoji('i')
             evo_emoji = char_to_emoji('e')
+            mats_emoji = char_to_emoji('m')
             remove_emoji = self.menu.emoji['no']
             emoji_to_embed = OrderedDict()
             emoji_to_embed[id_emoji] = id_embed
             emoji_to_embed[evo_emoji] = evo_embed
+            emoji_to_embed[mats_emoji] = mats_embed
             emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
 
             await self.menu.custom_menu(ctx, emoji_to_embed, id_emoji)
@@ -422,7 +440,9 @@ class Monster:
                  type_map,
                  attribute_map,
                  drop_info_list,
-                 series):
+                 series,
+                 mats_to_evo,
+                 used_for_evo):
 
         self.monster_id = base_monster.monster_id
         # NA is used in puzzledragonx
@@ -507,6 +527,10 @@ class Monster:
         self.is_inheritable = additional_info.is_inheritable if additional_info else False
         self.alt_evos = list()
 
+        self.mats_to_evo = [x.monster_id for x in sorted(mats_to_evo, key=lambda z: z.order)]
+        self.used_for_evo = list()
+#         self.used_for_evo = [x.monster_id for x in sorted(mats_to_evo, key=lambda z: z.order)]
+
 def monsterToInfoText(m: Monster):
     header = monsterToHeader(m)
 
@@ -558,7 +582,7 @@ def monsterToInfoText(m: Monster):
         active_row += 'None/Missing'
 
     info_chunk = '{}\n{}\n{}\n{}\n{}\n{}'.format(header, info_row, stats_row, awakenings_row, ls_row, active_row)
-    link_row = 'http://www.puzzledragonx.com/en/monster.asp?n={}'.format(m.monster_id_na)
+    link_row = INFO_PDX_TEMPLATE.format(m.monster_id_na)
 
     return info_chunk, link_row
 
@@ -589,14 +613,18 @@ def monsterToEvoText(m: Monster):
         output += "\n\t- {}".format(monsterToLongHeader(ae))
     return output
 
+def monsterToThumbnailUrl(m : Monster):
+    if m.on_us:
+        return THUMBNAIL_PDX_TEMPLATE.format(m.monster_id_na)
+    else:
+        return THUMBNAIL_GAMEWITH_TEMPLATE.format(m.monster_id_jp)
+
 def monsterToEvoEmbed(m : Monster):
     header = monsterToLongHeader(m)
     embed = discord.Embed()
-    GAMEWITH_URL_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
-    PDX_URL_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
-    embed.set_thumbnail(url=GAMEWITH_URL_TEMPLATE.format(m.monster_id_jp))
+    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
     embed.title = header
-    embed.url = 'http://www.puzzledragonx.com/en/monster.asp?n={}'.format(m.monster_id_na)
+    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
 
     if not len(m.alt_evos):
         embed.description = 'No alternate evos'
@@ -611,10 +639,29 @@ def monsterToEvoEmbed(m : Monster):
 
     return embed
 
+def monsterToEvoMatsEmbed(m : Monster):
+    header = monsterToLongHeader(m)
+    embed = discord.Embed()
+
+    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
+    embed.title = header
+    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+
+    if not len(m.mats_to_evo):
+        embed.description = 'No evo mats'
+        return embed
+
+    field_name = 'Evo materials'
+    field_data = ''
+    for ae in m.mats_to_evo:
+        field_data += "{}\n".format(monsterToLongHeader(ae))
+
+    embed.add_field(name=field_name, value=field_data)
+
+    return embed
+
 
 def monsterToPicText(m : Monster):
-    APPBANK_PIC_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'
-    PDX_PIC_TEMPLATE = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'
     link = APPBANK_PIC_TEMPLATE.format(m.monster_id_na)
     return monsterToHeader(m), link
 
@@ -645,11 +692,9 @@ def monsterToEmbed(m : Monster, server):
     header = monsterToLongHeader(m)
 
     embed = discord.Embed()
-    GAMEWITH_URL_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
-    PDX_URL_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
-    embed.set_thumbnail(url=GAMEWITH_URL_TEMPLATE.format(m.monster_id_na))
+    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
     embed.title = header
-    embed.url = 'http://www.puzzledragonx.com/en/monster.asp?n={}'.format(m.monster_id_na)
+    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
 
     info_row_1 = monsterToTypeString(m)
     acquire_text = monsterToAcquireString(m)
@@ -950,6 +995,7 @@ class PgDataWrapper:
         attribute_list = padguide.loadJsonToItem('attributeList.jsp', padguide.PgAttribute)
         awoken_list = padguide.loadJsonToItem('awokenSkillList.jsp', padguide.PgAwakening)
         evolution_list = padguide.loadJsonToItem('evolutionList.jsp', padguide.PgEvo)
+        evolution_mat_list = padguide.loadJsonToItem('evoMaterialList.jsp', padguide.PgEvoMaterial)
         monster_add_info_list = padguide.loadJsonToItem('monsterAddInfoList.jsp', padguide.PgMonsterAddInfo)
         monster_info_list = padguide.loadJsonToItem('monsterInfoList.jsp', padguide.PgMonsterInfo)
         base_monster_list = padguide.loadJsonToItem('monsterList.jsp', padguide.PgBaseMonster)
@@ -968,9 +1014,20 @@ class PgDataWrapper:
         for item in awoken_list:
             monster_awoken_multimap[item.monster_id].append(item)
 
+#         monster_for_evo_multimap = dict()
+#         monster_for_evo_multimap[item.to_monster_id] = item
+
+        monster_to_current_evo_item = {x.to_monster_id: x for x in evolution_list}
+
         monster_evo_multimap = defaultdict(list)
         for item in evolution_list:
             monster_evo_multimap[item.monster_id].append(item)
+
+        monster_evo_to_mat_multimap = defaultdict(list)
+        monster_mat_to_evo_multimap = defaultdict(list)
+        for item in evolution_mat_list:
+            monster_evo_to_mat_multimap[item.evo_id].append(item)
+            monster_mat_to_evo_multimap[item.monster_id].append(item)
 
         monster_add_info_map = {x.monster_id: x for x in monster_add_info_list}
         monster_info_map = {x.monster_id: x for x in monster_info_list}
@@ -988,14 +1045,19 @@ class PgDataWrapper:
 
             awakenings = monster_awoken_multimap[monster_id]
             awakening_skills = [skill_map[x.awakening_id] for x in awakenings]
-            evos = monster_evo_multimap[monster_id]
             additional_info = monster_add_info_map.get(monster_id)
+            evos = monster_evo_multimap[monster_id]
             monster_info = monster_info_map[monster_id]
             active_skill = skill_map.get(base_monster.active_id)
             leader_skill = skill_map.get(base_monster.leader_id)
             leader_skill_data = skill_leader_data_map.get(base_monster.leader_id)
             drop_info_list = monster_id_to_drop_info_list.get(monster_id, [])
             series = series_map[monster_info.series_id]
+
+            cur_evo = monster_to_current_evo_item.get(monster_id, None)
+            mats_to_evo = monster_evo_to_mat_multimap[cur_evo.evo_id] if cur_evo else []
+            used_for_evo = list()
+#             used_for_evo = monster_for_evo_multimap[cur_evo.evo_id]
 
             full_monster = Monster(
                 base_monster,
@@ -1009,7 +1071,9 @@ class PgDataWrapper:
                 type_map,
                 attribute_map,
                 drop_info_list,
-                series)
+                series,
+                mats_to_evo,
+                used_for_evo)
 
             if na_only and not full_monster.on_na:
                 continue
@@ -1028,6 +1092,13 @@ class PgDataWrapper:
                 if evo_to_id in self.full_monster_map:
                     self.full_monster_map[evo_to_id].evo_from.append(full_monster.monster_id)
 
+            mats_to_evo_monsters = list()
+            for monster_id in full_monster.mats_to_evo:
+                mats_to_evo_monsters.append(self.full_monster_map[monster_id])
+            # Ugh. This is bad.
+            # Really need to build an initial template monster, map it by ID, then
+            # use that when building the individual monsters.
+            full_monster.mats_to_evo = mats_to_evo_monsters
 
         self.series_id_to_monsters = defaultdict(list)
 
