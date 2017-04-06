@@ -662,7 +662,7 @@ def monsterToEvoMatsEmbed(m : Monster):
 
 
 def monsterToPicText(m : Monster):
-    link = APPBANK_PIC_TEMPLATE.format(m.monster_id_na)
+    link = FULLPIC_APPBANK_TEMPLATE.format(m.monster_id_na)
     return monsterToHeader(m), link
 
 def monsterToTypeString(m : Monster):
