@@ -31,6 +31,7 @@ class StreamCopy:
         while self == self.bot.get_cog('StreamCopy'):
             try:
                 await self.do_refresh()
+                await self.do_ensure_roles()
             except Exception as e:
                 traceback.print_exc()
 
@@ -43,6 +44,22 @@ class StreamCopy:
         """streamcopy."""
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
+
+    @streamcopy.command(pass_context=True, no_pm=True)
+    async def setStreamerRole(self, ctx, *, role_name : str):
+        try:
+            role = get_role(ctx.message.server.roles, role_name)
+        except:
+            await self.bot.say(inline('Unknown role'))
+            return
+
+        self.settings.setStreamerRole(ctx.message.server.id, role.id)
+        await self.bot.say(inline('Done. Make sure that role is below the bot in the hierarchy'))
+
+    @streamcopy.command(pass_context=True, no_pm=True)
+    async def clearStreamerRole(self, ctx):
+        self.settings.clearStreamerRole(ctx.message.server.id)
+        await self.bot.say(inline('Done'))
 
     @streamcopy.command(name="adduser", pass_context=True)
     async def addUser(self, ctx, user : discord.User, priority : int):
@@ -74,6 +91,10 @@ class StreamCopy:
             await self.bot.say(inline('Could not find a streamer'))
 
     async def check_stream(self, before, after):
+        streamer_role_id = self.settings.getStreamerRole(before.server.id)
+        if streamer_role_id:
+            await self.ensure_user_streaming_role(after.server, streamer_role_id, after)
+
         try:
             tracked_users = self.settings.users()
             if before.id not in tracked_users:
@@ -87,6 +108,18 @@ class StreamCopy:
         except ex:
             print("Stream checking failed", ex)
 
+    async def ensure_user_streaming_role(self, server, streamer_role_id : discord.Role, user : discord.Member):
+        user_is_playing = self.is_playing(user)
+        try:
+            streamer_role = get_role_from_id(self.bot, server, streamer_role_id)
+            user_has_streamer_role = streamer_role in user.roles
+            if user_is_playing and not user_has_streamer_role:
+                await self.bot.add_roles(user, streamer_role)
+            elif not user_is_playing and user_has_streamer_role:
+                await self.bot.remove_roles(user, streamer_role)
+        except ex:
+            pass
+
     async def do_refresh(self):
         other_stream = self.find_stream()
         if other_stream:
@@ -94,6 +127,15 @@ class StreamCopy:
         else:
             await self.bot.change_presence(game=None)
         return other_stream
+
+    async def do_ensure_roles(self):
+        servers = self.bot.servers
+        for server in servers:
+            streamer_role_id = self.settings.getStreamerRole(server.id)
+            if not streamer_role_id:
+                continue
+            for member in server.members:
+                await self.ensure_user_streaming_role(member.server, streamer_role_id, member)
 
     def find_stream(self):
         user_ids = self.settings.users().keys()
@@ -120,7 +162,8 @@ def setup(bot):
 class StreamCopySettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'users' : {}
+          'users' : {},
+          'servers': {}
         }
         return config
 
@@ -136,4 +179,25 @@ class StreamCopySettings(CogSettings):
         users = self.users()
         if user_id in users:
             users.pop(user_id)
+            self.save_settings()
+
+    def servers(self, server_id):
+        servers = self.bot_settings['servers']
+        if server_id not in servers:
+            servers[server_id] = {}
+        return servers[server_id]
+
+    def setStreamerRole(self, server_id, role_id):
+        server = self.servers(server_id)
+        server['role'] = role_id
+        self.save_settings()
+
+    def getStreamerRole(self, server_id):
+        server = self.servers(server_id)
+        return server.get('role', None)
+
+    def clearStreamerRole(self, server_id):
+        server = self.servers(server_id)
+        if 'role' in server:
+            server.pop('role')
             self.save_settings()
