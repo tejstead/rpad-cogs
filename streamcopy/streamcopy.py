@@ -39,14 +39,14 @@ class StreamCopy:
         print("done refresh_stream")
 
     @commands.group(pass_context=True)
-    @checks.is_owner()
+    @checks.mod_or_permissions(manage_server=True)
     async def streamcopy(self, context):
-        """streamcopy."""
+        """Utilities for reacting to users gaining/losing streaming status."""
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
     @streamcopy.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_roles=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def setStreamerRole(self, ctx, *, role_name : str):
         try:
             role = get_role(ctx.message.server.roles, role_name)
@@ -58,22 +58,25 @@ class StreamCopy:
         await self.bot.say(inline('Done. Make sure that role is below the bot in the hierarchy'))
 
     @streamcopy.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_roles=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def clearStreamerRole(self, ctx):
         self.settings.clearStreamerRole(ctx.message.server.id)
         await self.bot.say(inline('Done'))
 
     @streamcopy.command(name="adduser", pass_context=True)
+    @checks.is_owner()
     async def addUser(self, ctx, user : discord.User, priority : int):
         self.settings.addUser(user.id, priority)
         await self.bot.say(inline('Done'))
 
     @streamcopy.command(name="rmuser", pass_context=True)
+    @checks.is_owner()
     async def rmUser(self, ctx, user : discord.User):
         self.settings.rmUser(user.id)
         await self.bot.say(inline('Done'))
 
     @streamcopy.command(name="list", pass_context=True)
+    @checks.is_owner()
     async def list(self, ctx):
         user_ids = self.settings.users().keys()
         members = {x.id: x for x in self.bot.get_all_members() if x.id in user_ids}
@@ -85,6 +88,7 @@ class StreamCopy:
         await self.bot.say(box(output))
 
     @streamcopy.command(name="refresh")
+    @checks.is_owner()
     async def refresh(self):
         other_stream = await self.do_refresh()
         if other_stream:
