@@ -46,6 +46,7 @@ class StreamCopy:
             await send_cmd_help(context)
 
     @streamcopy.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_roles=True)
     async def setStreamerRole(self, ctx, *, role_name : str):
         try:
             role = get_role(ctx.message.server.roles, role_name)
@@ -57,6 +58,7 @@ class StreamCopy:
         await self.bot.say(inline('Done. Make sure that role is below the bot in the hierarchy'))
 
     @streamcopy.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_roles=True)
     async def clearStreamerRole(self, ctx):
         self.settings.clearStreamerRole(ctx.message.server.id)
         await self.bot.say(inline('Done'))
