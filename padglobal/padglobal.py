@@ -210,32 +210,65 @@ class PadGlobal:
 
 
     @commands.command(pass_context=True)
+    async def glossaryto(self, ctx, to_user : discord.Member, *, term : str):
+        """Send a user a glossary or padfaq entry
+
+        ^glossaryto @tactical_retreat jewels?
+        """
+        faq_items = {k:v for k, v in self.c_commands.items() if k in self.settings.faq()}
+        result = None
+        if term in faq_items:
+            result = faq_items[term]
+        else:
+            term, result = self.lookup_glossary(term)
+
+        if result:
+            result_output = '**{}** : {}'.format(term, result)
+            result = "{} asked me to send you this:\n{}".format(ctx.message.author.name, result_output)
+            await self.bot.send_message(to_user, result)
+            await self.bot.say(inline("Sent that info to {}".format(to_user.name)))
+        else:
+            await self.bot.say(inline('No definition found'))
+
+    @commands.command(pass_context=True)
     async def glossary(self, ctx, *, term : str=None):
         """Shows PAD Glossary entries"""
-        glossary = self.settings.glossary()
         if term:
-            term = term.lower()
-            definition = glossary.get(term, None)
-
-            if not definition:
-                matches = difflib.get_close_matches(term, glossary.keys(), n=1)
-                if not matches:
-                    await self.bot.say(inline('No definition found'))
-                    return
-                term = matches[0]
-                definition = glossary[term]
-
-            await self.bot.say('**{}** : {}'.format(term, definition))
+            term, definition = self.lookup_glossary(term)
+            if definition:
+                definition_output = '**{}** : {}'.format(term, definition)
+                await self.bot.say(definition_output)
+            else:
+                await self.bot.say(inline('No definition found'))
             return
 
+        msg = self.glossary_to_text()
+        for page in pagify(msg):
+            await self.bot.whisper(page)
+
+
+    def glossary_to_text(self):
+        glossary = self.settings.glossary()
         msg = '__**PAD Glossary terms (also check out ^pad / ^padfaq / ^boards)**__'
         for term in sorted(glossary.keys()):
             definition = glossary[term]
             msg += '\n**{}** : {}'.format(term, definition)
+        return msg
 
-        for page in pagify(msg):
-            await self.bot.whisper(page)
+    def lookup_glossary(self, term):
+        glossary = self.settings.glossary()
+        term = term.lower()
+        definition = glossary.get(term, None)
 
+        if definition:
+            return term, definition
+
+        matches = difflib.get_close_matches(term, glossary.keys(), n=1)
+        if not matches:
+            return term, None
+        else:
+            term = matches[0]
+            return term, glossary[term]
 
     @padglobal.command(pass_context=True)
     async def addglossary(self, ctx, term, *, definition):
