@@ -61,7 +61,7 @@ class StreamCopy:
 
         output = "Users:"
         for m_id, m in members.items():
-            output += "\n{} ({})".format(m.name, 'online' if self.is_playing(m) else 'offline')
+            output += "\n({}) : {}".format('+' if self.is_playing(m) else '-', m.name)
 
         await self.bot.say(box(output))
 
