@@ -83,7 +83,7 @@ def get_role(roles, role_string):
         lambda r: r.name.lower() == role_string.lower(), roles)
 
     if role is None:
-        raise RoleNotFound(roles[0].server, role_string)
+        raise RoleNotFound()
 
     return role
 
@@ -271,12 +271,9 @@ class Menu():
         if reactions_required:
             for e in emoji_to_message:
                 try:
-                    print("adding", e)
                     await self.bot.add_reaction(message, e)
-#                     await self.bot.add_reaction(message, str(e))
                 except Exception as e:
                     print("failed to add reaction", e)
-#                     return message
 
         r = await self.bot.wait_for_reaction(
             emoji=list(emoji_to_message.keys()),
