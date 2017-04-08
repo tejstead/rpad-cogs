@@ -23,6 +23,25 @@ from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.twitter_stream import *
 
+GETMIRU_HELP = """
+**Miru Bot now has a twin sister, also called Miru Bot (public)!**
+The new public Miru is open for invite to any server: personal, private, secret-handshake-entry-only, etc
+Unlike the private Miru used by larger community servers, public Miru has lower stability requirements, so I will install a variety of random entertainment plugins.
+
+To invite public Miru to your server, use the following link:
+https://discordapp.com/oauth2/authorize?client_id=296443771229569026&scope=bot
+
+The following commands might come in handy:
+`^modhelp`       - information on how to set up Miru's moderation commands
+`^userhelp`     - a user-focused guide to Miru's commands
+`^help`             - the full list of Miru commands
+
+A link to the awakenings emoji pack is included in `^modhelp`
+
+If you want to be notified of updates to Miru, suggest features, or ask for help, join the Miru Support server:
+https://discord.gg/zB4QHgn(edited)
+"""
+
 USER_HELP = """
 Bot user help
 This command gives you an overview of the most commonly used user-focused
@@ -304,6 +323,12 @@ class TrUtils:
         role = get_role(ctx.message.server.roles, role_name)
         self.settings.clearRainbow(ctx.message.server.id, role.id)
         await self.bot.say('`done`')
+
+    @commands.command()
+    async def getmiru(self):
+        """Tells you how to get Miru into your server"""
+        for page in pagify(GETMIRU_HELP, delims=['\n'], shorten_by=8):
+            await self.bot.whisper(box(page))
 
     @commands.command()
     async def userhelp(self):
