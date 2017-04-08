@@ -170,7 +170,7 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
-    @commands.command(name="mats", pass_context=True, aliases=['evomats'])
+    @commands.command(name="mats", pass_context=True, aliases=['evomats', 'evomat'])
     async def evomats(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
@@ -528,8 +528,7 @@ class Monster:
         self.alt_evos = list()
 
         self.mats_to_evo = [x.monster_id for x in sorted(mats_to_evo, key=lambda z: z.order)]
-        self.used_for_evo = list()
-#         self.used_for_evo = [x.monster_id for x in sorted(mats_to_evo, key=lambda z: z.order)]
+        self.used_for_evo = used_for_evo
 
 def monsterToInfoText(m: Monster):
     header = monsterToHeader(m)
@@ -647,15 +646,29 @@ def monsterToEvoMatsEmbed(m : Monster):
     embed.title = header
     embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
 
-    if not len(m.mats_to_evo):
-        embed.description = 'No evo mats'
-        return embed
+    mats_to_evo_size = len(m.mats_to_evo)
+    used_for_evo_size = len(m.used_for_evo)
 
     field_name = 'Evo materials'
     field_data = ''
-    for ae in m.mats_to_evo:
-        field_data += "{}\n".format(monsterToLongHeader(ae))
+    if mats_to_evo_size:
+        for ae in m.mats_to_evo:
+            field_data += "{}\n".format(monsterToLongHeader(ae))
+    else:
+        field_data = 'None'
+    embed.add_field(name=field_name, value=field_data)
 
+    if not used_for_evo_size:
+        return embed
+
+    field_name = 'Material for'
+    field_data = ''
+    if used_for_evo_size > 5:
+        field_data = '{} monsters'.format(used_for_evo_size)
+    else:
+        item_count = min(used_for_evo_size, 5)
+        for ae in sorted(m.used_for_evo, key=lambda x: x.monster_id_na, reverse=True)[:item_count]:
+            field_data += "{}\n".format(monsterToLongHeader(ae))
     embed.add_field(name=field_name, value=field_data)
 
     return embed
@@ -1018,16 +1031,20 @@ class PgDataWrapper:
 #         monster_for_evo_multimap[item.to_monster_id] = item
 
         monster_to_current_evo_item = {x.to_monster_id: x for x in evolution_list}
+        evo_id_to_monster_id = {x.evo_id: x.to_monster_id for x in evolution_list}
 
-        monster_evo_multimap = defaultdict(list)
+        monster_id_to_evo_multimap = defaultdict(list)
         for item in evolution_list:
-            monster_evo_multimap[item.monster_id].append(item)
+            monster_id_to_evo_multimap[item.monster_id].append(item)
 
         monster_evo_to_mat_multimap = defaultdict(list)
-        monster_mat_to_evo_multimap = defaultdict(list)
+        monster_mat_id_to_evod_monster_id_multimap = defaultdict(list)
         for item in evolution_mat_list:
             monster_evo_to_mat_multimap[item.evo_id].append(item)
-            monster_mat_to_evo_multimap[item.monster_id].append(item)
+            evo_monster_id = evo_id_to_monster_id[item.evo_id]
+            if evo_monster_id != '0':
+                # Not sure what this error case is
+                monster_mat_id_to_evod_monster_id_multimap[item.monster_id].append(evo_monster_id)
 
         monster_add_info_map = {x.monster_id: x for x in monster_add_info_list}
         monster_info_map = {x.monster_id: x for x in monster_info_list}
@@ -1046,7 +1063,7 @@ class PgDataWrapper:
             awakenings = monster_awoken_multimap[monster_id]
             awakening_skills = [skill_map[x.awakening_id] for x in awakenings]
             additional_info = monster_add_info_map.get(monster_id)
-            evos = monster_evo_multimap[monster_id]
+            evos = monster_id_to_evo_multimap[monster_id]
             monster_info = monster_info_map[monster_id]
             active_skill = skill_map.get(base_monster.active_id)
             leader_skill = skill_map.get(base_monster.leader_id)
@@ -1056,8 +1073,7 @@ class PgDataWrapper:
 
             cur_evo = monster_to_current_evo_item.get(monster_id, None)
             mats_to_evo = monster_evo_to_mat_multimap[cur_evo.evo_id] if cur_evo else []
-            used_for_evo = list()
-#             used_for_evo = monster_for_evo_multimap[cur_evo.evo_id]
+            used_for_evo = monster_mat_id_to_evod_monster_id_multimap[monster_id]
 
             full_monster = Monster(
                 base_monster,
@@ -1099,6 +1115,13 @@ class PgDataWrapper:
             # Really need to build an initial template monster, map it by ID, then
             # use that when building the individual monsters.
             full_monster.mats_to_evo = mats_to_evo_monsters
+
+            used_for_evo_monsters = list()
+            for monster_id in full_monster.used_for_evo:
+                if monster_id in self.full_monster_map:
+                    # Guard against na_only
+                    used_for_evo_monsters.append(self.full_monster_map[monster_id])
+            full_monster.used_for_evo = used_for_evo_monsters
 
         self.series_id_to_monsters = defaultdict(list)
 
