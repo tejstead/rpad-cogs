@@ -42,6 +42,27 @@ THUMBNAIL_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
 FULLPIC_APPBANK_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'
 FULLPIC_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'
 
+HELP_MSG = """
+^helpid : shows this message
+^id <query> : look up a monster and print a link to puzzledragonx
+^pic <query> : Look up a monster and display its image inline
+
+Options for <query>
+    <id> : Find a monster by ID
+        ^id 1234 (picks sun quan)
+    <name> : Take the best guess for a monster, picks the most recent monster
+        ^id kali (picks uvo d kali)
+    <prefix> <name> : Limit by element or awoken, e.g.
+        ^id ares  (selects the most recent, awoken ares)
+        ^id aares (explicitly selects awoken ares)
+        ^id a ares (spaces work too)
+        ^id rd ares (select a specific evo for ares, the red/dark one)
+        ^id r/d ares (slashes, spaces work too)
+
+computed nickname list and overrides: https://docs.google.com/spreadsheets/d/1EyzMjvf8ZCQ4K-gJYnNkiZlCEsT9YYI9dUd-T5qCirc/pubhtml
+submit an override suggestion: https://docs.google.com/forms/d/1kJH9Q0S8iqqULwrRqB9dSxMOMebZj6uZjECqi4t9_z0/edit"""
+
+EMBED_NOT_GENERATED = -1
 
 class OrderedCounter(Counter, OrderedDict):
     """Counter that remembers the order elements are first seen"""
@@ -77,6 +98,13 @@ class PadInfo:
 
         global EXPOSED_PAD_INFO
         EXPOSED_PAD_INFO = self
+
+        # These emojis are the keys into the idmenu submenus
+        self.id_emoji = char_to_emoji('i')
+        self.evo_emoji = char_to_emoji('e')
+        self.mats_emoji = char_to_emoji('m')
+        self.pantheon_emoji = char_to_emoji('p')
+        self.skillups_emoji = char_to_emoji('s')
 
 
     def __unload(self):
@@ -143,12 +171,7 @@ class PadInfo:
     async def _do_id(self, ctx, query, na_only=False):
         m, err, debug_info = self.findMonster(query, na_only=na_only)
         if m is not None:
-            embed = monsterToEmbed(m, ctx.message.server)
-            try:
-                await self.bot.say(embed=embed)
-            except Exception as e:
-                info, link = monsterToInfoText(m)
-                await self.bot.say(box(info) + '\n<' + link + '>')
+            await self._do_idmenu(ctx, m, self.id_emoji)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
@@ -165,8 +188,7 @@ class PadInfo:
     async def evos(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            embed = monsterToEvoEmbed(m)
-            await self.bot.say(embed=embed)
+            await _do_idmenu(ctx, m, self.evo_emoji)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
@@ -174,37 +196,61 @@ class PadInfo:
     async def evomats(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            embed = monsterToEvoMatsEmbed(m)
-            await self.bot.say(embed=embed)
+            await self._do_idmenu(ctx, m, self.mats_emoji)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(pass_context=True)
-    async def idmenu(self, ctx, query):
-        timeout = 30
+    async def pantheon(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            id_embed = monsterToEmbed(m, ctx.message.server)
-            evo_embed = monsterToEvoEmbed(m)
-            mats_embed = monsterToEvoMatsEmbed(m)
-
-            id_emoji = char_to_emoji('i')
-            evo_emoji = char_to_emoji('e')
-            mats_emoji = char_to_emoji('m')
-            remove_emoji = self.menu.emoji['no']
-            emoji_to_embed = OrderedDict()
-            emoji_to_embed[id_emoji] = id_embed
-            emoji_to_embed[evo_emoji] = evo_embed
-            emoji_to_embed[mats_emoji] = mats_embed
-            emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
-
-            await self.menu.custom_menu(ctx, emoji_to_embed, id_emoji)
+            menu = await self._do_idmenu(ctx, m, self.pantheon_emoji)
+            if menu == EMBED_NOT_GENERATED:
+                await self.bot.say(inline('Not a pantheon monster'))
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
-    @commands.command(name="debugid", pass_context=True)
+    @commands.command(pass_context=True)
+    async def skillups(self, ctx, *, query):
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            menu = await self._do_idmenu(ctx, m, self.skillups_emoji)
+            if menu == EMBED_NOT_GENERATED:
+                await self.bot.say(inline('No skillups available'))
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
+#     async def _do_idmenu(self, ctx, m : Monster, starting_menu_emoji):
+    async def _do_idmenu(self, ctx, m, starting_menu_emoji):
+        id_embed = monsterToEmbed(m, ctx.message.server)
+        evo_embed = monsterToEvoEmbed(m)
+        mats_embed = monsterToEvoMatsEmbed(m)
+
+        emoji_to_embed = OrderedDict()
+        emoji_to_embed[self.id_emoji] = id_embed
+        emoji_to_embed[self.evo_emoji] = evo_embed
+        emoji_to_embed[self.mats_emoji] = mats_embed
+
+        pantheon_embed = monsterToPantheonEmbed(m, self.pginfo_all)
+        if pantheon_embed:
+            emoji_to_embed[self.pantheon_emoji] = pantheon_embed
+
+        skillups_embed = monsterToSkillupsEmbed(m, self.pginfo_all)
+        if skillups_embed:
+            emoji_to_embed[self.skillups_emoji] = skillups_embed
+
+        remove_emoji = self.menu.emoji['no']
+        emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
+
+        if starting_menu_emoji not in emoji_to_embed:
+            # Selected menu wasn't generated for this monster
+            return EMBED_NOT_GENERATED
+
+        await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji)
+
+    @commands.command(pass_context=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def _dodebugid(self, ctx, *, query):
+    async def debugid(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             info, link = monsterToInfoText(m)
@@ -213,8 +259,8 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
-    @commands.command(name="pic", pass_context=True, aliases=['img'])
-    async def _dopic(self, ctx, *, query):
+    @commands.command(pass_context=True, aliases=['img'])
+    async def pic(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             header, link = monsterToPicText(m)
@@ -222,45 +268,9 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
-    @commands.command(pass_context=True)
-    async def pantheon(self, ctx, *, query):
-        m, err, debug_info = self.findMonster(query)
-        if m is None:
-            await self.bot.say(self.makeFailureMsg(err))
-            return
-
-        pantheon_list = self.pginfo_all.series_id_to_monsters.get(m.series_id, [])
-        pantheon_list = sorted(pantheon_list, key=lambda x: x.monster_id_na)
-
-        if len(pantheon_list) == 0 or len(pantheon_list) > 6:
-            await self.bot.say(inline('Not a pantheon monster'))
-            return
-        output = 'Pantheon: ' + m.series_name
-        for monster in pantheon_list:
-            output += '\n' + monsterToHeader(monster)
-        await self.bot.say(box(output))
-
-
     @commands.command(name="helpid", pass_context=True, aliases=['helppic', 'helpimg'])
     async def _helpid(self, ctx):
-        helpMsg = "^helpid : shows this message"
-        helpMsg += "\n" + "^id <query> : look up a monster and print a link to puzzledragonx"
-        helpMsg += "\n" + "^pic <query> : Look up a monster and display its image inline"
-        helpMsg += "\n\n" + "Options for <query>"
-        helpMsg += "\n\t" + "<id> : Find a monster by ID"
-        helpMsg += "\n\t\t" + "^id 1234 (picks sun quan)"
-        helpMsg += "\n\t" + "<name> : Take the best guess for a monster, picks the most recent monster"
-        helpMsg += "\n\t\t" + "^id kali (picks uvo d kali)"
-        helpMsg += "\n\t" + "<prefix> <name> : Limit by element or awoken, e.g."
-        helpMsg += "\n\t\t" + "^id ares  (selects the most recent, awoken ares)"
-        helpMsg += "\n\t\t" + "^id aares (explicitly selects awoken ares)"
-        helpMsg += "\n\t\t" + "^id a ares (spaces work too)"
-        helpMsg += "\n\t\t" + "^id rd ares (select a specific evo for ares, the red/dark one)"
-        helpMsg += "\n\t\t" + "^id r/d ares (slashes, spaces work too)"
-        helpMsg += "\n\n" + "computed nickname list and overrides: https://docs.google.com/spreadsheets/d/1EyzMjvf8ZCQ4K-gJYnNkiZlCEsT9YYI9dUd-T5qCirc/pubhtml"
-        helpMsg += "\n\n" + "submit an override suggestion: https://docs.google.com/forms/d/1kJH9Q0S8iqqULwrRqB9dSxMOMebZj6uZjECqi4t9_z0/edit"
-        await self.bot.whisper(box(helpMsg))
-
+        await self.bot.whisper(box(HELP_MSG))
 
     @commands.group(pass_context=True)
     async def padinfo(self, ctx):
@@ -442,7 +452,8 @@ class Monster:
                  drop_info_list,
                  series,
                  mats_to_evo,
-                 used_for_evo):
+                 used_for_evo,
+                 monster_ids_with_skill):
 
         self.monster_id = base_monster.monster_id
         # NA is used in puzzledragonx
@@ -529,6 +540,9 @@ class Monster:
 
         self.mats_to_evo = [x.monster_id for x in sorted(mats_to_evo, key=lambda z: z.order)]
         self.used_for_evo = used_for_evo
+
+        self.monster_ids_with_skill = monster_ids_with_skill
+        self.monsters_with_skill = list()
 
 def monsterToInfoText(m: Monster):
     header = monsterToHeader(m)
@@ -673,6 +687,58 @@ def monsterToEvoMatsEmbed(m : Monster):
 
     return embed
 
+# def monsterToPantheonEmbed(m : Monster, pginfo : PgDataWrapper):
+def monsterToPantheonEmbed(m : Monster, pginfo):
+    pantheon_list = pginfo.series_id_to_monsters.get(m.series_id, [])
+    if len(pantheon_list) == 0 or len(pantheon_list) > 6:
+        return None
+
+    header = monsterToLongHeader(m)
+    embed = discord.Embed()
+
+    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
+    embed.title = header
+    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+
+    field_name = 'Pantheon: ' + m.series_name
+    field_data = ''
+    for monster in sorted(pantheon_list, key=lambda x: x.monster_id_na):
+        field_data += '\n' + monsterToHeader(monster)
+    embed.add_field(name=field_name, value=field_data)
+
+    return embed
+
+# def monsterToSkillupsEmbed(m : Monster, pginfo : PgDataWrapper):
+def monsterToSkillupsEmbed(m : Monster, pginfo):
+    skillups_list = m.monsters_with_skill
+    if len(skillups_list) + len(m.server_actives) == 0:
+        return None
+
+    header = monsterToLongHeader(m)
+    embed = discord.Embed()
+
+    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
+    embed.title = header
+    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+
+    skillups_to_skip = list()
+    for server, skillup in m.server_skillups.items():
+        skillup_header = 'Skillup in ' + server
+        skillup_body = 'No. {} {}'.format(skillup.monster_id_na, skillup.name_na)
+        embed.add_field(name=skillup_header, value=skillup_body)
+        skillups_to_skip.append(skillup.monster_id_na)
+
+    field_name = 'Skillups'
+    field_data = ''
+    for monster in sorted(skillups_list, key=lambda x: x.monster_id_na):
+        if monster.monster_id_na in skillups_to_skip:
+            continue
+        field_data += '\n' + monsterToHeader(monster)
+
+    if len(field_data.strip()):
+        embed.add_field(name=field_name, value=field_data)
+
+    return embed
 
 def monsterToPicText(m : Monster):
     link = FULLPIC_APPBANK_TEMPLATE.format(m.monster_id_na)
@@ -765,12 +831,6 @@ def monsterToEmbed(m : Monster, server):
     if m.multiplier_text:
             ls_header += " [ {} ]".format(m.multiplier_text)
     embed.add_field(name=ls_header, value=ls_row, inline=False)
-
-    if not len(m.server_actives):
-        for server, skillup in m.server_skillups.items():
-            skillup_header = 'Skillup in ' + server
-            skillup_body = 'No. {} {}'.format(skillup.monster_id_na, skillup.name_na)
-            embed.add_field(name=skillup_header, value=skillup_body, inline=True)
 
     return embed
 
@@ -1055,6 +1115,12 @@ class PgDataWrapper:
 
         monster_id_to_drop_info_list = self.computeMonsterDropInfoCombined(dungeon_monster_drop_list, dungeon_monster_list, dungeon_list)
 
+        # Create a mapping of skill IDs to monsters, for computing skillups
+        skill_to_monster_list = defaultdict(list)
+        for base_monster in base_monster_list:
+            if base_monster.active_id:
+                skill_to_monster_list[base_monster.active_id].append(base_monster.monster_id)
+
         self.full_monster_list = list()
         self.full_monster_map = {}
         for base_monster in base_monster_list:
@@ -1075,6 +1141,8 @@ class PgDataWrapper:
             mats_to_evo = monster_evo_to_mat_multimap[cur_evo.evo_id] if cur_evo else []
             used_for_evo = monster_mat_id_to_evod_monster_id_multimap[monster_id]
 
+            monster_ids_with_skill = skill_to_monster_list.get(base_monster.active_id, list())
+
             full_monster = Monster(
                 base_monster,
                 monster_info,
@@ -1089,7 +1157,8 @@ class PgDataWrapper:
                 drop_info_list,
                 series,
                 mats_to_evo,
-                used_for_evo)
+                used_for_evo,
+                monster_ids_with_skill)
 
             if na_only and not full_monster.on_na:
                 continue
@@ -1122,6 +1191,18 @@ class PgDataWrapper:
                     # Guard against na_only
                     used_for_evo_monsters.append(self.full_monster_map[monster_id])
             full_monster.used_for_evo = used_for_evo_monsters
+
+        for full_monster in self.full_monster_list:
+            for monster_id in  full_monster.monster_ids_with_skill:
+                if monster_id == '0':
+                    continue
+
+                skillup_monster = self.full_monster_map.get(monster_id)
+                if not skillup_monster:
+                    continue
+
+                if skillup_monster.farmable_evo or skillup_monster.pem_evo:
+                    full_monster.monsters_with_skill.append(skillup_monster)
 
         self.series_id_to_monsters = defaultdict(list)
 
