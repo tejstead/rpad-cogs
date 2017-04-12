@@ -286,7 +286,8 @@ class Menu():
             try:
                 await self.bot.clear_reactions(message)
             except Exception as e:
-                print("failed to clear reactions", e)
+                # This is expected when miru doesn't have manage messages
+                pass
             return message
 
         react_emoji = r.reaction.emoji
@@ -303,10 +304,9 @@ class Menu():
 
         try:
             await self.bot.remove_reaction(message, react_emoji, r.user)
-        except Forbidden:
-            print("failed to clear user reaction")
-#             await self.bot.delete_message(message)
-            return message
+        except:
+            # This is expected when miru doesn't have manage messages
+            pass
 
         return await self._custom_menu(
             ctx, emoji_to_message, react_emoji,
