@@ -632,12 +632,17 @@ def monsterToThumbnailUrl(m : Monster):
     else:
         return THUMBNAIL_GAMEWITH_TEMPLATE.format(m.monster_id_jp)
 
-def monsterToEvoEmbed(m : Monster):
+def monsterToBaseEmbed(m : Monster):
     header = monsterToLongHeader(m)
     embed = discord.Embed()
     embed.set_thumbnail(url=monsterToThumbnailUrl(m))
     embed.title = header
     embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+    embed.set_footer(text='Click the reactions below to switch tabs')
+    return embed
+
+def monsterToEvoEmbed(m : Monster):
+    embed = monsterToBaseEmbed(m)
 
     if not len(m.alt_evos):
         embed.description = 'No alternate evos'
@@ -653,12 +658,7 @@ def monsterToEvoEmbed(m : Monster):
     return embed
 
 def monsterToEvoMatsEmbed(m : Monster):
-    header = monsterToLongHeader(m)
-    embed = discord.Embed()
-
-    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
-    embed.title = header
-    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+    embed = monsterToBaseEmbed(m)
 
     mats_to_evo_size = len(m.mats_to_evo)
     used_for_evo_size = len(m.used_for_evo)
@@ -693,12 +693,7 @@ def monsterToPantheonEmbed(m : Monster, pginfo):
     if len(pantheon_list) == 0 or len(pantheon_list) > 6:
         return None
 
-    header = monsterToLongHeader(m)
-    embed = discord.Embed()
-
-    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
-    embed.title = header
-    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+    embed = monsterToBaseEmbed(m)
 
     field_name = 'Pantheon: ' + m.series_name
     field_data = ''
@@ -714,12 +709,7 @@ def monsterToSkillupsEmbed(m : Monster, pginfo):
     if len(skillups_list) + len(m.server_actives) == 0:
         return None
 
-    header = monsterToLongHeader(m)
-    embed = discord.Embed()
-
-    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
-    embed.title = header
-    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+    embed = monsterToBaseEmbed(m)
 
     skillups_to_skip = list()
     for server, skillup in m.server_skillups.items():
@@ -768,12 +758,7 @@ def monsterToAcquireString(m : Monster):
         acquire_text = 'REM Evo'
 
 def monsterToEmbed(m : Monster, server):
-    header = monsterToLongHeader(m)
-
-    embed = discord.Embed()
-    embed.set_thumbnail(url=monsterToThumbnailUrl(m))
-    embed.title = header
-    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+    embed = monsterToBaseEmbed(m)
 
     info_row_1 = monsterToTypeString(m)
     acquire_text = monsterToAcquireString(m)
