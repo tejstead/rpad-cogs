@@ -188,7 +188,7 @@ class PadInfo:
     async def evos(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            await _do_idmenu(ctx, m, self.evo_emoji)
+            await self._do_idmenu(ctx, m, self.evo_emoji)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
