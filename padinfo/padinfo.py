@@ -37,10 +37,13 @@ from .utils.dataIO import fileIO
 from .utils.twitter_stream import *
 
 INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
-THUMBNAIL_GAMEWITH_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
-THUMBNAIL_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
-FULLPIC_APPBANK_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'
-FULLPIC_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'
+# THUMBNAIL_GAMEWITH_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
+# THUMBNAIL_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
+# FULLPIC_APPBANK_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'
+# FULLPIC_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'
+
+RPAD_FULL_TEMPLATE = 'https://storage.googleapis.com/rpad-discord.appspot.com/pad/full/{}.png'
+RPAD_PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/rpad-discord.appspot.com/pad/portrait/{}.png'
 
 HELP_MSG = """
 ^helpid : shows this message
@@ -627,10 +630,7 @@ def monsterToEvoText(m: Monster):
     return output
 
 def monsterToThumbnailUrl(m : Monster):
-    if m.on_us:
-        return THUMBNAIL_PDX_TEMPLATE.format(m.monster_id_na)
-    else:
-        return THUMBNAIL_GAMEWITH_TEMPLATE.format(m.monster_id_jp)
+    return RPAD_PORTRAIT_TEMPLATE.format(m.monster_id_jp)
 
 def monsterToBaseEmbed(m : Monster):
     header = monsterToLongHeader(m)
@@ -731,7 +731,7 @@ def monsterToSkillupsEmbed(m : Monster, pginfo):
     return embed
 
 def monsterToPicText(m : Monster):
-    link = FULLPIC_APPBANK_TEMPLATE.format(m.monster_id_na)
+    link = RPAD_FULL_TEMPLATE.format(m.monster_id_na)
     return monsterToHeader(m), link
 
 def monsterToTypeString(m : Monster):
