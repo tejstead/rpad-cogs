@@ -9,6 +9,7 @@ from discord.ext import commands
 
 from __main__ import send_cmd_help
 
+from .rpadutils import *
 from .utils import checks
 from .utils.dataIO import fileIO
 
@@ -33,9 +34,9 @@ class FancySay:
         new_msg = ""
         for char in text:
             if char.isalpha():
-                new_msg += ':regional_indicator_{}: '.format(char.lower())
+                new_msg += char_to_emoji(char) + ' '
             elif char == ' ':
-                new_msg += '   '
+                new_msg += '  '
             elif char.isspace():
                 new_msg += char
 
