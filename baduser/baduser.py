@@ -189,7 +189,7 @@ class BadUser:
             other_baduser_servers = user_id_to_baduser_server[member.id]
             other_banned_servers = user_id_to_ban_server[member.id]
 
-            if not local_strikes and not other_baduser_servers and not other_banned_servers:
+            if not len(local_strikes) and not len(other_baduser_servers) and not len(other_banned_servers):
                 continue
 
             tmp_msg = "{} ({})".format(member.name, member.id)
