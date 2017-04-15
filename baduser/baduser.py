@@ -13,6 +13,7 @@ from __main__ import settings
 
 from .rpadutils import *
 from .utils import checks
+from .utils.chat_formatting import *
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
@@ -50,7 +51,7 @@ class BadUser:
 
     @baduser.command(name="addnegativerole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addNegativeRole(self, ctx, role):
+    async def addNegativeRole(self, ctx, *, role):
         """Designate a role as a 'punishment' role."""
         role = get_role(ctx.message.server.roles, role)
         self.settings.addPunishmentRole(ctx.message.server.id, role.id)
@@ -58,7 +59,7 @@ class BadUser:
 
     @baduser.command(name="rmnegativerole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def rmNegativeRole(self, ctx, role):
+    async def rmNegativeRole(self, ctx, *, role):
         """Cancels a role from 'punishment' status."""
         role = get_role(ctx.message.server.roles, role)
         self.settings.rmPunishmentRole(ctx.message.server.id, role.id)
@@ -66,7 +67,7 @@ class BadUser:
 
     @baduser.command(name="addpositiverole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addPositiveRole(self, ctx, role):
+    async def addPositiveRole(self, ctx, *, role):
         """Designate a role as a 'benefit' role."""
         role = get_role(ctx.message.server.roles, role)
         self.settings.addPositiveRole(ctx.message.server.id, role.id)
@@ -74,7 +75,7 @@ class BadUser:
 
     @baduser.command(name="rmpositiverole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def rmPositiveRole(self, ctx, role):
+    async def rmPositiveRole(self, ctx, *, role):
         """Cancels a role from 'benefit' status."""
         role = get_role(ctx.message.server.roles, role)
         self.settings.rmPositiveRole(ctx.message.server.id, role.id)
@@ -151,6 +152,76 @@ class BadUser:
         for idx, strike in enumerate(strikes):
             await self.bot.say(inline('Strike {} of {}:'.format(idx + 1, len(strikes))))
             await self.bot.say(box(strike))
+
+    @baduser.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def report(self, ctx):
+        """Displays a report of information on bad users for the server."""
+        cur_server = ctx.message.server
+
+        user_id_to_ban_server = defaultdict(list)
+        user_id_to_baduser_server = defaultdict(list)
+        error_messages = list()
+        for server in self.bot.servers:
+            if server.id == cur_server.id:
+                continue
+
+            try:
+                ban_list = await self.bot.get_bans(server)
+            except:
+                ban_list = list()
+                error_messages.append("Server '{}' refused access to ban list".format(server.name))
+
+            for user in ban_list:
+                user_id_to_ban_server[user.id].append(server.id)
+
+            baduser_list = self.settings.getBadUsers(server.id)
+            for user_id in baduser_list:
+                user_id_to_baduser_server[user_id].append(server.id)
+
+        bad_users = self.settings.getBadUsers(cur_server.id)
+
+        baduser_entries = list()
+        otheruser_entries = list()
+
+        for member in server.members:
+            local_strikes = self.settings.getUserStrikes(server.id, member.id)
+            other_baduser_servers = user_id_to_baduser_server[member.id]
+            other_banned_servers = user_id_to_ban_server[member.id]
+
+            if not local_strikes and not other_baduser_servers and not other_banned_servers:
+                continue
+
+            tmp_msg = "{} ({})".format(member.name, member.id)
+            tmp_msg += "\n\tbad user in {} other servers".format(len(other_baduser_servers))
+            tmp_msg += "\n\tbanned from {} other servers".format(len(other_banned_servers))
+
+            if len(local_strikes):
+                tmp_msg += "\n\t{} strikes in this server".format(len(local_strikes))
+                for strike in local_strikes:
+                    tmp_msg += "\n\t\t{}".format(strike.splitlines()[0])
+                baduser_entries.append(tmp_msg)
+            else:
+                otheruser_entries.append(tmp_msg)
+
+
+        other_server_count = len(self.bot.servers) - 1
+        other_ban_count = len([x for x, l in user_id_to_ban_server.items() if len(l)])
+        other_baduser_count = len([x for x, l in user_id_to_baduser_server.items() if len(l)])
+        msg = "Across {} other servers, {} users are banned and {} have baduser entries".format(
+                other_server_count, other_ban_count, other_baduser_count)
+
+        msg += "\n\n{} baduser entries for this server".format(len(baduser_entries))
+        msg += "\n" + "\n".join(baduser_entries)
+        msg += "\n\n{} entries for users with no record in this server".format(len(otheruser_entries))
+        msg += "\n" + "\n".join(otheruser_entries)
+
+        if error_messages:
+            msg += "\n\nSome errors occurred:"
+            msg += "\n" + "\n".join(error_messages)
+
+        for page in pagify(msg):
+            await self.bot.say(box(page))
 
     async def mod_message(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
