@@ -240,8 +240,11 @@ class BadUser:
         update_channel = self.settings.getChannel(member.server.id)
         if update_channel is not None:
             channel_obj = discord.Object(update_channel)
-            await self.bot.send_message(channel_obj, inline(msg))
-            await self.bot.send_message(channel_obj, 'Hey @here please leave a note explaining why this role was modified')
+            try:
+                await self.bot.send_message(channel_obj, inline(msg))
+                await self.bot.send_message(channel_obj, 'Hey @here please leave a note explaining why this role was modified')
+            except:
+                print('Failed to notify in', update_channel, msg)
 
 
 def setup(bot):
