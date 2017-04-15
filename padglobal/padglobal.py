@@ -211,22 +211,26 @@ class PadGlobal:
 
     @commands.command(pass_context=True)
     async def glossaryto(self, ctx, to_user : discord.Member, *, term : str):
-        """Send a user a glossary or padfaq entry
+        """Send a user a glossary or pad/padfaq entry
 
         ^glossaryto @tactical_retreat jewels?
         """
-        faq_items = {k:v for k, v in self.c_commands.items() if k in self.settings.faq()}
+        corrected_term = term
+        cmd_items = {k:v for k, v in self.c_commands.items()}
         result = None
-        if term in faq_items:
-            result = faq_items[term]
+        if term in cmd_items:
+            result = cmd_items[term]
         else:
-            term, result = self.lookup_glossary(term)
+            corrected_term, result = self.lookup_glossary(term)
 
         if result:
-            result_output = '**{}** : {}'.format(term, result)
+            result_output = '**{}** : {}'.format(corrected_term, result)
             result = "{} asked me to send you this:\n{}".format(ctx.message.author.name, result_output)
             await self.bot.send_message(to_user, result)
-            await self.bot.say(inline("Sent that info to {}".format(to_user.name)))
+            msg = "Sent that info to {}".format(to_user.name)
+            if term != corrected_term:
+                msg += ' (corrected to {})'.format(corrected_term)
+            await self.bot.say(inline(msg))
         else:
             await self.bot.say(inline('No definition found'))
 
