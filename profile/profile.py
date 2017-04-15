@@ -43,7 +43,7 @@ def validateAndCleanId(id):
         return None
 
 def formatNameLine(server, pad_name, pad_id):
-    group = computeNewGroup(pad_id) if server == 'JP' else computeOldGroup(pad_id)
+    group = computeOldGroup(pad_id)
     return "[{}]: '{}' : {} (Group {})".format(server, pad_name, formatId(pad_id), group)
 
 def formatId(id):
@@ -53,9 +53,9 @@ def computeOldGroup(str_id):
     old_id_digit = str_id[2]
     return chr(ord('A') + (int(old_id_digit) % 5))
 
-def computeNewGroup(str_id):
-    int_id = int(str_id)
-    return (int_id % 3)
+# def computeNewGroup(str_id):
+#     int_id = int(str_id)
+#     return (int_id % 3)
 
 class Profile:
     def __init__(self, bot):
