@@ -184,9 +184,9 @@ class BadUser:
         baduser_entries = list()
         otheruser_entries = list()
 
-        await self.bot.request_offline_members(server)
-        for member in server.members:
-            local_strikes = self.settings.getUserStrikes(server.id, member.id)
+        await self.bot.request_offline_members(cur_server)
+        for member in cur_server.members:
+            local_strikes = self.settings.getUserStrikes(cur_server.id, member.id)
             other_baduser_servers = user_id_to_baduser_server[member.id]
             other_banned_servers = user_id_to_ban_server[member.id]
 
