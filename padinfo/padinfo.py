@@ -454,6 +454,7 @@ class Monster:
                  attribute_map,
                  drop_info_list,
                  series,
+                 monster_price,
                  mats_to_evo,
                  used_for_evo,
                  monster_ids_with_skill):
@@ -538,7 +539,20 @@ class Monster:
         self.farmable = len(drop_info_list) > 0
         self.farmable_evo = self.farmable
         self.drop_info_list = drop_info_list
-        self.is_inheritable = additional_info.is_inheritable if additional_info else False
+
+        self.buy_mp = monster_price.buy_mp
+        self.in_mpshop = self.buy_mp > 0
+        self.sell_mp = monster_price.sell_mp
+
+
+        assist_setting = additional_info.extra_val_1 if additional_info else None
+        if assist_setting == '1':
+            self.is_inheritable = True
+        elif assist_setting == '2':
+            self.is_inheritable = False
+        else:
+            self.is_inheritable = len(self.awakening_names) > 0 and self.rarity >= 5 and self.sell_mp > 3000
+
         self.alt_evos = list()
 
         self.mats_to_evo = [x.monster_id for x in sorted(mats_to_evo, key=lambda z: z.order)]
@@ -744,9 +758,10 @@ def monsterToTypeString(m : Monster):
 
 def monsterToAcquireString(m : Monster):
     acquire_text = None
-    if m.farmable:
+    if m.farmable and not m.mp_evo:
+        # Some MP shop monsters 'drop' in PADR
         acquire_text = 'Farmable'
-    elif m.farmable_evo:
+    elif m.farmable_evo and not m.mp_evo:
         acquire_text = 'Farmable Evo'
     elif m.in_pem:
         acquire_text = 'In PEM'
@@ -756,6 +771,11 @@ def monsterToAcquireString(m : Monster):
         acquire_text = 'In REM'
     elif m.rem_evo:
         acquire_text = 'REM Evo'
+    elif m.in_mpshop:
+        acquire_text = 'MP Shop'
+    elif m.mp_evo:
+        acquire_text = 'MP Shop Evo'
+    return acquire_text
 
 def monsterToEmbed(m : Monster, server):
     embed = monsterToBaseEmbed(m)
@@ -1061,6 +1081,7 @@ class PgDataWrapper:
         skill_leader_data_list = padguide.loadJsonToItem('skillLeaderDataList.jsp', padguide.PgSkillLeaderData)
         type_list = padguide.loadJsonToItem('typeList.jsp', padguide.PgType)
         series_list = padguide.loadJsonToItem('seriesList.jsp', padguide.PgSeries)
+        mp_list = padguide.loadJsonToItem('monsterPriceList.jsp', padguide.PgMonsterPrice)
 
         dungeon_monster_list = padguide.loadJsonToItem('dungeonMonsterList.jsp', padguide.PgDungeonMonster)
         dungeon_monster_drop_list = padguide.loadJsonToItem('dungeonMonsterDropList.jsp', padguide.PgDungeonMonsterDrop)
@@ -1097,6 +1118,7 @@ class PgDataWrapper:
         skill_leader_data_map = {x.leader_id: x for x in skill_leader_data_list}
         type_map = {x.type_id: x for x in type_list}
         series_map = {x.series_id: x for x in series_list}
+        monster_id_to_monster_price = {x.monster_id: x for x in mp_list}
 
         monster_id_to_drop_info_list = self.computeMonsterDropInfoCombined(dungeon_monster_drop_list, dungeon_monster_list, dungeon_list)
 
@@ -1121,6 +1143,7 @@ class PgDataWrapper:
             leader_skill_data = skill_leader_data_map.get(base_monster.leader_id)
             drop_info_list = monster_id_to_drop_info_list.get(monster_id, [])
             series = series_map[monster_info.series_id]
+            monster_price = monster_id_to_monster_price[monster_id]
 
             cur_evo = monster_to_current_evo_item.get(monster_id, None)
             mats_to_evo = monster_evo_to_mat_multimap[cur_evo.evo_id] if cur_evo else []
@@ -1141,6 +1164,7 @@ class PgDataWrapper:
                 attribute_map,
                 drop_info_list,
                 series,
+                monster_price,
                 mats_to_evo,
                 used_for_evo,
                 monster_ids_with_skill)
@@ -1226,16 +1250,19 @@ class PgDataWrapper:
             farmable_evo = False
             pem_evo = False
             rem_evo = False
+            mp_evo = False
             for m in mg.monsters:
                 farmable_evo = farmable_evo or m.farmable
                 pem_evo = pem_evo or m.in_pem
                 rem_evo = rem_evo or m.in_rem
+                mp_evo = mp_evo or m.in_mpshop
 
             # Override tree farmable status
             for m in mg.monsters:
                 m.farmable_evo = farmable_evo
                 m.pem_evo = pem_evo
                 m.rem_evo = rem_evo
+                m.mp_evo = mp_evo
 
             # Split monster groups into low or high priority ones
             if shouldFilterMonster(mg.monsters[0]) or shouldFilterGroup(mg):
