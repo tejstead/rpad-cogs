@@ -81,7 +81,6 @@ class PgMonsterAddInfo:
         self.monster_id = item['MONSTER_NO']
         self.sub_type = item['SUB_TYPE']
         self.extra_val_1 = item['EXTRA_VAL1']
-        self.is_inheritable = self.extra_val_1 == '1'
 
 # monsterInfoList.jsp
 #         {
@@ -133,6 +132,18 @@ class PgBaseMonster:
 
         self.type1 = item['TT_SEQ']
         self.type2 = item['TT_SEQ_SUB']
+
+# {
+#     "BUY_PRICE": "0",
+#     "MONSTER_NO": "3577",
+#     "SELL_PRICE": "99",
+#     "TSTAMP": "1492101772974"
+# }
+class PgMonsterPrice:
+    def __init__(self, item):
+        self.monster_id = item['MONSTER_NO']
+        self.buy_mp = int(item['BUY_PRICE'])
+        self.sell_mp = int(item['SELL_PRICE'])
 
 # {
 #     "DEL_YN": "N",
