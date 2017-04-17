@@ -267,7 +267,7 @@ class PadGlobal:
         if definition:
             return term, definition
 
-        matches = difflib.get_close_matches(term, glossary.keys(), n=1)
+        matches = difflib.get_close_matches(term, glossary.keys(), n=1, cutoff=.8)
         if not matches:
             return term, None
         else:
@@ -319,11 +319,19 @@ class PadGlobal:
         if cmd in cmdlist.keys():
             cmd = cmdlist[cmd]
             cmd = self.format_cc(cmd, message)
+            cmd = self.fix_emojis(message.server, cmd)
             await self.bot.send_message(message.channel, cmd)
         elif cmd.lower() in cmdlist.keys():
             cmd = cmdlist[cmd.lower()]
             cmd = self.format_cc(cmd, message)
+            cmd = self.fix_emojis(message.server, cmd)
             await self.bot.send_message(message.channel, cmd)
+
+    def fix_emojis(self, server, txt):
+        emoji_wrapped_name_to_emoji_ref = {r'<:' + x.name + r':\d{18}>': str(x) for x in server.emojis}
+        for emoji_name, emoji_ref in emoji_wrapped_name_to_emoji_ref.items():
+            txt = re.sub(emoji_name, emoji_ref, txt)
+        return txt
 
     def get_prefix(self, message):
         for p in self.bot.settings.get_prefixes(message.server):
