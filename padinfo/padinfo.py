@@ -777,6 +777,12 @@ def monsterToAcquireString(m : Monster):
         acquire_text = 'MP Shop Evo'
     return acquire_text
 
+def match_emoji(emoji_list, name_regex):
+    for e in emoji_list:
+        if re.match(name_regex, e.name, re.IGNORECASE):
+            return e
+    return None
+
 def monsterToEmbed(m : Monster, server):
     embed = monsterToBaseEmbed(m)
 
@@ -800,7 +806,7 @@ def monsterToEmbed(m : Monster, server):
     for a, count in unique_awakenings.items():
         mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a) if server is not None else None
         if mapped_awakening:
-            mapped_awakening = discord.utils.get(server.emojis, name=mapped_awakening)
+            mapped_awakening = match_emoji(server.emojis, mapped_awakening)
 
         if mapped_awakening is None:
             mapped_awakening = AWAKENING_NAME_MAP.get(a, a)
@@ -883,58 +889,61 @@ series_to_prefix_map = {
   '154' : ['padr'],
 }
 
+def two_word_regex(w1, w2):
+    return '(.*{w1}.*{w2}.*)|(.*{w1}.*{w2}.*)'.format(w1=w1, w2=w2)
+
 AWAKENING_NAME_MAP_RPAD = {
   'Enhanced Attack': 'boost_atk',
   'Enhanced HP': 'boost_hp',
   'Enhanced Heal': 'boost_rcv',
 
-  'God Killer': 'killer_01_god',
-  'Dragon Killer': 'killer_02_dragon',
-  'Devil Killer': 'killer_03_devil',
-  'Machine Killer': 'killer_04_machine',
-  'Balance Killer': 'killer_05_balance',
-  'Attacker Killer': 'killer_06_attacker',
+  'God Killer': two_word_regex('killer', 'god'),
+  'Dragon Killer': two_word_regex('killer', 'dragon'),
+  'Devil Killer': two_word_regex('killer', 'devil'),
+  'Machine Killer': two_word_regex('killer', 'machine'),
+  'Balance Killer': two_word_regex('killer', 'balance'),
+  'Attacker Killer': two_word_regex('killer', 'attacker'),
 
-  'Physical Killer': 'killer_07_physical',
-  'Healer Killer': 'killer_08_healer',
-  'Evolve Material Killer': 'killer_09_evomat',
-  'Awoken Killer': 'killer_10_awoken',
-  'Enhance Killer': 'killer_11_enhancemat',
-  'Vendor Killer': 'killer_12_vendor',
+  'Physical Killer': two_word_regex('killer', 'physical'),
+  'Healer Killer': two_word_regex('killer', 'healer'),
+  'Evolve Material Killer': two_word_regex('killer', 'evomat'),
+  'Awoken Killer': two_word_regex('killer', 'awoken'),
+  'Enhance Killer': two_word_regex('killer', 'enhancemat'),
+  'Vendor Killer': two_word_regex('killer', 'vendor'),
 
-  'Auto-Recover': 'misc_autoheal',
-  'Recover Bind': 'misc_bindclear',
-  'Enhanced Combo': 'misc_combo_boost',
-  'Guard Break' : 'misc_guard_break',
-  'Multi Boost': 'misc_multiboost',
-  'Skill Boost': 'misc_sb',
-  'Extend Time': 'misc_te',
-  'Two-Pronged Attack': 'misc_tpa',
+  'Auto-Recover': '.*autoheal.*',
+  'Recover Bind': '.*bindclear.*',
+  'Enhanced Combo': '.*combo_boost.*',
+  'Guard Break' : '.*guard_break.*',
+  'Multi Boost': '.*multiboost.*',
+  'Skill Boost': '(.*_sb$)|(^sb_.*)',
+  'Extend Time': '(.*_te$)|(^te_.*)',
+  'Two-Pronged Attack': '.*tpa.*',
 
-  'Enhanced Fire Orbs': 'oe_1_fire',
-  'Enhanced Water Orbs': 'oe_2_water',
-  'Enhanced Wood Orbs': 'oe_3_wood',
-  'Enhanced Light Orbs': 'oe_4_light',
-  'Enhanced Dark Orbs': 'oe_5_dark',
-  'Enhanced Heal Orbs': 'oe_6_heart',
+  'Enhanced Fire Orbs': two_word_regex('oe', 'fire'),
+  'Enhanced Water Orbs': two_word_regex('oe', 'water'),
+  'Enhanced Wood Orbs': two_word_regex('oe', 'wood'),
+  'Enhanced Light Orbs': two_word_regex('oe', 'light'),
+  'Enhanced Dark Orbs': two_word_regex('oe', 'dark'),
+  'Enhanced Heal Orbs': two_word_regex('oe', 'heart'),
 
-  'Reduce Fire Damage': 'reduce_1_fire',
-  'Reduce Water Damage': 'reduce_2_water',
-  'Reduce Wood Damage': 'reduce_3_wood',
-  'Reduce Light Damage': 'reduce_4_light',
-  'Reduce Dark Damage': 'reduce_5_dark',
+  'Reduce Fire Damage': two_word_regex('oe', 'fire'),
+  'Reduce Water Damage': two_word_regex('oe', 'water'),
+  'Reduce Wood Damage': two_word_regex('oe', 'wood'),
+  'Reduce Light Damage': two_word_regex('oe', 'light'),
+  'Reduce Dark Damage': two_word_regex('oe', 'dark'),
 
-  'Resistance-Bind': 'res_bind',
-  'Resistance-Dark': 'res_blind',
-  'Resistance-Jammers': 'res_jammer',
-  'Resistance-Poison': 'res_poison',
-  'Resistance-Skill Bind': 'res_skillbind',
+  'Resistance-Bind': two_word_regex('res', 'bind'),
+  'Resistance-Dark': two_word_regex('res', 'blind'),
+  'Resistance-Jammers': two_word_regex('res', 'jammer'),
+  'Resistance-Poison': two_word_regex('res', 'poison'),
+  'Resistance-Skill Bind': two_word_regex('res', 'skillbind'),
 
-  'Enhanced Fire Att.': 'row_1_fire',
-  'Enhanced Water Att.': 'row_2_water',
-  'Enhanced Wood Att.': 'row_3_wood',
-  'Enhanced Light Att.': 'row_4_light',
-  'Enhanced Dark Att.': 'row_5_dark',
+  'Enhanced Fire Att.': two_word_regex('row', 'fire'),
+  'Enhanced Water Att.': two_word_regex('row', 'water'),
+  'Enhanced Wood Att.': two_word_regex('row', 'wood'),
+  'Enhanced Light Att.': two_word_regex('row', 'light'),
+  'Enhanced Dark Att.': two_word_regex('row', 'dark'),
 }
 
 AWAKENING_NAME_MAP = {
