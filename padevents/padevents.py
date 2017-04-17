@@ -86,6 +86,7 @@ EXTRA_FILES = [
     "monsterAddInfoList.jsp",
     "monsterInfoList.jsp",
     "monsterList.jsp",
+    "monsterPriceList.jsp",
     "skillDataList.jsp",
     "skillLeaderDataList.jsp",
     "seriesList.jsp",
