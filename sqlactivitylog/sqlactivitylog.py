@@ -140,7 +140,7 @@ class SqlActivityLogger(object):
             await send_cmd_help(context)
 
     @exlog.command(pass_context=True, no_pm=True)
-    async def user(self, ctx, user : discord.Member, count=10):
+    async def user(self, ctx, user : discord.User, count=10):
         """exlog user tactical_retreat 100
 
         List of messages for a user across all channels.
@@ -188,7 +188,7 @@ class SqlActivityLogger(object):
         await self.queryAndPrint(server, CHANNEL_QUERY, values, column_data)
 
     @exlog.command(pass_context=True, no_pm=True)
-    async def userchannel(self, ctx, user : discord.Member, channel : discord.Channel, count=10):
+    async def userchannel(self, ctx, user : discord.User, channel : discord.Channel, count=10):
         """exlog userchannel tactical_retreat #general_chat 100
 
         List of messages from a user in a given channel.
