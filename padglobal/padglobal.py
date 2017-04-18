@@ -328,6 +328,8 @@ class PadGlobal:
             await self.bot.send_message(message.channel, cmd)
 
     def fix_emojis(self, server, txt):
+        if server is None:
+            return txt
         emoji_wrapped_name_to_emoji_ref = {r'<:' + x.name + r':\d{18}>': str(x) for x in server.emojis}
         for emoji_name, emoji_ref in emoji_wrapped_name_to_emoji_ref.items():
             txt = re.sub(emoji_name, emoji_ref, txt)
