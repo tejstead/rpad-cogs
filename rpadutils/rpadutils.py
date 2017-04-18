@@ -1,9 +1,11 @@
+import asyncio
 import inspect
 import re
 
 import discord
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound
+from discord.ext.commands import converter
 
 from cogs.utils.chat_formatting import *
 
