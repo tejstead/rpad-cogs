@@ -319,7 +319,44 @@ def char_to_emoji(c):
     if c < 'a' or c > 'z':
         return c
 
-    base = 127462
+    base = ord('\N{REGIONAL INDICATOR SYMBOL LETTER A}')
     adjustment = ord(c) - ord('a')
     return chr(base + adjustment)
 
+
+
+
+##############################
+# Hack to fix discord.py
+##############################
+class UserConverter2(converter.IDConverter):
+    @asyncio.coroutine
+    def convert(self):
+        message = self.ctx.message
+        bot = self.ctx.bot
+        match = self._get_id_match() or re.match(r'<@!?([0-9]+)>$', self.argument)
+        server = message.server
+        result = None
+        if match is None:
+            # not a mention...
+            if server:
+                result = server.get_member_named(self.argument)
+            else:
+                result = _get_from_servers(bot, 'get_member_named', self.argument)
+        else:
+            user_id = match.group(1)
+            if server:
+                result = yield from bot.get_user_info(user_id)
+            else:
+                result = _get_from_servers(bot, 'get_member', user_id)
+
+        if result is None:
+            raise BadArgument('Member "{}" not found'.format(self.argument))
+
+        return result
+
+converter.UserConverter = UserConverter2
+
+##############################
+# End hack to fix discord.py
+##############################
