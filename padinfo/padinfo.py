@@ -890,12 +890,12 @@ series_to_prefix_map = {
 }
 
 def two_word_regex(w1, w2):
-    return '(.*{w1}.*{w2}.*)|(.*{w1}.*{w2}.*)'.format(w1=w1, w2=w2)
+    return '(.*{w1}.*{w2}.*)|(.*{w2}.*{w1}.*)'.format(w1=w1, w2=w2)
 
 AWAKENING_NAME_MAP_RPAD = {
-  'Enhanced Attack': 'boost_atk',
-  'Enhanced HP': 'boost_hp',
-  'Enhanced Heal': 'boost_rcv',
+  'Enhanced Attack': two_word_regex('boost', 'atk'),
+  'Enhanced HP': two_word_regex('boost', 'hp'),
+  'Enhanced Heal': two_word_regex('boost', 'rcv'),
 
   'God Killer': two_word_regex('killer', 'god'),
   'Dragon Killer': two_word_regex('killer', 'dragon'),
@@ -913,9 +913,9 @@ AWAKENING_NAME_MAP_RPAD = {
 
   'Auto-Recover': '.*autoheal.*',
   'Recover Bind': '.*bindclear.*',
-  'Enhanced Combo': '.*combo_boost.*',
-  'Guard Break' : '.*guard_break.*',
-  'Multi Boost': '.*multiboost.*',
+  'Enhanced Combo': two_word_regex('combo', 'boost'),
+  'Guard Break' : two_word_regex('guard', 'break'),
+  'Multi Boost': two_word_regex('multi', 'boost'),
   'Skill Boost': '(.*_sb$)|(^sb_.*)',
   'Extend Time': '(.*_te$)|(^te_.*)',
   'Two-Pronged Attack': '.*tpa.*',
@@ -927,13 +927,13 @@ AWAKENING_NAME_MAP_RPAD = {
   'Enhanced Dark Orbs': two_word_regex('oe', 'dark'),
   'Enhanced Heal Orbs': two_word_regex('oe', 'heart'),
 
-  'Reduce Fire Damage': two_word_regex('oe', 'fire'),
-  'Reduce Water Damage': two_word_regex('oe', 'water'),
-  'Reduce Wood Damage': two_word_regex('oe', 'wood'),
-  'Reduce Light Damage': two_word_regex('oe', 'light'),
-  'Reduce Dark Damage': two_word_regex('oe', 'dark'),
+  'Reduce Fire Damage': two_word_regex('red', 'fire'),
+  'Reduce Water Damage': two_word_regex('red', 'water'),
+  'Reduce Wood Damage': two_word_regex('red', 'wood'),
+  'Reduce Light Damage': two_word_regex('red', 'light'),
+  'Reduce Dark Damage': two_word_regex('red', 'dark'),
 
-  'Resistance-Bind': two_word_regex('res', 'bind'),
+  'Resistance-Bind': two_word_regex('res', '_bind'),
   'Resistance-Dark': two_word_regex('res', 'blind'),
   'Resistance-Jammers': two_word_regex('res', 'jammer'),
   'Resistance-Poison': two_word_regex('res', 'poison'),
