@@ -644,7 +644,8 @@ def monsterToEvoText(m: Monster):
     return output
 
 def monsterToThumbnailUrl(m : Monster):
-    return RPAD_PORTRAIT_TEMPLATE.format(m.monster_id_jp)
+    # Uses the NA id because we prefer the pdx portrait
+    return RPAD_PORTRAIT_TEMPLATE.format(m.monster_id_na)
 
 def monsterToBaseEmbed(m : Monster):
     header = monsterToLongHeader(m)
