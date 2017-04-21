@@ -407,6 +407,10 @@ def cleanDungeonNames(name):
     name = name.replace('Extreme King Metal Dragon', 'Extreme KMD')
     name = name.replace('Golden Mound-Tricolor [Fr/Wt/Wd Only]', 'Golden Mound')
     name = name.replace('Gods-Awakening Materials Descended', "Awoken Mats")
+    name = name.replace('Orb move time 4 sec', '4s move time')
+    name = name.replace('Awakening Materials Descended', 'Awkn Mats')
+    name = name.replace("Star Treasure Thieves' Den", 'STTD')
+    name = name.replace('Ruins of the Star Vault', 'Star Vault')
     return name
 
 # {
