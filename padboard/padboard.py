@@ -210,6 +210,7 @@ class PadBoard:
         return ''.join([''.join(r) for r in board])
 
 def is_valid_image_url(url):
+    url = url.lower()
     return url.startswith('http') and (url.endswith('.png') or url.endswith('.jpg'))
 
 def check_folder():
