@@ -746,7 +746,8 @@ def monsterToSkillupsEmbed(m : Monster, pginfo):
     return embed
 
 def monsterToPicText(m : Monster):
-    link = RPAD_FULL_TEMPLATE.format(m.monster_id_na)
+    # We use the JP monster ids for portraits
+    link = RPAD_FULL_TEMPLATE.format(m.monster_id_jp)
     return monsterToHeader(m), link
 
 def monsterToTypeString(m : Monster):
