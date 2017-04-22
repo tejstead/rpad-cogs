@@ -45,6 +45,11 @@ CREATE TABLE IF NOT EXISTS messages(
   clean_content STRING NOT NULL)
 '''
 
+CREATE_INDEX = '''
+CREATE INDEX IF NOT EXISTS idx_messages_server_id
+ON messages(server_id)
+'''
+
 MAX_LOGS = 500
 
 USER_QUERY = '''
@@ -120,6 +125,7 @@ class SqlActivityLogger(object):
         self.con = lite.connect(DB, detect_types=lite.PARSE_DECLTYPES)
         self.con.row_factory = lite.Row
         self.con.execute(CREATE_TABLE)
+        self.con.execute(CREATE_INDEX)
         self.insert_timing = deque(maxlen=1000)
 
     def __unload(self):
