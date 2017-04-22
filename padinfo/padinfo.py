@@ -108,6 +108,7 @@ class PadInfo:
         self.mats_emoji = char_to_emoji('m')
         self.pantheon_emoji = char_to_emoji('p')
         self.skillups_emoji = char_to_emoji('s')
+        self.pic_emoji = '\N{FRAME WITH PICTURE}'
 
 
     def __unload(self):
@@ -228,11 +229,13 @@ class PadInfo:
         id_embed = monsterToEmbed(m, ctx.message.server)
         evo_embed = monsterToEvoEmbed(m)
         mats_embed = monsterToEvoMatsEmbed(m)
+        pic_embed = monsterToPicEmbed(m)
 
         emoji_to_embed = OrderedDict()
         emoji_to_embed[self.id_emoji] = id_embed
         emoji_to_embed[self.evo_emoji] = evo_embed
         emoji_to_embed[self.mats_emoji] = mats_embed
+        emoji_to_embed[self.pic_emoji] = pic_embed
 
         pantheon_embed = monsterToPantheonEmbed(m, self.pginfo_all)
         if pantheon_embed:
