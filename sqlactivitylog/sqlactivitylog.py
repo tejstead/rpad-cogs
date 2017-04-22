@@ -309,6 +309,7 @@ class SqlActivityLogger(object):
                     server_obj = self.bot.get_server(value)
                     value = server_obj.name if server_obj else value
                 if col == 'clean_content':
+                    value = value.replace('```', '~~~')
                     value = value.replace('`', '\`')
                     value = '\n'.join(textwrap.wrap(value, 60))
                 table_row.append(value)
@@ -344,14 +345,27 @@ class SqlActivityLogger(object):
         timestamp = 0
         server_id = message.server.id if message.server else -1
         channel_id = message.channel.id if message.channel else -1
+
+        msg_content = message.content
+        msg_clean_content = message.clean_content
+        if len(message.attachments):
+            extra_txt = '\nattachments: ' + str(message.attachments)
+            msg_content = (msg_content + extra_txt).strip()
+            msg_clean_content = (msg_clean_content + extra_txt).strip()
+
+        if len(message.embeds):
+            extra_txt = '\nembeds: ' + str(message.embeds)
+            msg_content = (msg_content + extra_txt).strip()
+            msg_clean_content = (msg_clean_content + extra_txt).strip()
+
         values = {
           'timestamp': message.timestamp,
           'server_id': server_id,
           'channel_id': channel_id,
           'user_id': message.author.id,
           'msg_type': msg_type,
-          'content': message.content,
-          'clean_content': message.clean_content,
+          'content': msg_content,
+          'clean_content': msg_clean_content,
         }
         self.con.execute(stmt, values)
         self.con.commit()
