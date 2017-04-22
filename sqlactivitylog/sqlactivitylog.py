@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import textwrap
+import timeit
 
 import discord
 from discord.ext import commands
@@ -263,8 +264,10 @@ class SqlActivityLogger(object):
         await self.queryAndPrint(server, WHOSAYS_QUERY, values, column_data)
 
     async def queryAndPrint(self, server, query, values, column_data, max_rows=MAX_LOGS * 2):
+        before_time = timeit.default_timer()
         cursor = self.con.execute(query, values)
         rows = cursor.fetchall()
+        execution_time = timeit.default_timer() - before_time
 
         if len(column_data) == 0:
             column_data = ALL_COLUMNS
@@ -316,8 +319,7 @@ class SqlActivityLogger(object):
 
             tbl.add_row(table_row)
 
-
-        result_text = "{} results\n{}".format(len(rows), tbl.get_string())
+        result_text = "{} results fetched in {}s\n{}".format(len(rows), round(execution_time, 2), tbl.get_string())
         for p in pagify(result_text):
             await self.bot.say(box(p))
 
