@@ -135,9 +135,9 @@ class SqlActivityLogger(object):
     @checks.is_owner()
     async def inserttiming(self, ctx):
         size = len(self.insert_timing)
-        avg_time = round(sum(self.insert_timing) / size, 2)
-        max_time = round(max(self.insert_timing))
-        min_time = round(min(self.insert_timing))
+        avg_time = round(sum(self.insert_timing) / size, 4)
+        max_time = round(max(self.insert_timing), 4)
+        min_time = round(min(self.insert_timing), 4)
         await self.bot.say(inline('{} inserts, min={} max={} avg={}'.format(size, min_time, max_time, avg_time)))
 
     @commands.group(pass_context=True, no_pm=True)
