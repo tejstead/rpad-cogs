@@ -252,7 +252,11 @@ class PadInfo:
             # Selected menu wasn't generated for this monster
             return EMBED_NOT_GENERATED
 
-        await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji)
+        result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=30)
+        if result_msg and result_embed:
+            # Message is finished but not deleted, clear the footer
+            result_embed.set_footer(text=discord.Embed.Empty)
+            await self.bot.edit_message(result_msg, embed=result_embed)
 
     @commands.command(pass_context=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -269,8 +273,7 @@ class PadInfo:
     async def pic(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            header, link = monsterToPicText(m)
-            await self.bot.say(inline(header) + '\n' + link)
+            await self._do_idmenu(ctx, m, self.pic_emoji)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
@@ -656,7 +659,7 @@ def monsterToBaseEmbed(m : Monster):
     embed.set_thumbnail(url=monsterToThumbnailUrl(m))
     embed.title = header
     embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
-    embed.set_footer(text='Click the reactions below to switch tabs')
+    embed.set_footer(text='Requester may click the reactions below to switch tabs')
     return embed
 
 def monsterToEvoEmbed(m : Monster):
@@ -748,10 +751,18 @@ def monsterToSkillupsEmbed(m : Monster, pginfo):
 
     return embed
 
-def monsterToPicText(m : Monster):
-    # We use the JP monster ids for portraits
-    link = RPAD_FULL_TEMPLATE.format(m.monster_id_jp)
-    return monsterToHeader(m), link
+def monsterToPicUrl(m : Monster):
+    # We use the JP monster ids for pictures
+    return RPAD_FULL_TEMPLATE.format(m.monster_id_jp)
+
+# def monsterToSkillupsEmbed(m : Monster, pginfo : PgDataWrapper):
+def monsterToPicEmbed(m : Monster):
+    embed = monsterToBaseEmbed(m)
+    url = monsterToPicUrl(m)
+    embed.set_image(url=url)
+    # Clear the thumbnail, don't need it on pic
+    embed.set_thumbnail(url='')
+    return embed
 
 def monsterToTypeString(m : Monster):
     output = m.type1
