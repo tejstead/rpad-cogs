@@ -1,3 +1,4 @@
+from collections import deque
 from datetime import datetime
 import os
 import textwrap
@@ -119,6 +120,7 @@ class SqlActivityLogger(object):
         self.con = lite.connect(DB, detect_types=lite.PARSE_DECLTYPES)
         self.con.row_factory = lite.Row
         self.con.execute(CREATE_TABLE)
+        self.insert_timing = deque(maxlen=1000)
 
     def __unload(self):
         self.lock = True
@@ -128,6 +130,15 @@ class SqlActivityLogger(object):
     @checks.is_owner()
     async def rawquery(self, ctx, *, query : str):
         await self.queryAndPrint(ctx.message.server, query, {}, {})
+
+    @commands.command(pass_context=True)
+    @checks.is_owner()
+    async def inserttiming(self, ctx):
+        size = len(self.insert_timing)
+        avg_time = round(sum(self.insert_timing) / size, 2)
+        max_time = round(max(self.insert_timing))
+        min_time = round(min(self.insert_timing))
+        await self.bot.say(inline('{} inserts, min={} max={} avg={}'.format(size, min_time, max_time, avg_time)))
 
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -369,8 +380,12 @@ class SqlActivityLogger(object):
           'content': msg_content,
           'clean_content': msg_clean_content,
         }
+
+        before_time = timeit.default_timer()
         self.con.execute(stmt, values)
         self.con.commit()
+        execution_time = timeit.default_timer() - before_time
+        self.insert_timing.append(execution_time)
 
 
 def check_folders():
