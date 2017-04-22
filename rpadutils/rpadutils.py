@@ -275,7 +275,8 @@ class Menu():
                 try:
                     await self.bot.add_reaction(message, e)
                 except Exception as e:
-                    print("failed to add reaction", e)
+                    # failed to add reaction, ignore
+                    pass
 
         r = await self.bot.wait_for_reaction(
             emoji=list(emoji_to_message.keys()),
@@ -290,7 +291,7 @@ class Menu():
             except Exception as e:
                 # This is expected when miru doesn't have manage messages
                 pass
-            return message
+            return message, new_message_content
 
         react_emoji = r.reaction.emoji
         react_action = emoji_to_message[r.reaction.emoji]
@@ -302,7 +303,7 @@ class Menu():
 
         # user function killed message, quit
         if not message:
-            return
+            return None, None
 
         try:
             await self.bot.remove_reaction(message, react_emoji, r.user)
