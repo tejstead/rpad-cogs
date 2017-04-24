@@ -106,8 +106,8 @@ class PadInfo:
         self.id_emoji = char_to_emoji('i')
         self.evo_emoji = char_to_emoji('e')
         self.mats_emoji = char_to_emoji('m')
-        self.pantheon_emoji = char_to_emoji('p')
-        self.skillups_emoji = char_to_emoji('s')
+        self.pantheon_emoji = '\N{CLASSICAL BUILDING}'
+        self.skillups_emoji = '\N{MEAT ON BONE}'
         self.pic_emoji = '\N{FRAME WITH PICTURE}'
 
 
@@ -252,11 +252,14 @@ class PadInfo:
             # Selected menu wasn't generated for this monster
             return EMBED_NOT_GENERATED
 
-        result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=30)
-        if result_msg and result_embed:
-            # Message is finished but not deleted, clear the footer
-            result_embed.set_footer(text=discord.Embed.Empty)
-            await self.bot.edit_message(result_msg, embed=result_embed)
+        try:
+            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=30)
+            if result_msg and result_embed:
+                # Message is finished but not deleted, clear the footer
+                result_embed.set_footer(text=discord.Embed.Empty)
+                await self.bot.edit_message(result_msg, embed=result_embed)
+        except Exception as ex:
+            print('Menu failure', ex)
 
     @commands.command(pass_context=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -463,7 +466,8 @@ class Monster:
                  monster_price,
                  mats_to_evo,
                  used_for_evo,
-                 monster_ids_with_skill):
+                 monster_ids_with_skill,
+                 cur_evo):
 
         self.monster_id = base_monster.monster_id
         # NA is used in puzzledragonx
@@ -566,6 +570,8 @@ class Monster:
 
         self.monster_ids_with_skill = monster_ids_with_skill
         self.monsters_with_skill = list()
+
+        self.evo_type = cur_evo.tv_type if cur_evo else None
 
 def monsterToInfoText(m: Monster):
     header = monsterToHeader(m)
@@ -1050,17 +1056,32 @@ def addPrefixes(m: Monster):
     if m.name_na.lower() == m.name_na and m.name_na != m.name_jp:
         prefixes.add('chibi')
 
+    awoken_or_revo = False
     if 'awoken' in m.name_na.lower() or '覚醒' in m.name_na:
+        awoken_or_revo = True
         prefixes.add('a')
 
     if '覚醒' in m.name_na:
         prefixes.add('awoken')
 
     if 'reincarnated' in m.name_na.lower() or '転生' in m.name_na:
+        awoken_or_revo = True
         prefixes.add('revo')
 
     if '転生' in m.name_na:
         prefixes.add('reincarnated')
+
+    if not awoken_or_revo:
+        if m.evo_type is None:
+            prefixes.add('base')
+        elif m.evo_type == '0':
+            prefixes.add('evo')
+        elif m.evo_type == '1':
+            prefixes.add('uvo')
+            prefixes.add('uevo')
+        elif m.evo_type == '2':
+            prefixes.add('uuvo')
+            prefixes.add('uuevo')
 
     # Add collab prefixes
     if m.series_id in series_to_prefix_map:
@@ -1192,7 +1213,8 @@ class PgDataWrapper:
                 monster_price,
                 mats_to_evo,
                 used_for_evo,
-                monster_ids_with_skill)
+                monster_ids_with_skill,
+                cur_evo)
 
             if na_only and not full_monster.on_na:
                 continue
