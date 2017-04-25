@@ -429,12 +429,12 @@ class SqlActivityLogger(object):
 
         msg_content = message.content
         msg_clean_content = message.clean_content
-        if len(message.attachments):
+        if message.attachments:
             extra_txt = '\nattachments: ' + str(message.attachments)
             msg_content = (msg_content + extra_txt).strip()
             msg_clean_content = (msg_clean_content + extra_txt).strip()
 
-        if len(message.embeds):
+        if message.embeds:
             extra_txt = '\nembeds: ' + str(message.embeds)
             msg_content = (msg_content + extra_txt).strip()
             msg_clean_content = (msg_clean_content + extra_txt).strip()
