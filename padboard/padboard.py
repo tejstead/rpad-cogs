@@ -36,11 +36,13 @@ LOGS_PER_USER = 5
 class PadBoard:
     def __init__(self, bot):
         self.bot = bot
-        self.logs = defaultdict(lambda: deque(maxlen=5))
+        self.logs = defaultdict(lambda: deque(maxlen=1))
         self.orb_type_to_images = padvision.load_orb_images_dir_to_map(ORB_DATA_DIR)
 
     async def log_message(self, message):
-        self.logs[message.author.id].append(message)
+        url = self.get_image_url(message)
+        if url:
+            self.logs[message.author.id].append(url)
 
     @commands.group(pass_context=True)
     async def padboard(self, context):
@@ -85,13 +87,16 @@ class PadBoard:
             await self.bot.say(inline('done reloading'))
 
     def find_image(self, user_id):
-        messages = list(self.logs[user_id])
-        messages.reverse()
-        for m in messages:
-            if is_valid_image_url(m.content):
-                return m.content
-            if len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
-                return m.attachments[0]['url']
+        urls = list(self.logs[user_id])
+        if urls:
+            return urls[-1]
+        return None
+
+    def get_image_url(self, m):
+        if is_valid_image_url(m.content):
+            return m.content
+        if len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
+            return m.attachments[0]['url']
         return None
 
     async def download_image(self, image_url):
@@ -104,7 +109,7 @@ class PadBoard:
     @commands.command(pass_context=True)
     async def dawnglare(self, ctx, user: discord.Member=None):
         """Scans your recent messages for images. Attempts to convert the image into a dawnglare link."""
-        image_data = await self.get_recent_image(ctx, user)
+        image_data = await self.get_recent_image(ctx, user, ctx.message)
         if not image_data:
             return
 
@@ -115,7 +120,7 @@ class PadBoard:
     @commands.command(pass_context=True)
     async def solve(self, ctx, user: discord.Member=None):
         """Scans your recent messages for images. Attempts to convert the image into a dawnglare link with solution."""
-        image_data = await self.get_recent_image(ctx, user)
+        image_data = await self.get_recent_image(ctx, user, ctx.message)
         if not image_data:
             return
 
@@ -163,9 +168,12 @@ class PadBoard:
         await self.bot.say(dawnglare_url)
 
 
-    async def get_recent_image(self, ctx, user : discord.Member=None):
+    async def get_recent_image(self, ctx, user : discord.Member=None, message : discord.Message=None):
         user_id = user.id if user else ctx.message.author.id
-        image_url = self.find_image(user_id)
+
+        image_url = self.get_image_url(message)
+        if image_url is None:
+            image_url = self.find_image(user_id)
 
         if not image_url:
             if user:
