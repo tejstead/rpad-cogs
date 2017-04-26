@@ -33,7 +33,7 @@ from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
-from .utils.dataIO import fileIO
+from .utils.dataIO import dataIO
 from .utils.twitter_stream import *
 
 INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
@@ -109,6 +109,13 @@ class PadInfo:
         self.pantheon_emoji = '\N{CLASSICAL BUILDING}'
         self.skillups_emoji = '\N{MEAT ON BONE}'
         self.pic_emoji = '\N{FRAME WITH PICTURE}'
+
+        self.historic_lookups_file_path = "data/padinfo/historic_lookups.json"
+        if not dataIO.is_valid_json(self.historic_lookups_file_path):
+            print("Creating empty historic_lookups.json...")
+            dataIO.save_json(self.historic_lookups_file_path, {})
+
+        self.historic_lookups = dataIO.load_json(self.historic_lookups_file_path)
 
 
     def __unload(self):
@@ -323,6 +330,15 @@ class PadInfo:
         return box(msg)
 
     def findMonster(self, query, na_only=False):
+        m, err, debug_info = self._findMonster(query, na_only)
+
+        monster_id = m.monster_id if m else -1
+        self.historic_lookups[query] = monster_id
+        dataIO.save_json(self.historic_lookups_file_path, self.historic_lookups)
+
+        return m, err, debug_info
+
+    def _findMonster(self, query, na_only=False):
         query = query.lower().strip()
 
         # id search
