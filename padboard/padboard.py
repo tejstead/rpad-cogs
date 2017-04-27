@@ -33,6 +33,10 @@ ORB_DATA_DIR = DATA_DIR + '/orb_images'
 
 LOGS_PER_USER = 5
 
+DAWNGLARE_BOARD_TEMPLATE = "https://storage.googleapis.com/mirubot/websites/padsim/index.html?patt={}"
+DAWNGLARE_MOVE_TEMPLATE = "https://storage.googleapis.com/mirubot/websites/padsim/index.html?patt={}&replay={}"
+
+
 class PadBoard:
     def __init__(self, bot):
         self.bot = bot
@@ -114,58 +118,60 @@ class PadBoard:
             return
 
         result = await self.get_dawnglare_pattern(image_data)
-        dawnglare_url = "http://pad.dawnglare.com/?patt=" + result
+        dawnglare_url = DAWNGLARE_BOARD_TEMPLATE.format(result)
         await self.bot.say(dawnglare_url)
 
-    @commands.command(pass_context=True)
-    async def solve(self, ctx, user: discord.Member=None):
-        """Scans your recent messages for images. Attempts to convert the image into a dawnglare link with solution."""
-        image_data = await self.get_recent_image(ctx, user, ctx.message)
-        if not image_data:
-            return
-
-        result = await self.get_dawnglare_pattern(image_data)
-
-        mapping = {
-           'r' : Fire,
-           'g' : Wood,
-           'b' : Water,
-           'd' : Dark,
-           'l' : Light,
-           'h' : Heart,
-           'p' : Poison,
-           'j' : Jammer
-        }
-
-        orb_list = list(map(lambda x: mapping[x], list(result)))
-        num_rows = 5
-        num_cols = 6
-        board = Board(orb_list, num_rows, num_cols)
-
-        weights = {
-            Fire.symbol: 1.0,
-            Wood.symbol: 1.0,
-            Water.symbol: 1.0,
-            Dark.symbol: 1.0,
-            Light.symbol: 1.0,
-            Heart.symbol: 1.0,
-            Poison.symbol: 0.5,
-            Jammer.symbol: 0.5,
-            Unknown.symbol: 0.0
-        }
-
-        solver = TrPrunedBfs(weights, 300)
-        (score, moves, solved_board) = solver.solve(board, 30)
-
-        cur_orb = (0, 0)
-        converted_moves = list()
-        for m in moves:
-            cur_orb = (cur_orb[0] + m[0], cur_orb[1] + m[1])
-            converted_moves.append(str(cur_orb[0] * 6 + cur_orb[1]))
-
-        dawnglare_moves = '|'.join(converted_moves)
-        dawnglare_url = "http://pad.dawnglare.com/?patt=" + result + '&replay=' + dawnglare_moves
-        await self.bot.say(dawnglare_url)
+#     @commands.command(pass_context=True)
+#     async def solve(self, ctx, user: discord.Member=None):
+#         """Scans your recent messages for images. Attempts to convert the image into a dawnglare link with solution."""
+#         image_data = await self.get_recent_image(ctx, user, ctx.message)
+#         if not image_data:
+#             return
+#
+#         result = await self.get_dawnglare_pattern(image_data)
+#
+#         mapping = {
+#            'r' : Fire,
+#            'g' : Wood,
+#            'b' : Water,
+#            'd' : Dark,
+#            'l' : Light,
+#            'h' : Heart,
+#            'p' : Poison,
+#            'j' : Jammer,
+#            'm' : Poison,
+#            'u' : Unknown,
+#         }
+#
+#         orb_list = list(map(lambda x: mapping[x], list(result)))
+#         num_rows = 5
+#         num_cols = 6
+#         board = Board(orb_list, num_rows, num_cols)
+#
+#         weights = {
+#             Fire.symbol: 1.0,
+#             Wood.symbol: 1.0,
+#             Water.symbol: 1.0,
+#             Dark.symbol: 1.0,
+#             Light.symbol: 1.0,
+#             Heart.symbol: 1.0,
+#             Poison.symbol: 0.5,
+#             Jammer.symbol: 0.5,
+#             Unknown.symbol: 0.0
+#         }
+#
+#         solver = TrPrunedBfs(weights, 300)
+#         (score, moves, solved_board) = solver.solve(board, 30)
+#
+#         cur_orb = (0, 0)
+#         converted_moves = list()
+#         for m in moves:
+#             cur_orb = (cur_orb[0] + m[0], cur_orb[1] + m[1])
+#             converted_moves.append(str(cur_orb[0] * 6 + cur_orb[1]))
+#
+#         dawnglare_moves = '|'.join(converted_moves)
+#         dawnglare_url = DAWNGLARE_MOVE_TEMPLATE.format(result, dawnglare_moves)
+#         await self.bot.say(dawnglare_url)
 
 
     async def get_recent_image(self, ctx, user : discord.Member=None, message : discord.Message=None):
@@ -190,23 +196,7 @@ class PadBoard:
         return image_data
 
     async def get_dawnglare_pattern(self, image_data):
-        result = self.classify_to_string(image_data)
-        if 'm' in result:
-            if 'j' and 'p' in result:
-                await self.bot.say(inline('Warning: mortals not supported by dawnglare, replaced with jammer even though jammer also present'))
-                result = result.replace('m', 'j')
-            elif 'j' in result:
-                await self.bot.say(inline('Warning: mortals not supported by dawnglare, replaced with poison'))
-                result = result.replace('m', 'p')
-            else:
-                await self.bot.say(inline('Warning: mortals not supported by dawnglare, replaced with jammer'))
-                result = result.replace('m', 'j')
-
-        if 'u' in result:
-            await self.bot.say(inline('Warning: had to replace unknowns with jammers.'))
-            result = result.replace('u', 'j')
-
-        return result
+        return self.classify_to_string(image_data)
 
     def classify_to_string(self, image_data):
         nparr = np.fromstring(image_data, np.uint8)
