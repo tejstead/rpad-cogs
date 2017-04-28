@@ -4,6 +4,7 @@ import os
 import cv2
 import np
 
+ORB_IMG_SIZE = 40
 
 class PadVision:
     def __init__(self, bot):
@@ -18,7 +19,7 @@ def setup(bot):
 # Library code
 ###############################################################################
 
-EXTRACTABLE = 'rbgldhjpm'
+EXTRACTABLE = 'rbgldhjpmo'
 
 # returns y, x
 def board_iterator():
@@ -40,7 +41,35 @@ def getL2Err(A, B):
     # Convert to a reasonable scale, since L2 error is summed across all pixels of the image.
     return errorL2 / (100 * 100);
 
+# Compare two images by getting the L2 error (square-root of sum of squared error).
+def getL2ErrThresholded(A, B):
+    A = cv2.cvtColor(A, cv2.COLOR_BGR2GRAY)
+    B = cv2.cvtColor(B, cv2.COLOR_BGR2GRAY)
+    A = cv2.adaptiveThreshold(A, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 3)
+    B = cv2.adaptiveThreshold(B, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 3)
+
+    # Calculate the L2 relative error between images.
+    errorL2 = cv2.norm(A, B, cv2.NORM_L2);
+    # Convert to a reasonable scale, since L2 error is summed across all pixels of the image.
+    return errorL2 / (100 * 100);
+
 def getMSErr(imageA, imageB):
+    # the 'Mean Squared Error' between the two images is the
+    # sum of the squared difference between the two images;
+    # NOTE: the two images must have the same dimension
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    err /= float(imageA.shape[0] * imageA.shape[1])
+
+    # return the MSE, the lower the error, the more "similar"
+    # the two images are
+    return err
+
+def getMSErrThresholded(imageA, imageB):
+    imageA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY)
+    imageB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY)
+    imageA = cv2.adaptiveThreshold(imageA, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 2)
+    imageB = cv2.adaptiveThreshold(imageB, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 2)
+
     # the 'Mean Squared Error' between the two images is the
     # sum of the squared difference between the two images;
     # NOTE: the two images must have the same dimension
@@ -53,10 +82,10 @@ def getMSErr(imageA, imageB):
 
 def resizeOrbImg(img):
     height, width, _ = img.shape
-    if height < 100 or width < 100:
-        return cv2.resize(img, (100, 100), interpolation=cv2.INTER_CUBIC)
-    elif height > 100 or width > 100:
-        return cv2.resize(img, (100, 100), interpolation=cv2.INTER_AREA)
+    if height < ORB_IMG_SIZE or width < ORB_IMG_SIZE:
+        return cv2.resize(img, (ORB_IMG_SIZE, ORB_IMG_SIZE), interpolation=cv2.INTER_CUBIC)
+    elif height > ORB_IMG_SIZE or width > ORB_IMG_SIZE:
+        return cv2.resize(img, (ORB_IMG_SIZE, ORB_IMG_SIZE), interpolation=cv2.INTER_AREA)
     else:
         return img
 
@@ -98,12 +127,18 @@ class OrbExtractor(object):
                 break
             xstart += 1
 
+        # Add an extra pixel for the outer border?
+        xstart += 1
+
         # compute true baseline from the bottom (removes android buttons)
         yend = height - 1
         while True:
             if max(img[yend, xstart + 10]) > 0:
                 break
             yend -= 1
+
+        # Add an extra pixel for the outer border?
+        yend -= 1
 
         # compute true board size
         board_width = width - (xstart * 2)
@@ -126,7 +161,7 @@ class OrbExtractor(object):
         cv2.destroyAllWindows()
 
     def get_orb_vertices(self, x, y):
-        # Consider adding an offset here Sto get rid of padding?
+        # Consider adding an offset here to get rid of padding?
         offset = 0
         box_ystart = y * self.orb_size + self.ystart
         box_yend = box_ystart + self.orb_size
@@ -149,17 +184,26 @@ class SimilarityBoardExtractor(object):
     def __init__(self, orb_type_to_images, img):
         self.orb_type_to_images = orb_type_to_images
         self.img = img
+        self.processed = False
+        self.results = [['u' for x in range(6)] for y in range(5)]
+        self.similarity = [[0 for x in range(6)] for y in range(5)]
 
-    def get_board(self):
+    def process(self):
         oe = OrbExtractor(self.img)
 
-        results = [['u' for x in range(6)] for y in range(5)]
         for y, x in board_iterator():
             orb_img = oe.get_orb_img(x, y)
             orb_img = resizeOrbImg(orb_img)
 
-            best_match, best_match_sim = find_best_match(orb_img, self.orb_type_to_images, getMSErr)
-            results[y][x] = best_match
+            best_match, best_match_sim = find_best_match(orb_img, self.orb_type_to_images, getL2ErrThresholded)
+            self.results[y][x] = best_match
+            self.similarity[y][x] = best_match_sim
 
-        return results
+    def get_board(self):
+        if not self.processed:
+            self.process()
+            self.processed = True
+        return self.results
 
+    def get_similarity(self):
+        return self.similarity
