@@ -83,7 +83,7 @@ class PadBoard:
                 await self.bot.say(inline('empty zip file?'))
                 return
 
-            await self.bot.say(box('deleting existing files and unzipping files:\n{}'.format('\n'.join(files))))
+            await self.bot.say(box('deleting existing files and unzipping files: {}'.format(len(files))))
             self.clear_training_folder()
             zip_file.extractall(ORB_DATA_DIR)
             await self.bot.say(inline('done extracting'))
