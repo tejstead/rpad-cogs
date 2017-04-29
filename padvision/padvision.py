@@ -1,5 +1,6 @@
 from collections import defaultdict
 import os
+import pickle
 
 import cv2
 import np
@@ -111,10 +112,22 @@ def load_orb_images_dir_to_map(orb_image_dir):
 
     return orb_type_to_images
 
+def load_hsv_to_orb(hsv_file_path):
+    try:
+        return pickle.load(open(hsv_file_path, 'rb'))
+    except Exception as ex:
+        print(ex)
+    return {}
+
+
 class OrbExtractor(object):
     def __init__(self, img):
         self.img = img
+        self.find_start_end()
+        self.compute_sizes()
 
+    def find_start_end(self):
+        img = self.img
         height, width, _ = img.shape
 
         # Detect left/right border size
@@ -127,9 +140,6 @@ class OrbExtractor(object):
                 break
             xstart += 1
 
-        # Add an extra pixel for the outer border?
-        xstart += 1
-
         # compute true baseline from the bottom (removes android buttons)
         yend = height - 1
         while True:
@@ -137,28 +147,25 @@ class OrbExtractor(object):
                 break
             yend -= 1
 
-        # Add an extra pixel for the outer border?
-        yend -= 1
+        self.xstart = xstart
+        self.yend = yend
+
+        self.x_adj = 0
+        self.y_adj = 2
+        self.orb_adj = 1
+
+    def compute_sizes(self):
+        img = self.img
+        height, width, _ = img.shape
 
         # compute true board size
-        board_width = width - (xstart * 2)
-        orb_size = int(board_width / 6)
+        board_width = width - (self.xstart * 2) - self.x_adj
+        orb_size = board_width / 6 - self.orb_adj
 
-        ystart = yend - orb_size * 5
+        ystart = self.yend - orb_size * 5 + self.y_adj
 
-        self.xstart = xstart
         self.ystart = ystart
         self.orb_size = orb_size
-
-    def markup_orbs(self):
-        for y in range(5):
-            for x in range(6):
-                box_xstart, box_ystart, box_xend, box_yend = self.get_orb_vertices(x, y)
-                cv2.rectangle(self.img, (box_xstart, box_ystart), (box_xend, box_yend), (0, 255, 0), 1)
-        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-        cv2.imshow('image', self.img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
 
     def get_orb_vertices(self, x, y):
         # Consider adding an offset here to get rid of padding?
@@ -167,7 +174,7 @@ class OrbExtractor(object):
         box_yend = box_ystart + self.orb_size
         box_xstart = x * self.orb_size + self.xstart
         box_xend = box_xstart + self.orb_size
-        return box_xstart + offset, box_ystart + offset, box_xend - offset, box_yend - offset
+        return int(box_xstart + offset), int(box_ystart + offset), int(box_xend - offset), int(box_yend - offset)
 
     def get_orb_coords(self, x, y):
         box_xstart, box_ystart, box_xend, box_yend = self.get_orb_vertices(x, y)
@@ -207,3 +214,45 @@ class SimilarityBoardExtractor(object):
 
     def get_similarity(self):
         return self.similarity
+
+
+def pixel_array_to_tuple(pixel):
+    # Converts an HSV pixel into a tuple used as a key
+    # don't need to store V, H/S is good enough
+    return (pixel[0], pixel[1])
+
+class PixelCompareBoardExtractor(object):
+    def __init__(self, hsv_pixels_to_orb, hsv_img):
+        self.hsv_pixels_to_orb = hsv_pixels_to_orb
+        self.hsv_img = hsv_img
+        self.processed = False
+        self.results = [['u' for x in range(6)] for y in range(5)]
+
+    def process(self):
+        oe = OrbExtractor(self.hsv_img)
+
+        for y, x in board_iterator():
+            orb_img = oe.get_orb_img(x, y)
+
+            detected_orb = self.process_orb(orb_img)
+            if detected_orb:
+                self.results[y][x] = detected_orb
+
+        self.processed = True
+
+    def process_orb(self, orb_img):
+        height, width, _ = orb_img.shape
+        for y in range(height):
+            for x in range(width):
+                pixel = orb_img[y][x]
+                key = pixel_array_to_tuple(pixel)
+                matched_orb = self.hsv_pixels_to_orb.get(key, None)
+                if matched_orb is not None:
+                    return matched_orb
+        return None
+
+    def get_board(self):
+        if not self.processed:
+            self.process()
+
+        return self.results
