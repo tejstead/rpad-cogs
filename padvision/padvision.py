@@ -116,7 +116,7 @@ def load_hsv_to_orb(hsv_file_path):
     try:
         return pickle.load(open(hsv_file_path, 'rb'))
     except Exception as ex:
-        print(ex)
+        print('failed to load hsv pixel to orb map', ex)
     return {}
 
 
