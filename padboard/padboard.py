@@ -76,7 +76,7 @@ class PadBoard:
 
             await self.bot.say(box('deleting existing file and replacing with file of size: {}'.format(len(file_bytes))))
 
-            os.mkdir(PIXEL_DATA_DIR)
+            os.makedirs(PIXEL_DATA_DIR, exist_ok=True)
             with open(PIXEL_FILE_PATH, 'wb') as f:
                 f.write(file_bytes)
 
