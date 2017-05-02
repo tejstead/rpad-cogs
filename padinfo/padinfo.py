@@ -939,7 +939,7 @@ AWAKENING_NAME_MAP_RPAD = {
   'Dragon Killer': two_word_regex('killer', 'dragon'),
   'Devil Killer': two_word_regex('killer', 'devil'),
   'Machine Killer': two_word_regex('killer', 'machine'),
-  'Balance Killer': two_word_regex('killer', 'balance'),
+  'Balanced Killer': two_word_regex('killer', 'balance'),
   'Attacker Killer': two_word_regex('killer', 'attacker'),
 
   'Physical Killer': two_word_regex('killer', 'physical'),
