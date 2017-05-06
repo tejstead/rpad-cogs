@@ -363,3 +363,31 @@ converter.UserConverter = UserConverter2
 ##############################
 # End hack to fix discord.py
 ##############################
+
+
+def fix_emojis_for_server(emoji_list, msg_text):
+    """Finds 'emoji-looking' substrings in msg_text and corrects them.
+
+    If msg_text has something like '<:emoji_1_derp:13242342343>' and the server
+    contains an emoji named :emoji_2_derp: then it will be swapped out in
+    the message.
+
+    This corrects an issue where a padglobal alias is created in one server
+    with an emoji, but it has a slightly different name in another server.
+    """
+    # Find all emoji-looking things in the message
+    matches = re.findall(r'<:[0-9a-z_]+:\d{18}>', msg_text, re.IGNORECASE)
+    if not matches:
+        return msg_text
+
+    # For each unique looking emoji thing
+    for m in set(matches):
+        # Create a regex for that emoji replacing the digit
+        m_re = re.sub(r'\d', r'\d', m)
+        for em in emoji_list:
+            # If the current emoji matches the regex, force a replacement
+            emoji_code = str(em)
+            if re.match(m_re, emoji_code, re.IGNORECASE):
+                msg_text = re.sub(m_re, emoji_code, msg_text, flags=re.IGNORECASE)
+                break
+    return msg_text

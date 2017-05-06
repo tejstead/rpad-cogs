@@ -318,22 +318,17 @@ class PadGlobal:
         cmd = message.content[len(prefix):]
         if cmd in cmdlist.keys():
             cmd = cmdlist[cmd]
-            cmd = self.format_cc(cmd, message)
-            cmd = self.fix_emojis(message.server, cmd)
-            await self.bot.send_message(message.channel, cmd)
         elif cmd.lower() in cmdlist.keys():
             cmd = cmdlist[cmd.lower()]
-            cmd = self.format_cc(cmd, message)
-            cmd = self.fix_emojis(message.server, cmd)
-            await self.bot.send_message(message.channel, cmd)
+        else:
+            return
+        cmd = self.format_cc(cmd, message)
 
-    def fix_emojis(self, server, txt):
-        if server is None:
-            return txt
-        emoji_wrapped_name_to_emoji_ref = {r'<:' + x.name + r':\d{18}>': str(x) for x in server.emojis}
-        for emoji_name, emoji_ref in emoji_wrapped_name_to_emoji_ref.items():
-            txt = re.sub(emoji_name, emoji_ref, txt)
-        return txt
+        emoji_list = message.server.emojis if message.server else []
+        cmd = fix_emojis_for_server(emoji_list, cmd)
+        await self.bot.send_message(message.channel, cmd)
+
+
 
     def get_prefix(self, message):
         for p in self.bot.settings.get_prefixes(message.server):
