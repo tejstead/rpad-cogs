@@ -50,6 +50,7 @@ class AutoMod2:
         self.channel_user_logs = defaultdict(lambda: deque(maxlen=LOGS_PER_CHANNEL_USER))
 
     @commands.group(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def automod2(self, context):
         """AutoMod2 tools.
 
