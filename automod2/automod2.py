@@ -1,3 +1,10 @@
+"""
+Lets you create patterns to match against messages and apply them as whitelists
+or blacklists to a channel.
+
+If a violation occurs, the message will be deleted and the user notified.
+"""
+
 from collections import defaultdict
 from collections import deque
 import copy
@@ -18,12 +25,17 @@ from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
 
+LOGS_PER_CHANNEL_USER = 5
+
+def linked_img_count(message):
+    return len(message.embeds) + len(message.attachments)
 
 def mod_or_perms(ctx, **perms):
     server = ctx.message.server
     mod_role = settings.get_server_mod(server).lower()
     admin_role = settings.get_server_admin(server).lower()
     return checks.role_or_permissions(ctx, lambda r: r.name.lower() in (mod_role, admin_role), **perms)
+
 
 class CtxWrapper:
     def __init__(self, msg):
@@ -35,6 +47,7 @@ class AutoMod2:
         self.bot = bot
 
         self.settings = AutoMod2Settings("automod2")
+        self.channel_user_logs = defaultdict(lambda: deque(maxlen=LOGS_PER_CHANNEL_USER))
 
     @commands.group(pass_context=True, no_pm=True)
     async def automod2(self, context):
@@ -140,6 +153,55 @@ class AutoMod2:
         output += self.patternsToTableText(patterns.values())
         await boxPagifySay(self.bot.say, output)
 
+    @automod2.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def imagelimit(self, ctx, limit : int):
+        """Prevents users from spamming images in a channel.
+
+        If a user attempts to link/attach more than <limit> images in the active channel
+        within the the lookback window (currently 5), all those messages are deleted.
+
+        Set to 0 to clear.
+        """
+        self.settings.setImageLimit(ctx, limit)
+        if limit == 0:
+            await self.bot.say(inline('Limit cleared'))
+        else:
+            await self.bot.say(inline('I will delete excess images in this channel'))
+
+
+    async def mod_message_images(self, message):
+        if message.author.id == self.bot.user.id or message.channel.is_private:
+            return
+
+        ctx = CtxWrapper(message)
+        image_limit = self.settings.getImageLimit(ctx)
+        if image_limit == 0:
+            return
+
+        key = (message.channel.id, message.author.id)
+        self.channel_user_logs[key].append(message)
+
+        user_logs = self.channel_user_logs[key]
+        count = 0
+        for m in user_logs:
+            count += linked_img_count(m)
+        if count <= image_limit:
+            return
+
+        for m in list(user_logs):
+            if linked_img_count(m) > 0:
+                try:
+                    await self.bot.delete_message(m)
+                except:
+                    pass
+                user_logs.remove(m)
+
+        msg = m.author.mention + inline(' your messages have been deleted for violating the image posting limit')
+        alert_msg = await self.bot.send_message(message.channel, msg)
+        await asyncio.sleep(10)
+        await self.bot.delete_message(alert_msg)
+
     async def mod_message_edit(self, before, after):
         await self.mod_message(after)
 
@@ -200,6 +262,7 @@ class AutoMod2:
             tbl.add_row([value['name'], value['include_pattern'], value['exclude_pattern']])
         return tbl.get_string()
 
+
 def matchesPattern(pattern, txt):
     if not len(pattern):
         return False
@@ -216,6 +279,7 @@ def matchesPattern(pattern, txt):
     p = re.compile(pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL)
     return p.match(txt)
 
+
 def starts_with_code(txt):
     # ignore spaces before or in code
     txt = txt.replace(' ', '')
@@ -224,6 +288,7 @@ def starts_with_code(txt):
     if len(txt) < 8:
         return False
     return pad_checkdigit(txt[0:8])
+
 
 def pad_checkdigit(n):
     n = str(n)
@@ -234,6 +299,7 @@ def pad_checkdigit(n):
     calcdigit = sum % 10
     return checkdigit == calcdigit
 
+
 def matchesIncludeExclude(include_pattern, exclude_pattern, txt):
     if matchesPattern(include_pattern, txt):
         return not matchesPattern(exclude_pattern, txt)
@@ -243,6 +309,7 @@ def matchesIncludeExclude(include_pattern, exclude_pattern, txt):
 def setup(bot):
     print('automod2 bot setup')
     n = AutoMod2(bot)
+    bot.add_listener(n.mod_message_images, "on_message")
     bot.add_listener(n.mod_message, "on_message")
     bot.add_listener(n.mod_message_edit, "on_message_edit")
     bot.add_cog(n)
@@ -283,6 +350,7 @@ class AutoMod2Settings(CogSettings):
             channels[channel_id] = {
                 'whitelist': [],
                 'blacklist': [],
+                'image_limit': 0,
             }
 
         return channels[channel_id]
@@ -348,4 +416,11 @@ class AutoMod2Settings(CogSettings):
     def rmBlacklist(self, ctx, name):
         self.rmRule(ctx, name, 'blacklist')
 
+    def getImageLimit(self, ctx):
+        channel = self.getChannel(ctx)
+        return channel.get('image_limit', 0)
 
+    def setImageLimit(self, ctx, image_limit):
+        channel = self.getChannel(ctx)
+        channel['image_limit'] = image_limit
+        self.save_settings()
