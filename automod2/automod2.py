@@ -196,7 +196,10 @@ class AutoMod2:
                     await self.bot.delete_message(m)
                 except:
                     pass
-                user_logs.remove(m)
+                try:
+                    user_logs.remove(m)
+                except:
+                    pass
 
         msg = m.author.mention + inline(' your messages have been deleted for violating the image posting limit')
         alert_msg = await self.bot.send_message(message.channel, msg)
