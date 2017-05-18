@@ -1,4 +1,9 @@
+"""
+A cloned and improved version of paddo's calculator cog.
+"""
+
 from math import *
+import numbers
 from random import *
 import re
 
@@ -6,7 +11,7 @@ import discord
 from discord.ext import commands
 from cogs.utils.chat_formatting import *
 
-ACCEPTED_TOKENS = r'[\[\]\-()*+/0-9=.,%>< ]|random|randint|choice|randrange|True|False|if|and|or|else|is|acos|acosh|asin|asinh|atan|atan2|atanh|ceil|copysign|cos|cosh|degrees|e|erf|erfc|exp|expm1|fabs|factorial|floor|fmod|frexp|fsum|gamma|gcd|hypot|inf|isclose|isfinite|isinf|isnan|ldexp|lgamma|log|log10|log1p|log2|modf|nan|pi|pow|radians|sin|sinh|sqrt|tan|tanh'
+ACCEPTED_TOKENS = r'[\[\]\-()*+/0-9=.,% ]|>|<|==|>=|<=|\||&|~|!=|^|sum|range|random|randint|choice|randrange|True|False|if|and|or|else|is|not|for|in|acos|acosh|asin|asinh|atan|atan2|atanh|ceil|copysign|cos|cosh|degrees|e|erf|erfc|exp|expm1|fabs|factorial|floor|fmod|frexp|fsum|gamma|gcd|hypot|inf|isclose|isfinite|isinf|isnan|ldexp|lgamma|log|log10|log1p|log2|modf|nan|pi|pow|radians|sin|sinh|sqrt|tan|tanh|round'
 
 HELP_MSG = '''
 This calculator works by first validating the content of your query against a whitelist, and then
@@ -36,6 +41,10 @@ class Calculator:
 
         calculate_stuff = eval(input)
         if len(str(calculate_stuff)) > 0:
+            if isinstance(calculate_stuff, numbers.Number):
+                if calculate_stuff > 1:
+                    calculate_stuff = round(calculate_stuff, 3)
+
             em = discord.Embed(color=discord.Color.blue())
             em.add_field(name='Input', value='`{}`'.format(input))
             em.add_field(name='Result', value=calculate_stuff)
