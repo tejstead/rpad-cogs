@@ -171,6 +171,15 @@ class PadInfo:
         """ready"""
         print("started padinfo")
 
+    @commands.command(pass_context=True)
+    async def jpname(self, ctx, *, query):
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            await self.bot.say(box(monsterToHeader(m)))
+            await self.bot.say(box(m.name_jp))
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
     @commands.command(name="id", pass_context=True)
     async def _do_id_all(self, ctx, *, query):
         await self._do_id(ctx, query)
