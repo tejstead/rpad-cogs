@@ -363,13 +363,18 @@ class TrUtils:
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
     async def bulkimagecopy(self, ctx, source_channel : discord.Channel, dest_channel : discord.Channel, number: int):
+        copy_items = []
         async for message in self.bot.logs_from(source_channel, limit=number):
             if message.author.id == self.bot.user.id or message.channel.is_private:
                 continue
+            img_url = extract_image_url(message)
+            if img_url:
+                copy_items.append((img_url, message.author.name, message.channel.name, dest_channel.id))
+
+        copy_items.reverse()
+        for item in copy_items:
             try:
-                img_url = extract_image_url(message)
-                if img_url:
-                    await self.copy_image_to_channel(img_url, message.author.name, message.channel.name, dest_channel.id)
+                await self.copy_image_to_channel(item[0], item[1], item[2], item[3])
             except Exception as error:
                 print(error)
 
