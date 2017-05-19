@@ -324,6 +324,39 @@ class TrUtils:
         self.settings.clearRainbow(ctx.message.server.id, role.id)
         await self.bot.say('`done`')
 
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def imagecopy(self, ctx, source_channel : discord.Channel, dest_channel : discord.Channel):
+        self.settings.setImageCopy(ctx.message.server.id, source_channel.id, dest_channel.id)
+        await self.bot.say('`done`')
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def clearimgcopy(self, ctx, channel : discord.Channel):
+        self.settings.clearImageCopy(ctx.message.server.id, channel.id)
+        await self.bot.say('`done`')
+
+    async def on_imgcopy_message(self, message):
+        if message.author.id == self.bot.user.id or message.channel.is_private:
+            return
+
+        img_url = extract_image_url(message)
+        if img_url is None:
+            return
+
+        img_copy_channel_id = self.settings.getImageCopy(message.server.id, message.channel.id)
+        if img_copy_channel_id is None:
+            return
+
+        embed = discord.Embed()
+        embed.set_footer(text='Posted by {} in {}'.format(message.author.name, message.channel.name))
+        embed.set_image(url=img_url)
+
+        try:
+            await self.bot.send_message(discord.Object(img_copy_channel_id), embed=embed)
+        except Exception as e:
+            print('Failed to copy msg to', img_copy_channel_id, e)
+
     @commands.command()
     async def getmiru(self):
         """Tells you how to get Miru into your server"""
@@ -445,6 +478,7 @@ def setup(bot):
     n = TrUtils(bot)
     n.registerTasks(asyncio.get_event_loop())
     bot.add_listener(n.check_for_nickname_change, "on_member_update")
+    bot.add_listener(n.on_imgcopy_message, "on_message")
     bot.add_cog(n)
     print('done adding trutils bot')
 
@@ -498,4 +532,24 @@ class TrUtilsSettings(CogSettings):
             rainbow.remove(role_id)
             self.save_settings()
 
+    def imagecopy(self, server_id):
+        server = self.getServer(server_id)
+        if 'imgcopy' not in server:
+            server['imgcopy'] = {}
+        return server['imgcopy']
+
+    def setImageCopy(self, server_id, source_channel_id, dest_channel_id):
+        imagecopy = self.imagecopy(server_id)
+        imagecopy[source_channel_id] = dest_channel_id
+        self.save_settings()
+
+    def getImageCopy(self, server_id, channel_id):
+        imagecopy = self.imagecopy(server_id)
+        return imagecopy.get(channel_id)
+
+    def clearImageCopy(self, server_id, channel_id):
+        imagecopy = self.imagecopy(server_id)
+        if user_id in imagecopy:
+            imagecopy.pop(channel_id)
+        self.save_settings()
 
