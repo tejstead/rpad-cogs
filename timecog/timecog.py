@@ -62,41 +62,6 @@ class TimeCog:
         msg = "There are " + fmtHrsMins(delta.seconds).strip() + " until " + time.strip() + " in " + now.strftime('%Z')
         await self.bot.say(inline(msg))
 
-#     @commands.command(name="timefrom", pass_context=True)
-#     async def timefrom(self, ctx, from_tz, from_time, to_tz, to_time):
-#         """Converts time"""
-#         try:
-#             from_tz_obj = tzStrToObj(from_tz)
-#         except Exception as e:
-#             await self.bot.say("Failed to parse from tz: " + from_tz)
-#             return
-#         try:
-#             to_tz_obj = tzStrToObj(to_tz)
-#         except Exception as e:
-#             await self.bot.say("Failed to parse to tz: " + to_tz)
-#             return
-#
-#         try:
-#             from_time_obj = timeStrToObj(from_time)
-#         except Exception as e:
-#             await self.bot.say("Failed to parse from time: " + from_time)
-#             return
-#
-#         try:
-#             to_time_obj = timeStrToObj(to_time)
-#         except Exception as e:
-#             await self.bot.say("Failed to parse from time: " + to_time)
-#             return
-#
-#         now = datetime.now(tz_obj)
-#         req_time = now.replace(hour=time_obj.tm_hour, minute=time_obj.tm_min)
-#
-#         if req_time < now:
-#             req_time = req_time + timedelta(days=1)
-#         delta = req_time - now
-#
-#         msg = "There are " + fmtHrsMins(delta.seconds).strip() + " until " + time.strip() + " in " + now.strftime('%Z')
-#         await self.bot.say(inline(msg))
 
 def timeStrToObj(timestr):
     timestr = timestr.replace(" ", "")
