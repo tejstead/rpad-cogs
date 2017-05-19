@@ -391,3 +391,14 @@ def fix_emojis_for_server(emoji_list, msg_text):
                 msg_text = re.sub(m_re, emoji_code, msg_text, flags=re.IGNORECASE)
                 break
     return msg_text
+
+def is_valid_image_url(url):
+    url = url.lower()
+    return url.startswith('http') and (url.endswith('.png') or url.endswith('.jpg'))
+
+def extract_image_url(m):
+    if is_valid_image_url(m.content):
+        return m.content
+    if len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
+        return m.attachments[0]['url']
+    return None

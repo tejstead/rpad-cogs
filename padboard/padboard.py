@@ -21,6 +21,7 @@ import np
 from __main__ import send_cmd_help
 
 from . import padvision
+from . import rpadutils
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.dataIO import fileIO
@@ -43,7 +44,7 @@ class PadBoard:
         self.hsv_pixels_to_orb = padvision.load_hsv_to_orb(PIXEL_FILE_PATH)
 
     async def log_message(self, message):
-        url = self.get_image_url(message)
+        url = rpadutils.extract_image_url(message)
         if url:
             self.logs[message.author.id].append(url)
 
@@ -117,13 +118,6 @@ class PadBoard:
             return urls[-1]
         return None
 
-    def get_image_url(self, m):
-        if is_valid_image_url(m.content):
-            return m.content
-        if len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
-            return m.attachments[0]['url']
-        return None
-
     async def download_image(self, image_url):
         async with aiohttp.get(image_url) as r:
             if r.status == 200:
@@ -151,7 +145,7 @@ class PadBoard:
     async def get_recent_image(self, ctx, user : discord.Member=None, message : discord.Message=None):
         user_id = user.id if user else ctx.message.author.id
 
-        image_url = self.get_image_url(message)
+        image_url = rpadutils.extract_image_url(message)
         if image_url is None:
             image_url = self.find_image(user_id)
 
@@ -188,10 +182,6 @@ class PadBoard:
         hsv_board = hsv_extractor.get_board()
 
         return img_board, hsv_board
-
-def is_valid_image_url(url):
-    url = url.lower()
-    return url.startswith('http') and (url.endswith('.png') or url.endswith('.jpg'))
 
 def check_folder():
     if not os.path.exists(DATA_DIR):
