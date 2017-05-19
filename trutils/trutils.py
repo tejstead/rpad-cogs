@@ -336,26 +336,42 @@ class TrUtils:
         self.settings.clearImageCopy(ctx.message.server.id, channel.id)
         await self.bot.say('`done`')
 
-    async def on_imgcopy_message(self, message):
-        if message.author.id == self.bot.user.id or message.channel.is_private:
-            return
-
-        img_url = extract_image_url(message)
-        if img_url is None:
-            return
-
-        img_copy_channel_id = self.settings.getImageCopy(message.server.id, message.channel.id)
-        if img_copy_channel_id is None:
-            return
-
+    async def copy_image_to_channel(self, img_url, author_name, channel_name, img_copy_channel_id):
         embed = discord.Embed()
-        embed.set_footer(text='Posted by {} in {}'.format(message.author.name, message.channel.name))
+        embed.set_footer(text='Posted by {} in {}'.format(author_name, channel_name))
         embed.set_image(url=img_url)
 
         try:
             await self.bot.send_message(discord.Object(img_copy_channel_id), embed=embed)
         except Exception as e:
             print('Failed to copy msg to', img_copy_channel_id, e)
+
+    async def on_imgcopy_message(self, message):
+        if message.author.id == self.bot.user.id or message.channel.is_private:
+            return
+
+        img_url = extract_image_url(message)
+        img_copy_channel_id = self.settings.getImageCopy(message.server.id, message.channel.id)
+        if img_url is None:
+            return
+
+        if img_copy_channel_id is None:
+            return
+
+        await self.copy_image_to_channel(img_url, message.author.name, message.channel.name, img_copy_channel_id)
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def bulkimagecopy(self, ctx, source_channel : discord.Channel, dest_channel : discord.Channel, number: int):
+        async for message in self.bot.logs_from(source_channel, limit=number):
+            if message.author.id == self.bot.user.id or message.channel.is_private:
+                continue
+            try:
+                img_url = extract_image_url(message)
+                if img_url:
+                    await self.copy_image_to_channel(img_url, message.author.name, message.channel.name, dest_channel.id)
+            except Exception as error:
+                print(error)
 
     @commands.command()
     async def getmiru(self):
