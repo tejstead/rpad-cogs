@@ -955,7 +955,7 @@ AWAKENING_NAME_MAP_RPAD = {
   'Healer Killer': two_word_regex('killer', 'healer'),
   'Evolve Material Killer': two_word_regex('killer', 'evomat'),
   'Awoken Killer': two_word_regex('killer', 'awoken'),
-  'Enhance Killer': two_word_regex('killer', 'enhancemat'),
+  'Enhance Material Killer': two_word_regex('killer', 'enhancemat'),
   'Vendor Killer': two_word_regex('killer', 'vendor'),
 
   'Auto-Recover': '.*autoheal.*',
