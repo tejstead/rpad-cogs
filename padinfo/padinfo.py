@@ -982,6 +982,7 @@ AWAKENING_NAME_MAP_RPAD = {
   'Enhanced Combo': two_word_regex('combo', 'boost'),
   'Guard Break' : two_word_regex('guard', 'break'),
   'Multi Boost': two_word_regex('multi', 'boost'),
+  'Additional Attack': two_word_regex('extra', 'attack'),
   'Skill Boost': '(.*_sb$)|(^sb_.*)',
   'Extend Time': '(.*_te$)|(^te_.*)',
   'Two-Pronged Attack': '.*tpa.*',
@@ -1039,6 +1040,7 @@ AWAKENING_NAME_MAP = {
   'Extend Time': 'TE',
   'Enhanced Combo': 'COMBO-BOOST',
   'Guard Break' : 'DEF-BREAK',
+  'Additional Attack' : 'EXTRA-ATK',
 
   'Resistance-Bind': 'RES-BIND',
   'Resistance-Dark': 'RES-BLIND',
