@@ -37,10 +37,6 @@ from .utils.dataIO import dataIO
 from .utils.twitter_stream import *
 
 INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
-# THUMBNAIL_GAMEWITH_TEMPLATE = 'https://gamewith.akamaized.net/article_tools/pad/gacha/{}.png'
-# THUMBNAIL_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/book/{}.png'
-# FULLPIC_APPBANK_TEMPLATE = 'http://img.pd.appbank.net/i/mk/{}.jpg'
-# FULLPIC_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/img/monster/MONS_{}.jpg'
 
 RPAD_FULL_TEMPLATE = 'https://storage.googleapis.com/rpad-discord.appspot.com/pad/full/{}.png'
 RPAD_PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/rpad-discord.appspot.com/pad/portrait/{}.png'
@@ -242,7 +238,7 @@ class PadInfo:
 
 #     async def _do_idmenu(self, ctx, m : Monster, starting_menu_emoji):
     async def _do_idmenu(self, ctx, m, starting_menu_emoji):
-        id_embed = monsterToEmbed(m, ctx.message.server)
+        id_embed = monsterToEmbed(m, self.get_emojis())
         evo_embed = monsterToEvoEmbed(m)
         mats_embed = monsterToEvoMatsEmbed(m)
         pic_embed = monsterToPicEmbed(m)
@@ -332,6 +328,18 @@ class PadInfo:
             output += '\t {} -> No. {} {}\n'.format(override, m.monster_id_na, m.name_na)
         await self.bot.say(box(output))
 
+    @padinfo.command(pass_context=True)
+    @checks.is_owner()
+    async def setemojiservers(self, ctx, *, emoji_servers=''):
+        """Set the emoji servers by ID (csv)"""
+        self.settings.emojiServers().clear()
+        if emoji_servers:
+            self.settings.setEmojiServers(emoji_servers.split(','))
+        await self.bot.say(inline('Set {} servers'.format(len(self.settings.emojiServers()))))
+
+    def get_emojis(self):
+        server_ids = self.settings.emojiServers()
+        return [e for s in self.bot.servers if s.id in server_ids for e in s.emojis]
 
     def makeFailureMsg(self, err):
         msg = 'Lookup failed: ' + err + '.\n'
@@ -468,6 +476,17 @@ class PadInfoSettings(CogSettings):
             self.groupOverride().pop(monster_id)
             self.save_settings()
 
+    def emojiServers(self):
+        key = 'emoji_servers'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = []
+        return self.bot_settings[key]
+
+    def setEmojiServers(self, emoji_servers):
+        es = self.emojiServers()
+        es.clear()
+        es.extend(emoji_servers)
+        self.save_settings()
 
 
 HIGH_SELECTION_PRIORITY = 2
@@ -830,7 +849,7 @@ def match_emoji(emoji_list, name_regex):
             return e
     return None
 
-def monsterToEmbed(m : Monster, server):
+def monsterToEmbed(m : Monster, emoji_list):
     embed = monsterToBaseEmbed(m)
 
     info_row_1 = monsterToTypeString(m)
@@ -851,9 +870,9 @@ def monsterToEmbed(m : Monster, server):
     awakenings_row = ''
     unique_awakenings = OrderedCounter(m.awakening_names)
     for a, count in unique_awakenings.items():
-        mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a) if server is not None else None
+        mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a)
         if mapped_awakening:
-            mapped_awakening = match_emoji(server.emojis, mapped_awakening)
+            mapped_awakening = match_emoji(emoji_list, mapped_awakening)
 
         if mapped_awakening is None:
             mapped_awakening = AWAKENING_NAME_MAP.get(a, a)
