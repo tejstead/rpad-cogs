@@ -36,10 +36,6 @@ from .utils.cog_settings import *
 from .utils.dataIO import dataIO
 from .utils.twitter_stream import *
 
-INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
-
-RPAD_FULL_TEMPLATE = 'https://storage.googleapis.com/rpad-discord.appspot.com/pad/full/{}.png'
-RPAD_PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/rpad-discord.appspot.com/pad/portrait/{}.png'
 
 HELP_MSG = """
 ^helpid : shows this message
@@ -76,6 +72,38 @@ def dl_nicknames():
     expiry_secs = 1 * 60 * 60
     file_url = "https://docs.google.com/spreadsheets/d/1EyzMjvf8ZCQ4K-gJYnNkiZlCEsT9YYI9dUd-T5qCirc/pub?gid=1926254248&single=true&output=csv"
     return makeCachedPlainRequest('nicknames.csv', file_url, expiry_secs)
+
+
+INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
+RPAD_PIC_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/full/{}.png'
+RPAD_PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/portrait/{}.png'
+
+# This was overwritten by voltron. PDX opted to copy it +10,000 ids away
+CROWS_1 = {x: x + 10000 for x in range(2601, 2635 + 1)}
+# This isn't overwritten but PDX adjusted anyway
+CROWS_2 = {x: x + 10000 for x in range(3460, 3481 + 1)}
+
+PDX_JP_ADJUSTMENTS = {}
+PDX_JP_ADJUSTMENTS.update(CROWS_1)
+PDX_JP_ADJUSTMENTS.update(CROWS_2)
+
+def get_pdx_url(m):
+    pdx_id = m.monster_id_na
+    if int(m.monster_id) == m.monster_id_jp:
+        pdx_id = PDX_JP_ADJUSTMENTS.get(pdx_id, pdx_id)
+    return INFO_PDX_TEMPLATE.format(pdx_id)
+
+def get_portrait_url(m):
+    if int(m.monster_id) != m.monster_id_na:
+        return RPAD_PORTRAIT_TEMPLATE.format('na', m.monster_id_na)
+    else:
+        return RPAD_PORTRAIT_TEMPLATE.format('jp', m.monster_id_jp)
+
+def get_pic_url(m):
+    if int(m.monster_id) != m.monster_id_na:
+        return RPAD_PIC_TEMPLATE.format('na', m.monster_id_na)
+    else:
+        return RPAD_PIC_TEMPLATE.format('jp', m.monster_id_jp)
 
 
 EXPOSED_PAD_INFO = None
@@ -668,7 +696,7 @@ def monsterToInfoText(m: Monster):
         active_row += 'None/Missing'
 
     info_chunk = '{}\n{}\n{}\n{}\n{}\n{}'.format(header, info_row, stats_row, awakenings_row, ls_row, active_row)
-    link_row = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+    link_row = get_pdx_url(m)
 
     return info_chunk, link_row
 
@@ -700,15 +728,14 @@ def monsterToEvoText(m: Monster):
     return output
 
 def monsterToThumbnailUrl(m : Monster):
-    # Uses the NA id because we prefer the pdx portrait
-    return RPAD_PORTRAIT_TEMPLATE.format(m.monster_id_na)
+    return get_portrait_url(m)
 
 def monsterToBaseEmbed(m : Monster):
     header = monsterToLongHeader(m)
     embed = discord.Embed()
     embed.set_thumbnail(url=monsterToThumbnailUrl(m))
     embed.title = header
-    embed.url = INFO_PDX_TEMPLATE.format(m.monster_id_na)
+    embed.url = get_pdx_url(m)
     embed.set_footer(text='Requester may click the reactions below to switch tabs')
     return embed
 
@@ -802,8 +829,7 @@ def monsterToSkillupsEmbed(m : Monster, pginfo):
     return embed
 
 def monsterToPicUrl(m : Monster):
-    # We use the JP monster ids for pictures
-    return RPAD_FULL_TEMPLATE.format(m.monster_id_jp)
+    return get_pic_url(m)
 
 # def monsterToSkillupsEmbed(m : Monster, pginfo : PgDataWrapper):
 def monsterToPicEmbed(m : Monster):
