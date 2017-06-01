@@ -1,6 +1,7 @@
 from collections import defaultdict
 import difflib
 import os
+import random
 import re
 
 import discord
@@ -29,12 +30,31 @@ The following users have donated. Thanks!
 {donors}
 """
 
+INSULTS_FILE = "data/donations/insults.json"
+DEFAULT_INSULTS = {
+    'miru_references': [
+        'Are you talking to me you piece of shit?',
+    ],
+    'insults' :  [
+        'You are garbage.',
+        'Kill yourself.',
+    ]
+}
+
+def roll(chance : int):
+    return random.randrange(100) < chance
+
 class Donations:
     """Manages donations and perks."""
 
     def __init__(self, bot):
         self.bot = bot
         self.settings = DonationsSettings("donations")
+
+        insults_json = dataIO.load_json(INSULTS_FILE) if dataIO.is_valid_json(INSULTS_FILE) else {}
+        self.insults_miru_reference = insults_json.get('miru_references', DEFAULT_INSULTS['miru_references'])
+        self.insults_list = insults_json.get('insults', DEFAULT_INSULTS['insults'])
+
 
     @commands.command(pass_context=True)
     async def donate(self, ctx):
@@ -80,6 +100,38 @@ class Donations:
 
         self.settings.addCustomEmbed(user_id, command, title, url, footer)
         await self.bot.say(inline('I set up your embed: ' + command))
+
+    @commands.command(pass_context=True)
+    async def spankme(self, ctx):
+        """You are trash (donor only)."""
+        user_id = ctx.message.author.id
+        if user_id not in self.settings.donors():
+            await self.bot.say(inline('Donor-only command'))
+            return
+
+        await self.bot.say(ctx.message.author.mention + ' ' + random.choice(self.insults_list))
+
+    @commands.command(pass_context=True)
+    async def insultme(self, ctx):
+        """You are consistently trash (donor only)."""
+        user_id = ctx.message.author.id
+        if user_id not in self.settings.donors():
+            await self.bot.say(inline('Donor-only command'))
+            return
+
+        self.settings.addInsultsEnabled(user_id)
+        await self.bot.say(ctx.message.author.mention + ' ' 'Oh, I will.\n' + random.choice(self.insults_list))
+
+    @commands.command(pass_context=True)
+    async def plsno(self, ctx):
+        """I am merciful (donor only)."""
+        user_id = ctx.message.author.id
+        if user_id not in self.settings.donors():
+            await self.bot.say(inline('Donor-only command'))
+            return
+
+        self.settings.rmInsultsEnabled(user_id)
+        await self.bot.say('I will let you off easy this time.')
 
     @commands.group(pass_context=True)
     @checks.admin_or_permissions(manage_server=True)
@@ -209,10 +261,49 @@ class Donations:
 
         return command
 
+    async def check_insult(self, message):
+        # Only opted-in people
+        if message.author.id not in self.settings.insultsEnabled():
+            return
+
+        content = message.clean_content
+        # Ignore short messages
+        if len(content) < 7:
+            return
+
+        msg = message.author.mention
+
+        # Always respond to miru bot mentions
+        mentions_bot = re.match(r'.*(miru|myr) bot.*', content, re.IGNORECASE)
+        # Frequently respond to miru in msg
+        mentions_miru_and_roll = re.match(r'.*\b(miru|myr)\b.*', content, re.IGNORECASE) and roll(50)
+
+        if mentions_bot or mentions_miru_and_roll:
+            msg += ' ' + random.choice(self.insults_miru_reference)
+            msg += '\n' + random.choice(self.insults_list)
+            await self.bot.send_message(message.channel, msg)
+            return
+
+        # Semi-frequetly respond to long messages
+        long_msg_and_roll = len(content) > 50 and roll(20)
+        # Occasionally respond to other messages
+        short_msg_and_roll = roll(5)
+
+        if long_msg_and_roll or short_msg_and_roll:
+            msg += ' ' + random.choice(self.insults_list)
+            await self.bot.send_message(message.channel, msg)
+            return
+
+        # Periodically send private messages
+        if roll(10):
+            msg += ' ' + random.choice(self.insults_list)
+            await self.bot.send_message(message.author, msg)
+            return
 
 def setup(bot):
     n = Donations(bot)
     bot.add_listener(n.checkCC, "on_message")
+    bot.add_listener(n.check_insult, "on_message")
     bot.add_cog(n)
 
 
@@ -224,6 +315,7 @@ class DonationsSettings(CogSettings):
           'custom_commands' : {},
           'custom_embeds' : {},
           'disabled_servers' : [],
+          'insults_enabled' : [],
         }
         return config
 
@@ -306,4 +398,19 @@ class DonationsSettings(CogSettings):
         disabled_servers = self.disabledServers()
         if server_id in disabled_servers:
             disabled_servers.remove(server_id)
+            self.save_settings()
+
+    def insultsEnabled(self):
+        return self.bot_settings['insults_enabled']
+
+    def addInsultsEnabled(self, user_id):
+        insults_enabled = self.insultsEnabled()
+        if user_id not in insults_enabled:
+            insults_enabled.append(user_id)
+            self.save_settings()
+
+    def rmInsultsEnabled(self, user_id):
+        insults_enabled = self.insultsEnabled()
+        if user_id in insults_enabled:
+            insults_enabled.remove(user_id)
             self.save_settings()
