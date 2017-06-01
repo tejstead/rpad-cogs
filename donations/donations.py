@@ -19,7 +19,7 @@ from .utils.dataIO import dataIO
 DONATE_MSG = """
 To donate to cover bot hosting fees you can use one of:
   Patreon : https://www.patreon.com/miru_bot
-  Venmo   : https://venmo.com/Tactical-Retreat
+  Venmo   : https://venmo.com/TacticalRetreat
 
 Read the Patreon or join the Miru Support Server for more details:
   https://discord.gg/zB4QHgn
@@ -276,10 +276,10 @@ class Donations:
 
         msg = message.author.mention
 
-        # Always respond to miru bot mentions
-        mentions_bot = re.match(r'.*(miru|myr) bot.*', content, re.IGNORECASE)
-        # Frequently respond to miru in msg
-        mentions_miru_and_roll = re.match(r'.*\b(miru|myr)\b.*', content, re.IGNORECASE) and roll(50)
+        # Pretty frequently respond to direct messages
+        mentions_bot = re.match(r'.*(miru|myr) bot.*', content, re.IGNORECASE) and roll(40)
+        # Semi-frequently respond to miru in msg
+        mentions_miru_and_roll = re.match(r'.*\b(miru|myr)\b.*', content, re.IGNORECASE) and roll(20)
 
         if mentions_bot or mentions_miru_and_roll:
             msg += ' ' + random.choice(self.insults_miru_reference)
@@ -288,9 +288,9 @@ class Donations:
             return
 
         # Semi-frequetly respond to long messages
-        long_msg_and_roll = len(content) > 50 and roll(20)
+        long_msg_and_roll = len(content) > 200 and roll(20)
         # Occasionally respond to other messages
-        short_msg_and_roll = roll(5)
+        short_msg_and_roll = roll(3)
 
         if long_msg_and_roll or short_msg_and_roll:
             msg += ' ' + random.choice(self.insults_list)
@@ -298,7 +298,7 @@ class Donations:
             return
 
         # Periodically send private messages
-        if roll(10):
+        if roll(7):
             msg += ' ' + random.choice(self.insults_list)
             await self.bot.send_message(message.author, msg)
             return
