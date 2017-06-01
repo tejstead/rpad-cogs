@@ -266,6 +266,9 @@ class Donations:
         if message.author.id not in self.settings.insultsEnabled():
             return
 
+        if message.server and message.server.id in self.settings.disabledServers():
+            return
+
         content = message.clean_content
         # Ignore short messages
         if len(content) < 7:
