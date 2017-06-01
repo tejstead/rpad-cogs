@@ -40,6 +40,12 @@ DEFAULT_INSULTS = {
         'Kill yourself.',
     ]
 }
+LOVE_FILE = "data/donations/love.json"
+DEFAULT_LOVE = {
+    'cute': ['xoxo'],
+    'sexy': ['{}====>'],
+    'perverted': ['{}===>()'],
+}
 
 def roll(chance : int):
     return random.randrange(100) < chance
@@ -54,6 +60,11 @@ class Donations:
         insults_json = dataIO.load_json(INSULTS_FILE) if dataIO.is_valid_json(INSULTS_FILE) else {}
         self.insults_miru_reference = insults_json.get('miru_references', DEFAULT_INSULTS['miru_references'])
         self.insults_list = insults_json.get('insults', DEFAULT_INSULTS['insults'])
+
+        love_json = dataIO.load_json(LOVE_FILE) if dataIO.is_valid_json(LOVE_FILE) else {}
+        self.cute_list = love_json.get('cute', DEFAULT_LOVE['cute'])
+        self.sexy_list = love_json.get('sexy', DEFAULT_LOVE['sexy'])
+        self.perverted_list = love_json.get('perverted', DEFAULT_LOVE['perverted'])
 
 
     @commands.command(pass_context=True)
@@ -132,6 +143,45 @@ class Donations:
 
         self.settings.rmInsultsEnabled(user_id)
         await self.bot.say('I will let you off easy this time.')
+
+    @commands.command(pass_context=True)
+    async def kissme(self, ctx):
+        """You are so cute! (donor only)."""
+        user_id = ctx.message.author.id
+        if user_id not in self.settings.donors():
+            await self.bot.say(inline('Donor-only command'))
+            return
+
+        await self.bot.say(ctx.message.author.mention + ' ' + random.choice(self.cute_list))
+
+    @commands.command(pass_context=True)
+    async def lewdme(self, ctx):
+        """So nsfw. (donor only)."""
+        user_id = ctx.message.author.id
+        if user_id not in self.settings.donors():
+            await self.bot.say(inline('Donor-only command'))
+            return
+
+        if 'nsfw' in ctx.message.channel.name.lower():
+            await self.bot.say(ctx.message.author.mention + ' ' + random.choice(self.sexy_list))
+        else:
+            await self.bot.say(ctx.message.author.mention + ' Oooh naughty...')
+            await self.bot.whisper(random.choice(self.sexy_list))
+
+    @commands.command(pass_context=True)
+    async def pervme(self, ctx):
+        """Hentai!!! (donor only)."""
+        user_id = ctx.message.author.id
+        if user_id not in self.settings.donors():
+            await self.bot.say(inline('Donor-only command'))
+            return
+
+        if 'nsfw' in ctx.message.channel.name.lower():
+            await self.bot.say(ctx.message.author.mention + ' ' + random.choice(self.perverted_list))
+        else:
+            await self.bot.say(ctx.message.author.mention + ' Filthy hentai!')
+            await self.bot.whisper(random.choice(self.perverted_list))
+
 
     @commands.group(pass_context=True)
     @checks.admin_or_permissions(manage_server=True)
