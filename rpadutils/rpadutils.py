@@ -399,6 +399,6 @@ def is_valid_image_url(url):
 def extract_image_url(m):
     if is_valid_image_url(m.content):
         return m.content
-    if len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
+    if m.attachments and len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
         return m.attachments[0]['url']
     return None
