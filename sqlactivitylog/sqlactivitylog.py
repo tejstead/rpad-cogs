@@ -45,9 +45,14 @@ CREATE TABLE IF NOT EXISTS messages(
   clean_content STRING NOT NULL)
 '''
 
-CREATE_INDEX = '''
-CREATE INDEX IF NOT EXISTS idx_messages_server_id
-ON messages(server_id)
+CREATE_INDEX_1 = '''
+CREATE INDEX IF NOT EXISTS idx_messages_server_id_channel_id_user_id
+ON messages(server_id, channel_id, user_id)
+'''
+
+CREATE_INDEX_2 = '''
+CREATE INDEX IF NOT EXISTS idx_messages_server_id_user_id
+ON messages(server_id, user_id)
 '''
 
 MAX_LOGS = 500
@@ -142,7 +147,8 @@ class SqlActivityLogger(object):
         self.con = lite.connect(DB, detect_types=lite.PARSE_DECLTYPES)
         self.con.row_factory = lite.Row
         self.con.execute(CREATE_TABLE)
-        self.con.execute(CREATE_INDEX)
+        self.con.execute(CREATE_INDEX_1)
+        self.con.execute(CREATE_INDEX_2)
         self.insert_timing = deque(maxlen=1000)
 
     def __unload(self):
@@ -424,6 +430,10 @@ class SqlActivityLogger(object):
     def log(self, msg_type, message):
         if self.lock:
             return
+
+        if message.author.id == self.bot.user.id:
+            return
+
         stmt = '''
           INSERT INTO messages(timestamp, server_id, channel_id, user_id, msg_type, content, clean_content)
           VALUES(:timestamp, :server_id, :channel_id, :user_id, :msg_type, :content, :clean_content)
