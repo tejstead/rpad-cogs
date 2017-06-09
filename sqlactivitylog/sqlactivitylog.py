@@ -163,6 +163,12 @@ class SqlActivityLogger(object):
         min_time = round(min(self.insert_timing), 4)
         await self.bot.say(inline('{} inserts, min={} max={} avg={}'.format(size, min_time, max_time, avg_time)))
 
+    @commands.command(pass_context=True)
+    @checks.is_owner()
+    async def togglelock(self, ctx):
+        self.lock = not self.lock
+        await self.bot.say(inline('Locked is now {}'.format(self.lock)))
+
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def exlog(self, context):
@@ -417,7 +423,6 @@ class SqlActivityLogger(object):
 
     def log(self, msg_type, message):
         if self.lock:
-            print('aborting log: db locked')
             return
         stmt = '''
           INSERT INTO messages(timestamp, server_id, channel_id, user_id, msg_type, content, clean_content)
