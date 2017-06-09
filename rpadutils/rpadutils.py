@@ -397,6 +397,7 @@ def is_valid_image_url(url):
     return url.startswith('http') and (url.endswith('.png') or url.endswith('.jpg'))
 
 def extract_image_url(m):
+    # force
     if is_valid_image_url(m.content):
         return m.content
     if m.attachments and len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
