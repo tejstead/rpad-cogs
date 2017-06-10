@@ -201,7 +201,7 @@ class AutoMod2:
                 except:
                     pass
 
-        msg = m.author.mention + inline(' your messages have been deleted for violating the image posting limit')
+        msg = m.author.mention + inline(' Upload multiple images to an imgur gallery #endimagespam')
         alert_msg = await self.bot.send_message(message.channel, msg)
         await asyncio.sleep(10)
         await self.bot.delete_message(alert_msg)
