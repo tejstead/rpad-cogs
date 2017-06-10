@@ -127,7 +127,7 @@ class PadInfo:
         EXPOSED_PAD_INFO = self
 
         # These emojis are the keys into the idmenu submenus
-        self.id_emoji = char_to_emoji('i')
+        self.id_emoji = '\N{INFORMATION SOURCE}'
         self.evo_emoji = char_to_emoji('e')
         self.mats_emoji = char_to_emoji('m')
         self.pantheon_emoji = '\N{CLASSICAL BUILDING}'
