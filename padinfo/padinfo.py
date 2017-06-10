@@ -1132,15 +1132,11 @@ def addPrefixes(m: Monster):
     if 'awoken' in m.name_na.lower() or '覚醒' in m.name_na:
         awoken_or_revo = True
         prefixes.add('a')
-
-    if '覚醒' in m.name_na:
         prefixes.add('awoken')
 
     if 'reincarnated' in m.name_na.lower() or '転生' in m.name_na:
         awoken_or_revo = True
         prefixes.add('revo')
-
-    if '転生' in m.name_na:
         prefixes.add('reincarnated')
 
     if not awoken_or_revo:
