@@ -24,6 +24,8 @@ PAD Global Commands
 
 PADGLOBAL_COG = None
 
+BLACKLISTED_CHARACTERS = '^[]*`~_'
+
 def is_padglobal_admin_check(ctx):
     return PADGLOBAL_COG.settings.checkAdmin(ctx.message.author.id)
 
@@ -60,10 +62,15 @@ class PadGlobal:
         if command in self.bot.commands.keys():
             await self.bot.say("That is already a standard command.")
             return
+
+        for c in BLACKLISTED_CHARACTERS:
+            if c in command:
+                await self.bot.say("Invalid character in name: {}".format(c))
+                return
+
         if not self.c_commands:
             self.c_commands = {}
-        cmdlist = self.c_commands
-        cmdlist[command] = text
+        self.c_commands[command] = text
         dataIO.save_json(self.file_path, self.c_commands)
         await self.bot.say("PAD command successfully added/edited.")
 
