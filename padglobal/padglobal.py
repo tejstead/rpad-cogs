@@ -323,12 +323,25 @@ class PadGlobal:
 
         cmdlist = self.c_commands
         cmd = message.content[len(prefix):]
+        corrected = False
         if cmd in cmdlist.keys():
-            cmd = cmdlist[cmd]
-        elif cmd.lower() in cmdlist.keys():
-            cmd = cmdlist[cmd.lower()]
+            pass
         else:
-            return
+            cmd = cmd.lower()
+            if cmd in cmdlist.keys():
+                pass
+            elif (cmd + 's') in cmdlist.keys():
+                cmd = cmd + 's'
+            elif (cmd + '?') in cmdlist.keys():
+                cmd = cmd + '?'
+            else:
+                return
+            corrected = True
+
+        if corrected:
+            await self.bot.send_message(message.channel, inline('Corrected to: {}'.format(cmd)))
+        cmd = cmdlist[cmd]
+
         cmd = self.format_cc(cmd, message)
 
         emoji_list = message.server.emojis if message.server else []
