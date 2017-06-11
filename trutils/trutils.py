@@ -15,6 +15,7 @@ import discord
 from discord.ext import commands
 
 from __main__ import user_allowed, send_cmd_help
+from google.cloud import vision
 
 from .rpadutils import *
 from .utils import checks
@@ -22,6 +23,7 @@ from .utils.chat_formatting import *
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.twitter_stream import *
+
 
 GETMIRU_HELP = """
 **Miru Bot now has a twin sister, also called Miru Bot (public)!**
@@ -493,6 +495,21 @@ class TrUtils:
         for result in to_await:
             if asyncio.iscoroutine(result):
                 result = await result
+                
+    @commands.command(pass_context=True)
+    async def checkcat(self, ctx, img : str):
+        client = vision.Client(project='rpad-discord')
+        image = client.image(source_uri=img)
+        labels = image.detect_labels(limit=2)
+        for l in labels:
+            if 'cat' in l.description.lower():
+                await self.bot.say(inline('looks like a cat, {:.0%}'.format(l.score)))
+                return
+        if len(labels):
+            await self.bot.say(inline('looks like a {}, {:.0%}'.format(l.description, l.score)))
+        else:
+            await self.bot.say(inline('not sure what that is'))
+        
 
 def setup(bot):
     print('trutils bot setup')
