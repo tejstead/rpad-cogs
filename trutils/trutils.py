@@ -497,16 +497,18 @@ class TrUtils:
                 result = await result
                 
     @commands.command(pass_context=True)
-    async def checkcat(self, ctx, img : str):
+    async def checkimg(self, ctx, img : str):
         client = vision.Client(project='rpad-discord')
         image = client.image(source_uri=img)
-        labels = image.detect_labels(limit=2)
-        for l in labels:
-            if 'cat' in l.description.lower():
-                await self.bot.say(inline('looks like a cat, {:.0%}'.format(l.score)))
-                return
+        try:
+            labels = image.detect_labels(limit=2)
+        except:
+            await self.bot.say(inline('failed to classify, check your URL'))
+            return
+        
         if len(labels):
-            await self.bot.say(inline('looks like a {}, {:.0%}'.format(l.description, l.score)))
+            formatted_labels = map(lambda l: '({} {:.0%})'.format(l.description, l.score), labels)
+            await self.bot.say(inline('looks like: ' + ' '.join(formatted_labels)))
         else:
             await self.bot.say(inline('not sure what that is'))
         
