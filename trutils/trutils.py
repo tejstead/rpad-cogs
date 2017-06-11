@@ -1,6 +1,5 @@
 import asyncio
 from collections import defaultdict
-from enum import Enum
 import http.client
 import json
 import os
@@ -13,6 +12,7 @@ import urllib.parse
 
 import discord
 from discord.ext import commands
+from enum import Enum
 
 from __main__ import user_allowed, send_cmd_help
 from google.cloud import vision
@@ -348,19 +348,44 @@ class TrUtils:
         except Exception as e:
             print('Failed to copy msg to', img_copy_channel_id, e)
 
+    async def copy_attachment_to_channel(self, msg, in_attachment, img_copy_channel_id):
+        embed = discord.Embed()
+        embed.set_footer(text='Posted by {} in {}'.format(msg.author.name, msg.channel.name))
+        embed.set_image(url=in_attachment['url'])
+        try:
+            await self.bot.send_message(discord.Object(img_copy_channel_id), embed=embed)
+        except Exception as e:
+            print('Failed to copy attachment to', img_copy_channel_id, e)
+
+    async def copy_embed_to_channel(self, msg, in_embed, img_copy_channel_id):
+        embed = discord.Embed()
+        embed.description = in_embed['url']
+        embed.title = in_embed['title']
+        embed.set_image(url=in_embed['thumbnail']['url'])
+        embed.set_footer(text='Posted by {} in {}'.format(msg.author.name, msg.channel.name))
+        try:
+            await self.bot.send_message(discord.Object(img_copy_channel_id), embed=embed)
+        except Exception as e:
+            print('Failed to copy embed to', img_copy_channel_id, e)
+
     async def on_imgcopy_message(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
 
-        img_url = extract_image_url(message)
         img_copy_channel_id = self.settings.getImageCopy(message.server.id, message.channel.id)
-        if img_url is None:
-            return
-
         if img_copy_channel_id is None:
             return
 
-        await self.copy_image_to_channel(img_url, message.author.name, message.channel.name, img_copy_channel_id)
+        if message.attachments and len(message.attachments):
+            for a in message.attachments:
+                await self.copy_attachment_to_channel(message, a, img_copy_channel_id)
+            return
+        
+        if message.embeds and len(message.embeds):
+            for e in message.embeds:
+                await self.copy_embed_to_channel(message, e, img_copy_channel_id)
+            return
+        
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
