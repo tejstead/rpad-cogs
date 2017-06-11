@@ -894,17 +894,15 @@ def monsterToEmbed(m : Monster, emoji_list):
     embed.add_field(name=stats_row_1, value=stats_row_2)
 
     awakenings_row = ''
-    unique_awakenings = OrderedCounter(m.awakening_names)
-    for a, count in unique_awakenings.items():
+    for a in m.awakening_names:
         mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a)
         if mapped_awakening:
             mapped_awakening = match_emoji(emoji_list, mapped_awakening)
 
         if mapped_awakening is None:
             mapped_awakening = AWAKENING_NAME_MAP.get(a, a)
-            awakenings_row += ' {}x{}'.format(mapped_awakening, count)
-        else:
-            awakenings_row += (' ' + str(mapped_awakening)) * count
+
+        awakenings_row += ' {}'.format(mapped_awakening)
 
     awakenings_row = awakenings_row.strip()
 
@@ -1247,7 +1245,7 @@ class PgDataWrapper:
         for base_monster in base_monster_list:
             monster_id = base_monster.monster_id
 
-            awakenings = monster_awoken_multimap[monster_id]
+            awakenings = sorted(monster_awoken_multimap[monster_id], key=lambda x: x.order)
             awakening_skills = [skill_map[x.awakening_id] for x in awakenings]
             additional_info = monster_add_info_map.get(monster_id)
             evos = monster_id_to_evo_multimap[monster_id]
