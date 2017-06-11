@@ -180,6 +180,9 @@ class AutoMod2:
         if image_limit == 0:
             return
 
+        if mod_or_perms(ctx, manage_messages=True):
+            return
+
         key = (message.channel.id, message.author.id)
         self.channel_user_logs[key].append(message)
 
