@@ -1314,18 +1314,6 @@ class PgDataWrapper:
                     used_for_evo_monsters.append(self.full_monster_map[monster_id])
             full_monster.used_for_evo = used_for_evo_monsters
 
-        for full_monster in self.full_monster_list:
-            for monster_id in  full_monster.monster_ids_with_skill:
-                if monster_id == '0':
-                    continue
-
-                skillup_monster = self.full_monster_map.get(monster_id)
-                if not skillup_monster:
-                    continue
-
-                if skillup_monster.farmable_evo or skillup_monster.pem_evo:
-                    full_monster.monsters_with_skill.append(skillup_monster)
-
         self.series_id_to_monsters = defaultdict(list)
 
         self.hp_monster_groups = list()
@@ -1382,6 +1370,19 @@ class PgDataWrapper:
                 self.lp_monster_groups.append(mg)
             else:
                 self.hp_monster_groups.append(mg)
+
+
+        for full_monster in self.full_monster_list:
+            for monster_id in  full_monster.monster_ids_with_skill:
+                if monster_id == '0':
+                    continue
+
+                skillup_monster = self.full_monster_map.get(monster_id)
+                if not skillup_monster:
+                    continue
+
+                if not skillup_monster.rem_evo:
+                    full_monster.monsters_with_skill.append(skillup_monster)
 
 
         # Unzip the monster groups into monster lists
