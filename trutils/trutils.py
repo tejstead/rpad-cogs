@@ -361,7 +361,7 @@ class TrUtils:
         embed = discord.Embed()
         embed.description = in_embed['url']
         embed.title = in_embed['title']
-        embed.set_image(url=in_embed['thumbnail']['url'])
+        embed.set_image(url=in_embed['thumbnail']['proxy_url'])
         embed.set_footer(text='Posted by {} in {}'.format(msg.author.name, msg.channel.name))
         try:
             await self.bot.send_message(discord.Object(img_copy_channel_id), embed=embed)
