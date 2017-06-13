@@ -1,10 +1,10 @@
 from datetime import datetime
 from datetime import timedelta
-from enum import Enum
 import re
 
 import discord
 from discord.ext import commands
+from enum import Enum
 import pytz
 
 from .rpadutils import *
@@ -218,6 +218,10 @@ class PgSkillLeaderData:
                 resist *= mult
         return hp, atk, rcv, resist
 
+EMPTY_SKILL_LEADER_DATA = PgSkillLeaderData({
+    'TS_SEQ': '0',
+    'LEADER_DATA': '1/1|2/1|3/1',
+})
 
 class PgType:
     def __init__(self, item):

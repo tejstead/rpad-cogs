@@ -6,7 +6,6 @@ import csv
 from datetime import datetime
 from datetime import timedelta
 import difflib
-from enum import Enum
 import http.client
 from itertools import groupby
 import json
@@ -21,6 +20,7 @@ import urllib.parse
 from dateutil import tz
 import discord
 from discord.ext import commands
+from enum import Enum
 import prettytable
 import pytz
 import romkan
@@ -320,6 +320,42 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
+    @commands.command(pass_context=True, aliases=['leaders'])
+    async def leaderskill(self, ctx, left_query, right_query=None, *, bad=None):
+        """Display the multiplier and leaderskills for two monsters.
+
+        If either your left or right query contains spaces, wrap in quotes.
+        e.g.: ^leaderskill "r sonia" "b sonia"
+        """
+        if bad:
+            await self.bot.say(inline('Too many inputs. Try wrapping your queries in quotes.'))
+            return
+
+        left_m, left_err, _ = self.findMonster(left_query)
+        if right_query:
+            right_m, right_err, _ = self.findMonster(right_query)
+        else:
+            right_m, right_err, = left_m, left_err
+
+        err_msg = '{} query failed to match a monster: [ {} ]. If your query is multiple words, wrap it in quotes.'
+        if left_err:
+            await self.bot.say(inline(err_msg.format('Left', left_query)))
+            return
+        if right_err:
+            await self.bot.say(inline(err_msg.format('Right', right_query)))
+            return
+
+        lhp, latk, lrcv, lresist = left_m.leader_skill_data.getMaxMultipliers()
+        rhp, ratk, rrcv, rresist = right_m.leader_skill_data.getMaxMultipliers()
+        multiplier_text = createMultiplierText(lhp, latk, lrcv, lresist, rhp, ratk, rrcv, rresist)
+
+        embed = discord.Embed()
+        embed.title = 'Multiplier [{}]\n\n'.format(multiplier_text)
+        embed.description = '**\n**'
+        embed.add_field(name=monsterToHeader(left_m), value=(left_m.leader_text or 'None/Missing'))
+        embed.add_field(name=monsterToHeader(right_m), value=(right_m.leader_text or 'None/Missing'))
+        await self.bot.say(embed=embed)
+
     @commands.command(name="helpid", pass_context=True, aliases=['helppic', 'helpimg'])
     async def _helpid(self, ctx):
         await self.bot.whisper(box(HELP_MSG))
@@ -611,12 +647,12 @@ class Monster:
         self.server_skillups = {}
 
         self.leader_text = None
-        self.multiplier_text = None
         if leader_skill:
             self.leader_text = leader_skill.desc
-            if leader_skill_data:
-                hp, atk, rcv, resist = leader_skill_data.getMaxMultipliers()
-                self.multiplier_text = createMultiplierText(hp, atk, rcv, resist)
+
+        self.leader_skill_data = leader_skill_data or padguide.EMPTY_SKILL_LEADER_DATA
+        hp, atk, rcv, resist = self.leader_skill_data.getMaxMultipliers()
+        self.multiplier_text = createMultiplierText(hp, atk, rcv, resist, hp, atk, rcv, resist)
 
         self.farmable = len(drop_info_list) > 0
         self.farmable_evo = self.farmable
@@ -1548,10 +1584,13 @@ def shouldFilterGroup(mg: MonsterGroup):
 
     return failed_max_rarity
 
-def createMultiplierText(hp, atk, rcv, resist):
+def createMultiplierText(hp1, atk1, rcv1, resist1, hp2, atk2, rcv2, resist2):
     def fmtNum(val):
         return ('{:.2f}').format(val).strip('0').rstrip('.')
-    text = "{}/{}/{}".format(fmtNum(hp * hp), fmtNum(atk * atk), fmtNum(rcv * rcv))
-    if resist < 1:
-        text += ' Resist {}%'.format(fmtNum(100 * (1 - (1 - resist) * (1 - resist))))
+    text = "{}/{}/{}".format(fmtNum(hp1 * hp2), fmtNum(atk1 * atk2), fmtNum(rcv1 * rcv2))
+    if resist1 * resist2 < 1:
+        resist1 = resist1 if resist1 < 1 else 0
+        resist2 = resist2 if resist2 < 1 else 0
+        print(resist1, resist2)
+        text += ' Resist {}%'.format(fmtNum(100 * (1 - (1 - resist1) * (1 - resist2))))
     return text
