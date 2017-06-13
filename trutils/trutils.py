@@ -291,6 +291,18 @@ class TrUtils:
 
     @commands.command(pass_context=True)
     async def dumpmsg(self, ctx, msg_id : int):
+        """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped and some issues cleaned up"""
+        msg = await self.bot.get_message(ctx.message.channel, msg_id)
+        content = msg.clean_content.strip()
+        content = re.sub(r'<(:[0-9a-z_]+:)\d{18}>', r'\1', content, flags=re.IGNORECASE)
+        if content.startswith('```') or content.endswith('```'):
+            content = '`\n{}\n`'.format(content)
+        else:
+            content = box(content)
+        await self.bot.say(content)
+
+    @commands.command(pass_context=True)
+    async def dumpmsgexact(self, ctx, msg_id : int):
         """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped"""
         msg = await self.bot.get_message(ctx.message.channel, msg_id)
         content = msg.clean_content.strip()
