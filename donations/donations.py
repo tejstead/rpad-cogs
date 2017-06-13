@@ -338,9 +338,9 @@ class Donations:
             return
 
         # Semi-frequetly respond to long messages
-        long_msg_and_roll = len(content) > 200 and roll(20)
+        long_msg_and_roll = len(content) > 200 and roll(10)
         # Occasionally respond to other messages
-        short_msg_and_roll = roll(3)
+        short_msg_and_roll = roll(2)
 
         if long_msg_and_roll or short_msg_and_roll:
             msg += ' ' + random.choice(self.insults_list)
