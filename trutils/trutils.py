@@ -295,10 +295,7 @@ class TrUtils:
         msg = await self.bot.get_message(ctx.message.channel, msg_id)
         content = msg.clean_content.strip()
         content = re.sub(r'<(:[0-9a-z_]+:)\d{18}>', r'\1', content, flags=re.IGNORECASE)
-        if content.startswith('```') or content.endswith('```'):
-            content = '`\n{}\n`'.format(content)
-        else:
-            content = box(content)
+        content = box(content.replace('`', u'\u200b`'))
         await self.bot.say(content)
 
     @commands.command(pass_context=True)
@@ -306,10 +303,7 @@ class TrUtils:
         """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped"""
         msg = await self.bot.get_message(ctx.message.channel, msg_id)
         content = msg.clean_content.strip()
-        if content.startswith('```') or content.endswith('```'):
-            content = '`\n{}\n`'.format(content)
-        else:
-            content = box(content)
+        content = box(content.replace('`', u'\u200b`'))
         await self.bot.say(content)
 
     @commands.command(name="dontchangemyname", pass_context=True, no_pm=True)
