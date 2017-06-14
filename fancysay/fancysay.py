@@ -28,6 +28,41 @@ class FancySay:
             await send_cmd_help(context)
 
     @fancysay.command(pass_context=True, no_pm=True)
+    async def pingrole(self, ctx, role : discord.Role, *, text):
+        """^fancysay pingrole rolename this is the text to ping
+
+        1) Converts a role to mentionable
+        2) Posts the message + ping in the current channel
+        3) Sets the role to unmentionable
+        4) Deletes the input message
+
+        The role must be unmentionable before this command for safety.
+        """
+        if role.mentionable:
+            await self.bot.say(inline('Error: role is already mentionable'))
+            return
+
+        try:
+            await self.bot.edit_role(ctx.message.server, role, mentionable=True)
+        except Exception as ex:
+            await self.bot.say(inline('Error: failed to set role mentionable'))
+            return
+
+        await self.bot.say('{} {} (posted by {})'.format(role.mention, text, ctx.message.author.mention))
+
+        try:
+            await self.bot.edit_role(ctx.message.server, role, mentionable=False)
+        except Exception as ex:
+            await self.bot.say(inline('Error: failed to set role unmentionable'))
+            return
+
+        try:
+            await self.bot.delete_message(ctx.message)
+        except Exception as ex:
+            await self.bot.say(inline('Error: failed to delete request message'))
+            return
+
+    @fancysay.command(pass_context=True, no_pm=True)
     async def emoji(self, ctx, *, text):
         """Speak the provided text as emojis, deleting the original request"""
         await self.bot.delete_message(ctx.message)
