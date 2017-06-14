@@ -14,14 +14,12 @@ from .utils import checks
 from .utils.dataIO import fileIO
 
 
-LOGS_PER_CHANNEL = 1000
-
 class FancySay:
     def __init__(self, bot):
         self.bot = bot
 
     @commands.group(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_channels=True)
+    @checks.mod_or_permissions(manage_messages=True)
     async def fancysay(self, context):
         """Make the bot say fancy things (via embeds)."""
         if context.invoked_subcommand is None:
@@ -48,7 +46,7 @@ class FancySay:
             await self.bot.say(inline('Error: failed to set role mentionable'))
             return
 
-        await self.bot.say('{} {} (posted by {})'.format(role.mention, text, ctx.message.author.mention))
+        await self.bot.say('From {}:\n{}\n{}'.format(ctx.message.author.mention, role.mention, text))
 
         try:
             await self.bot.edit_role(ctx.message.server, role, mentionable=False)
