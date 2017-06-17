@@ -199,7 +199,7 @@ class PadInfo:
     async def jpname(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            await self.bot.say(box(monsterToHeader(m)))
+            await self.bot.say(monsterToHeader(m, link=True))
             await self.bot.say(box(m.name_jp))
         else:
             await self.bot.say(self.makeFailureMsg(err))
@@ -351,9 +351,10 @@ class PadInfo:
 
         embed = discord.Embed()
         embed.title = 'Multiplier [{}]\n\n'.format(multiplier_text)
-        embed.description = '**\n**'
-        embed.add_field(name=monsterToHeader(left_m), value=(left_m.leader_text or 'None/Missing'))
-        embed.add_field(name=monsterToHeader(right_m), value=(right_m.leader_text or 'None/Missing'))
+        description = ''
+        description += '\n**' + monsterToHeader(left_m, link=True) + '**\n' + (left_m.leader_text or 'None/Missing')
+        description += '\n**' + monsterToHeader(right_m, link=True) + '**\n' + (right_m.leader_text or 'None/Missing')
+        embed.description = description
         await self.bot.say(embed=embed)
 
     @commands.command(name="helpid", pass_context=True, aliases=['helppic', 'helpimg'])
@@ -728,8 +729,9 @@ def monsterToInfoText(m: Monster):
 
     return info_chunk, link_row
 
-def monsterToHeader(m : Monster):
-    return 'No. {} {}'.format(m.monster_id_na, m.name_na)
+def monsterToHeader(m : Monster, link=False):
+    msg = 'No. {} {}'.format(m.monster_id_na, m.name_na)
+    return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
 
 def monsterToJpSuffix(m : Monster):
     suffix = ""
@@ -739,15 +741,17 @@ def monsterToJpSuffix(m : Monster):
         suffix += ' (JP only)'
     return suffix
 
-def monsterToLongHeader(m : Monster):
-    return monsterToHeader(m) + monsterToJpSuffix(m)
+def monsterToLongHeader(m : Monster, link=False):
+    msg = monsterToHeader(m) + monsterToJpSuffix(m)
+    return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
 
-def monsterToLongHeaderWithAttr(m : Monster):
+def monsterToLongHeaderWithAttr(m : Monster, link=False):
     header = 'No. {} {} {}'.format(
         m.monster_id_na,
         "({}{})".format(attr_prefix_map[m.attr1], "/" + attr_prefix_map[m.attr2] if m.attr2 else ""),
         m.name_na)
-    return header + monsterToJpSuffix(m)
+    msg = header + monsterToJpSuffix(m)
+    return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
 
 def monsterToEvoText(m: Monster):
     output = monsterToLongHeader(m)
@@ -777,7 +781,7 @@ def monsterToEvoEmbed(m : Monster):
     field_name = '{} alternate evos'.format(len(m.alt_evos))
     field_data = ''
     for ae in sorted(m.alt_evos, key=lambda x: int(x.monster_id)):
-        field_data += "{}\n".format(monsterToLongHeader(ae))
+        field_data += "{}\n".format(monsterToLongHeader(ae, link=True))
 
     embed.add_field(name=field_name, value=field_data)
 
@@ -793,7 +797,7 @@ def monsterToEvoMatsEmbed(m : Monster):
     field_data = ''
     if mats_to_evo_size:
         for ae in m.mats_to_evo:
-            field_data += "{}\n".format(monsterToLongHeader(ae))
+            field_data += "{}\n".format(monsterToLongHeader(ae, link=True))
     else:
         field_data = 'None'
     embed.add_field(name=field_name, value=field_data)
@@ -808,7 +812,7 @@ def monsterToEvoMatsEmbed(m : Monster):
     else:
         item_count = min(used_for_evo_size, 5)
         for ae in sorted(m.used_for_evo, key=lambda x: x.monster_id_na, reverse=True)[:item_count]:
-            field_data += "{}\n".format(monsterToLongHeader(ae))
+            field_data += "{}\n".format(monsterToLongHeader(ae, link=True))
     embed.add_field(name=field_name, value=field_data)
 
     return embed
@@ -824,7 +828,7 @@ def monsterToPantheonEmbed(m : Monster, pginfo):
     field_name = 'Pantheon: ' + m.series_name
     field_data = ''
     for monster in sorted(pantheon_list, key=lambda x: x.monster_id_na):
-        field_data += '\n' + monsterToHeader(monster)
+        field_data += '\n' + monsterToHeader(monster, link=True)
     embed.add_field(name=field_name, value=field_data)
 
     return embed
@@ -840,7 +844,7 @@ def monsterToSkillupsEmbed(m : Monster, pginfo):
     skillups_to_skip = list()
     for server, skillup in m.server_skillups.items():
         skillup_header = 'Skillup in ' + server
-        skillup_body = 'No. {} {}'.format(skillup.monster_id_na, skillup.name_na)
+        skillup_body = monsterToHeader(skillup, link=True)
         embed.add_field(name=skillup_header, value=skillup_body)
         skillups_to_skip.append(skillup.monster_id_na)
 
@@ -849,7 +853,7 @@ def monsterToSkillupsEmbed(m : Monster, pginfo):
     for monster in sorted(skillups_list, key=lambda x: x.monster_id_na):
         if monster.monster_id_na in skillups_to_skip:
             continue
-        field_data += '\n' + monsterToHeader(monster)
+        field_data += '\n' + monsterToHeader(monster, link=True)
 
     if len(field_data.strip()):
         embed.add_field(name=field_name, value=field_data)
