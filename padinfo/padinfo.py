@@ -715,7 +715,7 @@ def monsterToInfoText(m: Monster):
 
     awakenings_row = _map_awakenings_text(m)
 
-    ls_row = 'LS: ' + m.leader_text or 'None/Missing'
+    ls_row = 'LS: ' + (m.leader_text or 'None/Missing')
 
     active_row = 'AS: '
     if m.active_skill:
