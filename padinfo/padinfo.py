@@ -503,6 +503,10 @@ class PadInfo:
         # couldn't find anything
         return None, "Could not find a match for: " + query, None
 
+    def map_awakenings_text(self, m):
+        """Exported for use in other cogs"""
+        return _map_awakenings_text(m)
+
 def pickBestMonster(monster_list):
     return max(monster_list, key=lambda x: (x.selection_priority, x.rarity, x.monster_id_na))
 
@@ -709,21 +713,9 @@ def monsterToInfoText(m: Monster):
 
     stats_row = 'Lv. {}  HP {}  ATK {}  RCV {}  Weighted {}'.format(m.max_level, m.hp, m.atk, m.rcv, m.weighted_stats)
 
-    awakenings_row = ''
-    unique_awakenings = set(m.awakening_names)
-    for a in unique_awakenings:
-        count = m.awakening_names.count(a)
-        awakenings_row += ' {}x{}'.format(AWAKENING_NAME_MAP.get(a, a), count)
-    awakenings_row = awakenings_row.strip()
+    awakenings_row = _map_awakenings_text(m)
 
-    if not len(awakenings_row):
-        awakenings_row = 'No Awakenings'
-
-    ls_row = 'LS: '
-    if m.leader_text:
-        ls_row += m.leader_text
-    else:
-        ls_row += 'None/Missing'
+    ls_row = 'LS: ' + m.leader_text or 'None/Missing'
 
     active_row = 'AS: '
     if m.active_skill:
@@ -905,9 +897,9 @@ def monsterToAcquireString(m : Monster):
         acquire_text = 'MP Shop Evo'
     return acquire_text
 
-def match_emoji(emoji_list, name_regex):
+def match_emoji(emoji_list, name):
     for e in emoji_list:
-        if re.match(name_regex, e.name, re.IGNORECASE):
+        if e.name == name:
             return e
     return None
 
@@ -931,9 +923,8 @@ def monsterToEmbed(m : Monster, emoji_list):
 
     awakenings_row = ''
     for a in m.awakening_names:
-        mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a)
-        if mapped_awakening:
-            mapped_awakening = match_emoji(emoji_list, mapped_awakening)
+        mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a, a)
+        mapped_awakening = match_emoji(emoji_list, mapped_awakening)
 
         if mapped_awakening is None:
             mapped_awakening = AWAKENING_NAME_MAP.get(a, a)
@@ -1015,62 +1006,59 @@ series_to_prefix_map = {
   '154' : ['padr'],
 }
 
-def two_word_regex(w1, w2):
-    return '(.*{w1}.*{w2}.*)|(.*{w2}.*{w1}.*)'.format(w1=w1, w2=w2)
-
 AWAKENING_NAME_MAP_RPAD = {
-  'Enhanced Attack': two_word_regex('boost', 'atk'),
-  'Enhanced HP': two_word_regex('boost', 'hp'),
-  'Enhanced Heal': two_word_regex('boost', 'rcv'),
+  'Enhanced Attack': 'boost_atk',
+  'Enhanced HP': 'boost_hp',
+  'Enhanced Heal': 'boost_rcv',
 
-  'God Killer': two_word_regex('killer', 'god'),
-  'Dragon Killer': two_word_regex('killer', 'dragon'),
-  'Devil Killer': two_word_regex('killer', 'devil'),
-  'Machine Killer': two_word_regex('killer', 'machine'),
-  'Balanced Killer': two_word_regex('killer', 'balance'),
-  'Attacker Killer': two_word_regex('killer', 'attacker'),
+  'God Killer': 'killer_god',
+  'Dragon Killer': 'killer_dragon',
+  'Devil Killer': 'killer_devil',
+  'Machine Killer': 'killer_machine',
+  'Balanced Killer': 'killer_balance',
+  'Attacker Killer': 'killer_attacker',
 
-  'Physical Killer': two_word_regex('killer', 'physical'),
-  'Healer Killer': two_word_regex('killer', 'healer'),
-  'Evolve Material Killer': two_word_regex('killer', 'evomat'),
-  'Awaken Material Killer': two_word_regex('killer', 'awoken'),
-  'Enhance Material Killer': two_word_regex('killer', 'enhancemat'),
-  'Vendor Material Killer': two_word_regex('killer', 'vendor'),
+  'Physical Killer': 'killer_physical',
+  'Healer Killer': 'killer_healer',
+  'Evolve Material Killer': 'killer_evomat',
+  'Awaken Material Killer': 'killer_awoken',
+  'Enhance Material Killer': 'killer_enhancemat',
+  'Vendor Material Killer': 'killer_vendor',
 
-  'Auto-Recover': '.*autoheal.*',
-  'Recover Bind': '.*bindclear.*',
-  'Enhanced Combo': two_word_regex('combo', 'boost'),
-  'Guard Break' : two_word_regex('guard', 'break'),
-  'Multi Boost': two_word_regex('multi', 'boost'),
-  'Additional Attack': two_word_regex('extra', 'attack'),
-  'Skill Boost': '(.*_sb$)|(^sb_.*)',
-  'Extend Time': '(.*_te$)|(^te_.*)',
-  'Two-Pronged Attack': '.*tpa.*',
+  'Auto-Recover': 'misc_autoheal',
+  'Recover Bind': 'misc_bindclear',
+  'Enhanced Combo': 'misc_comboboost',
+  'Guard Break' : 'misc_guardbreak',
+  'Multi Boost': 'misc_multiboost',
+  'Additional Attack': 'misc_extraattack',
+  'Skill Boost': 'misc_sb',
+  'Extend Time': 'misc_te',
+  'Two-Pronged Attack': 'misc_tpa',
 
-  'Enhanced Fire Orbs': two_word_regex('oe', 'fire'),
-  'Enhanced Water Orbs': two_word_regex('oe', 'water'),
-  'Enhanced Wood Orbs': two_word_regex('oe', 'wood'),
-  'Enhanced Light Orbs': two_word_regex('oe', 'light'),
-  'Enhanced Dark Orbs': two_word_regex('oe', 'dark'),
-  'Enhanced Heal Orbs': two_word_regex('oe', 'heart'),
+  'Enhanced Fire Orbs': 'oe_fire',
+  'Enhanced Water Orbs': 'oe_water',
+  'Enhanced Wood Orbs': 'oe_wood',
+  'Enhanced Light Orbs': 'oe_light',
+  'Enhanced Dark Orbs': 'oe_dark',
+  'Enhanced Heal Orbs': 'oe_heart',
 
-  'Reduce Fire Damage': two_word_regex('red', 'fire'),
-  'Reduce Water Damage': two_word_regex('red', 'water'),
-  'Reduce Wood Damage': two_word_regex('red', 'wood'),
-  'Reduce Light Damage': two_word_regex('red', 'light'),
-  'Reduce Dark Damage': two_word_regex('red', 'dark'),
+  'Reduce Fire Damage': 'reduce_fire',
+  'Reduce Water Damage': 'reduce_water',
+  'Reduce Wood Damage': 'reduce_wood',
+  'Reduce Light Damage': 'reduce_light',
+  'Reduce Dark Damage': 'reduce_dark',
 
-  'Resistance-Bind': two_word_regex('res', '_bind'),
-  'Resistance-Dark': two_word_regex('res', 'blind'),
-  'Resistance-Jammers': two_word_regex('res', 'jammer'),
-  'Resistance-Poison': two_word_regex('res', 'poison'),
-  'Resistance-Skill Bind': two_word_regex('res', 'skillbind'),
+  'Resistance-Bind': 'res_bind',
+  'Resistance-Dark': 'res_blind',
+  'Resistance-Jammers': 'res_jammer',
+  'Resistance-Poison': 'res_poison',
+  'Resistance-Skill Bind': 'res_skillbind',
 
-  'Enhanced Fire Att.': two_word_regex('row', 'fire'),
-  'Enhanced Water Att.': two_word_regex('row', 'water'),
-  'Enhanced Wood Att.': two_word_regex('row', 'wood'),
-  'Enhanced Light Att.': two_word_regex('row', 'light'),
-  'Enhanced Dark Att.': two_word_regex('row', 'dark'),
+  'Enhanced Fire Att.': 'row_fire',
+  'Enhanced Water Att.': 'row_water',
+  'Enhanced Wood Att.': 'row_wood',
+  'Enhanced Light Att.': 'row_light',
+  'Enhanced Dark Att.': 'row_dark',
 }
 
 AWAKENING_NAME_MAP = {
@@ -1594,3 +1582,16 @@ def createMultiplierText(hp1, atk1, rcv1, resist1, hp2, atk2, rcv2, resist2):
         print(resist1, resist2)
         text += ' Resist {}%'.format(fmtNum(100 * (1 - (1 - resist1) * (1 - resist2))))
     return text
+
+def _map_awakenings_text(m : Monster):
+    awakenings_row = ''
+    unique_awakenings = set(m.awakening_names)
+    for a in unique_awakenings:
+        count = m.awakening_names.count(a)
+        awakenings_row += ' {}x{}'.format(AWAKENING_NAME_MAP.get(a, a), count)
+    awakenings_row = awakenings_row.strip()
+
+    if not len(awakenings_row):
+        awakenings_row = 'No Awakenings'
+
+    return awakenings_row
