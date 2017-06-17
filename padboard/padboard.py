@@ -134,12 +134,13 @@ class PadBoard:
 
         img_board, hsv_board = self.classify(image_data)
         img_url = DAWNGLARE_BOARD_TEMPLATE.format(''.join([''.join(r) for r in img_board]))
-        hsv_url = DAWNGLARE_BOARD_TEMPLATE.format(''.join([''.join(r) for r in hsv_board]))
+        # Disabling HSV board for now. It's basically always worse
+#         hsv_url = DAWNGLARE_BOARD_TEMPLATE.format(''.join([''.join(r) for r in hsv_board]))
 
         msg = img_url
-        if img_url != hsv_url:
-            msg += '\n{}'.format(inline("I'm uncertain about this board, check the output carefully. Compare against:"))
-            msg += '\n{}'.format(hsv_url)
+#         if img_url != hsv_url:
+#             msg += '\n{}'.format(inline("I'm uncertain about this board, check the output carefully. Compare against:"))
+#             msg += '\n{}'.format(hsv_url)
         await self.bot.say(msg)
 
     async def get_recent_image(self, ctx, user : discord.Member=None, message : discord.Message=None):
