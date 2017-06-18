@@ -1583,7 +1583,6 @@ def createMultiplierText(hp1, atk1, rcv1, resist1, hp2, atk2, rcv2, resist2):
     if resist1 * resist2 < 1:
         resist1 = resist1 if resist1 < 1 else 0
         resist2 = resist2 if resist2 < 1 else 0
-        print(resist1, resist2)
         text += ' Resist {}%'.format(fmtNum(100 * (1 - (1 - resist1) * (1 - resist2))))
     return text
 
