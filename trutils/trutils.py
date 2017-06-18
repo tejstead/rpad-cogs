@@ -386,12 +386,15 @@ class TrUtils:
             for a in message.attachments:
                 await self.copy_attachment_to_channel(message, a, img_copy_channel_id)
             return
-        
+
         if message.embeds and len(message.embeds):
             for e in message.embeds:
                 await self.copy_embed_to_channel(message, e, img_copy_channel_id)
             return
-        
+
+    async def on_imgcopy_edit_message(self, old_message, new_message):
+        if len(old_message.embeds) == 0 and len(new_message.embeds) > 0:
+            await self.on_imgcopy_message(new_message)
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
@@ -526,7 +529,7 @@ class TrUtils:
         for result in to_await:
             if asyncio.iscoroutine(result):
                 result = await result
-                
+
     @commands.command(pass_context=True)
     async def checkimg(self, ctx, img : str):
         client = vision.Client(project='rpad-discord')
@@ -536,13 +539,13 @@ class TrUtils:
         except:
             await self.bot.say(inline('failed to classify, check your URL'))
             return
-        
+
         if len(labels):
             formatted_labels = map(lambda l: '({} {:.0%})'.format(l.description, l.score), labels)
             await self.bot.say(inline('looks like: ' + ' '.join(formatted_labels)))
         else:
             await self.bot.say(inline('not sure what that is'))
-        
+
 
 def setup(bot):
     print('trutils bot setup')
@@ -550,6 +553,7 @@ def setup(bot):
     n.registerTasks(asyncio.get_event_loop())
     bot.add_listener(n.check_for_nickname_change, "on_member_update")
     bot.add_listener(n.on_imgcopy_message, "on_message")
+    bot.add_listener(n.on_imgcopy_edit_message, "on_message_edit")
     bot.add_cog(n)
     print('done adding trutils bot')
 
