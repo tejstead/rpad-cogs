@@ -340,7 +340,7 @@ class TrUtils:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def clearimgcopy(self, ctx, channel : discord.Channel):
+    async def clearimagecopy(self, ctx, channel : discord.Channel):
         self.settings.clearImageCopy(ctx.message.server.id, channel.id)
         await self.bot.say('`done`')
 
@@ -366,7 +366,7 @@ class TrUtils:
     async def copy_embed_to_channel(self, msg, in_embed, img_copy_channel_id):
         embed = discord.Embed()
         embed.description = in_embed['url']
-        embed.title = in_embed['title'] if 'title' in in_embed else None 
+        embed.title = in_embed['title'] if 'title' in in_embed else None
         embed.set_image(url=in_embed['thumbnail']['proxy_url'])
         embed.set_footer(text='Posted by {} in {}'.format(msg.author.name, msg.channel.name))
         try:
@@ -396,6 +396,32 @@ class TrUtils:
         if len(old_message.embeds) == 0 and len(new_message.embeds) > 0:
             await self.on_imgcopy_message(new_message)
 
+    async def on_imgblacklist_message(self, message):
+        if message.author.id == self.bot.user.id or message.channel.is_private:
+            return
+        img_blacklist = self.settings.getImageTypeBlacklist(message.server.id, message.channel.id)
+        if img_blacklist is None:
+            return
+
+        if message.attachments and len(message.attachments):
+            for a in message.attachments:
+                print(a['url'])
+                if self._check_labels_for_blacklist(a['url'], img_blacklist):
+                    await self.bot.send_message(message.channel, inline('Hey, is there a {} in that picture!!!'.format(img_blacklist)))
+                    return
+            return
+
+        if message.embeds and len(message.embeds):
+            for e in message.embeds:
+                if self._check_labels_for_blacklist(e['thumbnail']['proxy_url'], img_blacklist):
+                    await self.bot.send_message(message.channel, inline('Hey, is there a {} in that picture!!!'.format(img_blacklist)))
+                    return
+            return
+
+    async def on_imgblacklist_edit_message(self, old_message, new_message):
+        if len(old_message.embeds) == 0 and len(new_message.embeds) > 0:
+            await self.on_imgblacklist_message(new_message)
+
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
     async def bulkimagecopy(self, ctx, source_channel : discord.Channel, dest_channel : discord.Channel, number: int):
@@ -413,6 +439,18 @@ class TrUtils:
                 await self.copy_image_to_channel(item[0], item[1], item[2], item[3])
             except Exception as error:
                 print(error)
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def imagetypeblacklist(self, ctx, channel : discord.Channel, image_type : str):
+        self.settings.setImageTypeBlacklist(ctx.message.server.id, channel.id, image_type)
+        await self.bot.say('`done`')
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def clearimagetypeblacklist(self, ctx, channel : discord.Channel, image_type : str):
+        self.settings.clearImageTypeBlacklist(ctx.message.server.id, channel.id, image_type)
+        await self.bot.say('`done`')
 
     @commands.command()
     async def getmiru(self):
@@ -532,11 +570,8 @@ class TrUtils:
 
     @commands.command(pass_context=True)
     async def checkimg(self, ctx, img : str):
-        client = vision.Client(project='rpad-discord')
-        image = client.image(source_uri=img)
-        try:
-            labels = image.detect_labels(limit=2)
-        except:
+        labels = self._get_image_labels(img)
+        if labels is None:
             await self.bot.say(inline('failed to classify, check your URL'))
             return
 
@@ -546,6 +581,23 @@ class TrUtils:
         else:
             await self.bot.say(inline('not sure what that is'))
 
+    def _get_image_labels(self, img : str):
+        client = vision.Client(project='rpad-discord')
+        image = client.image(source_uri=img)
+        try:
+            return image.detect_labels(limit=5)
+        except:
+            return None
+
+    def _check_labels_for_blacklist(self, img : str, blacklist : str):
+        blacklist = blacklist.lower()
+        labels = self._get_image_labels(img)
+        if labels is None:
+            return False
+        for l in labels:
+            if blacklist in l.description.lower():
+                return True
+        return False
 
 def setup(bot):
     print('trutils bot setup')
@@ -554,6 +606,8 @@ def setup(bot):
     bot.add_listener(n.check_for_nickname_change, "on_member_update")
     bot.add_listener(n.on_imgcopy_message, "on_message")
     bot.add_listener(n.on_imgcopy_edit_message, "on_message_edit")
+    bot.add_listener(n.on_imgblacklist_message, "on_message")
+    bot.add_listener(n.on_imgblacklist_edit_message, "on_message_edit")
     bot.add_cog(n)
     print('done adding trutils bot')
 
@@ -624,7 +678,29 @@ class TrUtilsSettings(CogSettings):
 
     def clearImageCopy(self, server_id, channel_id):
         imagecopy = self.imagecopy(server_id)
-        if user_id in imagecopy:
+        if channel_id in imagecopy:
             imagecopy.pop(channel_id)
+            self.save_settings()
+
+    def imagetypeblacklist(self, server_id):
+        key = 'imgtypeblacklist'
+        server = self.getServer(server_id)
+        if key not in server:
+            server[key] = {}
+        return server[key]
+
+    def setImageTypeBlacklist(self, server_id, channel_id, image_type):
+        imagebl = self.imagetypeblacklist(server_id)
+        imagebl[channel_id] = image_type
         self.save_settings()
+
+    def getImageTypeBlacklist(self, server_id, channel_id):
+        imagebl = self.imagetypeblacklist(server_id)
+        return imagebl.get(channel_id)
+
+    def clearImageTypeBlacklist(self, server_id, channel_id):
+        imagebl = self.imagetypeblacklist(server_id)
+        if channel_id in imagebl:
+            imagebl.pop(channel_id)
+            self.save_settings()
 
