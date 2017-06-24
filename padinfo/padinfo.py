@@ -199,7 +199,7 @@ class PadInfo:
     async def jpname(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            await self.bot.say(monsterToHeader(m, link=True))
+            await self.bot.say(monsterToHeader(m))
             await self.bot.say(box(m.name_jp))
         else:
             await self.bot.say(self.makeFailureMsg(err))
