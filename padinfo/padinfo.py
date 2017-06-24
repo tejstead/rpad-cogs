@@ -320,7 +320,7 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
-    @commands.command(pass_context=True, aliases=['leaders'])
+    @commands.command(pass_context=True, aliases=['leaders', 'leaderskills', 'ls'])
     async def leaderskill(self, ctx, left_query, right_query=None, *, bad=None):
         """Display the multiplier and leaderskills for two monsters.
 
