@@ -82,7 +82,7 @@ class VoiceRole:
 
     @voicerole.command(pass_context=True, no_pm=True)
     async def list(self, ctx):
-        """Clear the role associated with a channel"""
+        """List the channel/role associations for this server."""
         msg = 'Channel -> Role:'
         for channel_id, role_id in self.settings.getChannelRoles(ctx.message.server.id).items():
             msg += '\n\t{} : {}'.format(channel_id, role_id)
