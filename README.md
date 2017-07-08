@@ -6,6 +6,29 @@ This codebase is a mess right now. I'm working on cleaning it up, promise =)
 
 Code should adhere to the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)
 
+# Requirements
+
+Cogs here depend on one or more of the following packages. I haven't done a good job verifying
+this list.
+
+* python-dateutil
+* pytz
+* twython
+* feedparser
+* romkan 
+  + check out project from git
+  + update open calls in setup.py to include `encoding='utf8'`
+  + run setup.py install
+* tabulate
+* pypng
+* padtools
+* opencv-python
+* Pillow
+* setuptools
+* google-cloud
+* google-api
+
+
 # Puzzle and Dragons
 
 Most cogs here relate to the mobile game 'Puzzle and Dragons'. Data is sourced from the
