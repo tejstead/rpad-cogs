@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import re
+import unicodedata
 
 import discord
 from discord.ext import commands
@@ -397,9 +398,22 @@ def is_valid_image_url(url):
     return url.startswith('http') and (url.endswith('.png') or url.endswith('.jpg'))
 
 def extract_image_url(m):
-    # force
     if is_valid_image_url(m.content):
         return m.content
     if m.attachments and len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
         return m.attachments[0]['url']
     return None
+
+def rmdiacritics(input):
+    '''
+    Return the base character of char, by "removing" any
+    diacritics like accents or curls and strokes and the like.
+    '''
+    output = ''
+    for c in input:
+        desc = unicodedata.name(c)
+        cutoff = desc.find(' WITH ')
+        if cutoff != -1:
+            desc = desc[:cutoff]
+        output += unicodedata.lookup(desc)
+    return output
