@@ -417,3 +417,17 @@ def rmdiacritics(input):
             desc = desc[:cutoff]
         output += unicodedata.lookup(desc)
     return output
+
+def clean_global_mentions(content):
+    """Wipes out mentions to @everyone and @here."""
+    transformations = {
+        '@everyone': '@\u200beveryone',
+        '@here': '@\u200bhere'
+    }
+
+    def repl2(obj):
+        return transformations.get(obj.group(0), '')
+
+    pattern = re.compile('|'.join(transformations.keys()))
+    print(content)
+    return pattern.sub(repl2, content)
