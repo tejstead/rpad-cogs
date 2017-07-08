@@ -175,7 +175,7 @@ class PadTwitch:
         self.settings.rmCustomCommand(channel, cmd_name)
         self.stream.send_chat_message(channel, 'Done deleting ' + cmd_name)
 
-    @commands.group(pass_context=True, no_pm=True)
+    @commands.group(pass_context=True)
     @checks.is_owner()
     async def padtwitch(self, ctx):
         """Manage twitter feed mirroring"""
