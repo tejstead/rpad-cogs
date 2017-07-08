@@ -59,6 +59,7 @@ class PadGlobal:
         !padglobal add command_name Text you want
         """
         command = command.lower()
+        text = clean_global_mentions(text)
         if command in self.bot.commands.keys():
             await self.bot.say("That is already a standard command.")
             return
