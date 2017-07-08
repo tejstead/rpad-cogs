@@ -218,17 +218,25 @@ class PadGlobal:
 
     @commands.command(pass_context=True)
     async def glossaryto(self, ctx, to_user : discord.Member, *, term : str):
-        """Send a user a glossary or pad/padfaq entry
+        """Send a user a glossary entry
 
-        ^glossaryto @tactical_retreat jewels?
+        ^glossaryto @tactical_retreat godfest
+        """
+        corrected_term, result = self.lookup_glossary(term)
+        await self._do_send_term(ctx, to_user, term, corrected_term, result)
+
+    @commands.command(pass_context=True)
+    async def padto(self, ctx, to_user : discord.Member, *, term : str):
+        """Send a user a pad/padfaq entry
+
+        ^padto @tactical_retreat jewels?
         """
         corrected_term = self._lookup_command(term)
-        result = None
-        if corrected_term:
-            result = self.c_commands[corrected_term]
-        else:
-            corrected_term, result = self.lookup_glossary(term)
+        result = self.c_commands.get(corrected_term, None)
+        await self._do_send_term(ctx, to_user, term, corrected_term, result)
 
+    async def _do_send_term(self, ctx, to_user : discord.Member, term, corrected_term, result):
+        """Does the heavy lifting shared by padto and glossaryto."""
         if result:
             result_output = '**{}** : {}'.format(corrected_term, result)
             result = "{} asked me to send you this:\n{}".format(ctx.message.author.name, result_output)
