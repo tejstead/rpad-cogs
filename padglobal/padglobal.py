@@ -222,11 +222,10 @@ class PadGlobal:
 
         ^glossaryto @tactical_retreat jewels?
         """
-        corrected_term = term
-        cmd_items = {k:v for k, v in self.c_commands.items()}
+        corrected_term = self._lookup_command(term)
         result = None
-        if term in cmd_items:
-            result = cmd_items[term]
+        if corrected_term:
+            result = self.c_commands[corrected_term]
         else:
             corrected_term, result = self.lookup_glossary(term)
 
@@ -275,6 +274,10 @@ class PadGlobal:
             return term, definition
 
         matches = difflib.get_close_matches(term, glossary.keys(), n=1, cutoff=.8)
+        
+        if not matches:
+            matches = self._get_corrected_cmds(term, glossary.keys())
+
         if not matches:
             return term, None
         else:
@@ -321,44 +324,54 @@ class PadGlobal:
         if not prefix:
             return
 
-        cmdlist = self.c_commands
         cmd = message.content[len(prefix):]
-        corrected = False
-        if cmd in cmdlist.keys():
-            pass
-        elif cmd.lower() in cmdlist.keys():
-            cmd = cmd.lower()
-        else:
-            cmd = cmd.lower()
-            adjusted_cmd = [
-                cmd + 's',
-                cmd + '?',
-                cmd + 's?',
-                cmd.rstrip('?'),
-                cmd.rstrip('s'),
-                cmd.rstrip('s?'),
-                cmd.rstrip('s?') + 's',
-                cmd.rstrip('s?') + '?',
-                cmd.rstrip('s?') + 's?',
-            ]
-            matched_cmds = [x for x in adjusted_cmd if x in cmdlist.keys()]
-            if matched_cmds:
-                cmd = matched_cmds[0]
-                corrected = True
-            else:
-                return
+        final_cmd = self._lookup_command(cmd)
+        if final_cmd is None:
+            return
 
-        if corrected:
-            await self.bot.send_message(message.channel, inline('Corrected to: {}'.format(cmd)))
-        cmd = cmdlist[cmd]
+        if final_cmd != cmd:
+            await self.bot.send_message(message.channel, inline('Corrected to: {}'.format(final_cmd)))
+        result = self.c_commands[final_cmd]
 
-        cmd = self.format_cc(cmd, message)
+        cmd = self.format_cc(result, message)
 
         emoji_list = message.server.emojis if message.server else []
-        cmd = fix_emojis_for_server(emoji_list, cmd)
-        await self.bot.send_message(message.channel, cmd)
+        result = fix_emojis_for_server(emoji_list, result)
+        await self.bot.send_message(message.channel, result)
 
+    def _lookup_command(self, cmd):
+        """Returns the corrected cmd name.
+        
+        Checks the raw command list, and if that fails, applies some corrections and takes
+        the most likely result. Returns None if no good match.
+        """
+        cmdlist = self.c_commands.keys()
+        if cmd in cmdlist:
+            return cmd
+        elif cmd.lower() in cmdlist:
+            return cmd.lower()
+        else:
+            corrected_cmds = self._get_corrected_cmds(cmd, cmdlist)
+            if corrected_cmds:
+                return corrected_cmds[0]
 
+        return None
+        
+    def _get_corrected_cmds(self, cmd, options):
+        """Applies some corrections to cmd and returns the best matches in order."""
+        cmd = cmd.lower()
+        adjusted_cmd = [
+            cmd + 's',
+            cmd + '?',
+            cmd + 's?',
+            cmd.rstrip('?'),
+            cmd.rstrip('s'),
+            cmd.rstrip('s?'),
+            cmd.rstrip('s?') + 's',
+            cmd.rstrip('s?') + '?',
+            cmd.rstrip('s?') + 's?',
+        ]
+        return [x for x in adjusted_cmd if x in options]
 
     def get_prefix(self, message):
         for p in self.bot.settings.get_prefixes(message.server):
