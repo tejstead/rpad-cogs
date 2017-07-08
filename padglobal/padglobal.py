@@ -326,17 +326,27 @@ class PadGlobal:
         corrected = False
         if cmd in cmdlist.keys():
             pass
+        elif cmd.lower() in cmdlist.keys():
+            cmd = cmd.lower()
         else:
             cmd = cmd.lower()
-            if cmd in cmdlist.keys():
-                pass
-            elif (cmd + 's') in cmdlist.keys():
-                cmd = cmd + 's'
-            elif (cmd + '?') in cmdlist.keys():
-                cmd = cmd + '?'
+            adjusted_cmd = [
+                cmd + 's',
+                cmd + '?',
+                cmd + 's?',
+                cmd.rstrip('?'),
+                cmd.rstrip('s'),
+                cmd.rstrip('s?'),
+                cmd.rstrip('s?') + 's',
+                cmd.rstrip('s?') + '?',
+                cmd.rstrip('s?') + 's?',
+            ]
+            matched_cmds = [x for x in adjusted_cmd if x in cmdlist.keys()]
+            if matched_cmds:
+                cmd = matched_cmds[0]
+                corrected = True
             else:
                 return
-            corrected = True
 
         if corrected:
             await self.bot.send_message(message.channel, inline('Corrected to: {}'.format(cmd)))
