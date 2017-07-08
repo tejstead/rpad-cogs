@@ -83,6 +83,7 @@ class Donations:
     async def mycommand(self, ctx, command : str, *, text : str):
         """Sets your custom command (donor only)."""
         user_id = ctx.message.author.id
+        text = clean_global_mentions(text)
         if user_id not in self.settings.donors():
             await self.bot.say(inline('Only donors can set a personal command'))
             return
