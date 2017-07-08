@@ -1,5 +1,6 @@
 import asyncio
 from collections import defaultdict
+from enum import Enum
 import http.client
 import json
 import os
@@ -12,7 +13,6 @@ import urllib.parse
 
 import discord
 from discord.ext import commands
-from enum import Enum
 
 from __main__ import user_allowed, send_cmd_help
 from google.cloud import vision
@@ -290,9 +290,13 @@ class TrUtils:
         await self.bot.say(inline('Done'))
 
     @commands.command(pass_context=True)
-    async def dumpmsg(self, ctx, msg_id : int):
+    async def dumpmsg(self, ctx, msg_id : int=None):
         """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped and some issues cleaned up"""
-        msg = await self.bot.get_message(ctx.message.channel, msg_id)
+        if msg_id:
+            msg = await self.bot.get_message(ctx.message.channel, msg_id)
+        else:
+            async for message in self.bot.logs_from(ctx.message.channel, limit=2):
+                msg = message
         content = msg.clean_content.strip()
         content = re.sub(r'<(:[0-9a-z_]+:)\d{18}>', r'\1', content, flags=re.IGNORECASE)
         content = box(content.replace('`', u'\u200b`'))
@@ -570,6 +574,9 @@ class TrUtils:
 
     @commands.command(pass_context=True)
     async def checkimg(self, ctx, img : str):
+        if img.startswith('https://cdn.discordapp'):
+            await self.bot.say(inline('That URL probably wont work because Discord blocks non-browser requests'))
+
         labels = self._get_image_labels(img)
         if labels is None:
             await self.bot.say(inline('failed to classify, check your URL'))
