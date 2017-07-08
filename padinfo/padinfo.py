@@ -1123,7 +1123,7 @@ def addNickname(m: Monster):
     nickname = m.name_na.lower()
     if ',' in nickname:
         name_parts = nickname.split(',')
-        if name_parts[1].strip().startswith('the'):
+        if name_parts[1].strip().startswith('the '):
             # handle names like 'xxx, the yyy' where xxx is the name
             nickname = name_parts[0]
         else:
