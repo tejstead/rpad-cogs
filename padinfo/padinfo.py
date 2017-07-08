@@ -6,6 +6,7 @@ import csv
 from datetime import datetime
 from datetime import timedelta
 import difflib
+from enum import Enum
 import http.client
 from itertools import groupby
 import json
@@ -20,11 +21,11 @@ import urllib.parse
 from dateutil import tz
 import discord
 from discord.ext import commands
-from enum import Enum
 import prettytable
 import pytz
 import romkan
 from setuptools.command.alias import alias
+import unidecode
 
 from __main__ import user_allowed, send_cmd_help
 
@@ -412,6 +413,7 @@ class PadInfo:
         return box(msg)
 
     def findMonster(self, query, na_only=False):
+        query = rmdiacritics(query)
         m, err, debug_info = self._findMonster(query, na_only)
 
         monster_id = m.monster_id if m else -1
@@ -605,7 +607,7 @@ class Monster:
         self.cost = int(base_monster.cost)
         self.max_level = int(base_monster.max_level)
 
-        self.name_na = base_monster.name_na
+        self.name_na = rmdiacritics(base_monster.name_na)
         self.name_jp = base_monster.name_jp
 
         self.on_us = monster_info.on_us == '1'
@@ -623,6 +625,8 @@ class Monster:
             adjusted_subname = ''
             for part in subname.split('・'):
                 roma_part = romkan.to_roma(part)
+                roma_part_undiecode = unidecode.unidecode(part)
+                
                 if part != roma_part and not containsJp(roma_part):
                     adjusted_subname += ' ' + roma_part.strip('-')
             adjusted_subname = adjusted_subname.strip()
