@@ -27,14 +27,19 @@ from .utils.settings import Settings
 
 LOGS_PER_CHANNEL_USER = 5
 
+
 def linked_img_count(message):
     return len(message.embeds) + len(message.attachments)
 
+
 def mod_or_perms(ctx, **perms):
-    server = ctx.message.server
-    mod_role = settings.get_server_mod(server).lower()
-    admin_role = settings.get_server_admin(server).lower()
-    return checks.role_or_permissions(ctx, lambda r: r.name.lower() in (mod_role, admin_role), **perms)
+    try:
+        server = ctx.message.server
+        mod_role = settings.get_server_mod(server).lower()
+        admin_role = settings.get_server_admin(server).lower()
+        return checks.role_or_permissions(ctx, lambda r: r.name.lower() in (mod_role, admin_role), **perms)
+    except:
+        return False
 
 
 class CtxWrapper:
