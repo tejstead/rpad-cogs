@@ -454,6 +454,8 @@ class CollabEggMachine(EggMachine):
             self.rem_config = IMOUTO_COLLAB_CONFIG_2
         if self.machine_id == 650:
             self.rem_config = FF_COLLAB_CONFIG
+        if self.machine_id == 1066:
+            self.rem_config = MH_COLLAB_CONFIG
 
         self.stones_per_roll = self.rem_config['stones_per_roll']
 
@@ -527,6 +529,19 @@ FF_COLLAB_CONFIG = {
         4: 57,
     },
 }
+
+MH_COLLAB_CONFIG = {
+    'stones_per_roll': 10,
+    'monster_id': {},
+    'rarity': {
+        8: 0,
+        7: 8,
+        6: 22,
+        5: 75,
+        4: 0,
+    },
+}
+
 
 class EggMachineModifier:
     def __init__(self, egg_instance, egg_name, monster_list, boost_rate):
