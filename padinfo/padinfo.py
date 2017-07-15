@@ -138,6 +138,9 @@ class PadInfo:
         self.id_emoji = '\N{INFORMATION SOURCE}'
         self.evo_emoji = char_to_emoji('e')
         self.mats_emoji = char_to_emoji('m')
+        self.ls_emoji = '\N{INFORMATION SOURCE}'
+        self.left_emoji = char_to_emoji('l')
+        self.right_emoji = char_to_emoji('r')
         self.pantheon_emoji = '\N{CLASSICAL BUILDING}'
         self.skillups_emoji = '\N{MEAT ON BONE}'
         self.pic_emoji = '\N{FRAME WITH PICTURE}'
@@ -292,12 +295,15 @@ class PadInfo:
         if skillups_embed:
             emoji_to_embed[self.skillups_emoji] = skillups_embed
 
-        remove_emoji = self.menu.emoji['no']
-        emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
+        return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed)
 
+    async def _do_menu(self, ctx, starting_menu_emoji, emoji_to_embed):
         if starting_menu_emoji not in emoji_to_embed:
             # Selected menu wasn't generated for this monster
             return EMBED_NOT_GENERATED
+
+        remove_emoji = self.menu.emoji['no']
+        emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
 
         try:
             result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=30)
@@ -352,19 +358,12 @@ class PadInfo:
             await self.bot.say(inline(err_msg.format('Right', right_query)))
             return
 
-        lhp, latk, lrcv, lresist = left_m.leader_skill_data.getMaxMultipliers()
-        rhp, ratk, rrcv, rresist = right_m.leader_skill_data.getMaxMultipliers()
-        multiplier_text = createMultiplierText(lhp, latk, lrcv, lresist, rhp, ratk, rrcv, rresist)
+        emoji_to_embed = OrderedDict()
+        emoji_to_embed[self.ls_emoji] = monstersToLsEmbed(left_m, right_m)
+        emoji_to_embed[self.left_emoji] = monsterToEmbed(left_m, self.get_emojis())
+        emoji_to_embed[self.right_emoji] = monsterToEmbed(right_m, self.get_emojis())
 
-        embed = discord.Embed()
-        embed.title = 'Multiplier [{}]\n\n'.format(multiplier_text)
-        description = ''
-        description += '\n**' + \
-            monsterToHeader(left_m, link=True) + '**\n' + (left_m.leader_text or 'None/Missing')
-        description += '\n**' + \
-            monsterToHeader(right_m, link=True) + '**\n' + (right_m.leader_text or 'None/Missing')
-        embed.description = description
-        await self.bot.say(embed=embed)
+        await self._do_menu(ctx, self.ls_emoji, emoji_to_embed)
 
     @commands.command(name="helpid", pass_context=True, aliases=['helppic', 'helpimg'])
     async def _helpid(self, ctx):
@@ -901,6 +900,23 @@ def monsterToPicEmbed(m: Monster):
     embed.set_image(url=url)
     # Clear the thumbnail, don't need it on pic
     embed.set_thumbnail(url='')
+    return embed
+
+
+def monstersToLsEmbed(left_m: Monster, right_m: Monster):
+    lhp, latk, lrcv, lresist = left_m.leader_skill_data.getMaxMultipliers()
+    rhp, ratk, rrcv, rresist = right_m.leader_skill_data.getMaxMultipliers()
+    multiplier_text = createMultiplierText(lhp, latk, lrcv, lresist, rhp, ratk, rrcv, rresist)
+
+    embed = discord.Embed()
+    embed.title = 'Multiplier [{}]\n\n'.format(multiplier_text)
+    description = ''
+    description += '\n**' + \
+        monsterToHeader(left_m, link=True) + '**\n' + (left_m.leader_text or 'None/Missing')
+    description += '\n**' + \
+        monsterToHeader(right_m, link=True) + '**\n' + (right_m.leader_text or 'None/Missing')
+    embed.description = description
+
     return embed
 
 
