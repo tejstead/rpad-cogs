@@ -1055,6 +1055,10 @@ AWAKENING_NAME_MAP_RPAD = {
     'Enhanced HP': 'boost_hp',
     'Enhanced Heal': 'boost_rcv',
 
+    'Enhanced Team HP': 'teamboost_hp',
+    'Enhanced Team Attack': 'teamboost_atk',
+    'Enhanced Team RCV': 'teamboost_rcv',
+
     'God Killer': 'killer_god',
     'Dragon Killer': 'killer_dragon',
     'Devil Killer': 'killer_devil',
@@ -1078,6 +1082,7 @@ AWAKENING_NAME_MAP_RPAD = {
     'Skill Boost': 'misc_sb',
     'Extend Time': 'misc_te',
     'Two-Pronged Attack': 'misc_tpa',
+    'Damage Void Shield Penetration': 'misc_voidshield',
 
     'Enhanced Fire Orbs': 'oe_fire',
     'Enhanced Water Orbs': 'oe_water',
@@ -1123,6 +1128,10 @@ AWAKENING_NAME_MAP = {
     'Enhanced Attack': 'ATK',
     'Enhanced Heal': 'RCV',
 
+    'Enhanced Team HP': 'TEAM-HP',
+    'Enhanced Team Attack': 'TEAM-ATK',
+    'Enhanced Team RCV': 'TEAM-RCV',
+
     'Auto-Recover': 'AUTO-RECOVER',
     'Skill Boost': 'SB',
     'Resistance-Skill Bind': 'SBR',
@@ -1133,6 +1142,7 @@ AWAKENING_NAME_MAP = {
     'Enhanced Combo': 'COMBO-BOOST',
     'Guard Break': 'DEF-BREAK',
     'Additional Attack': 'EXTRA-ATK',
+    'Damage Void Shield Penetration': 'VOID-BREAK',
 
     'Resistance-Bind': 'RES-BIND',
     'Resistance-Dark': 'RES-BLIND',
