@@ -60,13 +60,16 @@ submit an override suggestion: https://docs.google.com/forms/d/1kJH9Q0S8iqqULwrR
 
 EMBED_NOT_GENERATED = -1
 
+
 class OrderedCounter(Counter, OrderedDict):
     """Counter that remembers the order elements are first seen"""
+
     def __repr__(self):
         return "%s(%r)" % (self.__class_.__name__, OrderedDict(self))
 
     def __reduce__(self):
         return self.__class__, (OrderedDict(self),)
+
 
 def dl_nicknames():
     # one hour expiry
@@ -88,17 +91,20 @@ PDX_JP_ADJUSTMENTS = {}
 PDX_JP_ADJUSTMENTS.update(CROWS_1)
 PDX_JP_ADJUSTMENTS.update(CROWS_2)
 
+
 def get_pdx_url(m):
     pdx_id = m.monster_id_na
     if int(m.monster_id) == m.monster_id_jp:
         pdx_id = PDX_JP_ADJUSTMENTS.get(pdx_id, pdx_id)
     return INFO_PDX_TEMPLATE.format(pdx_id)
 
+
 def get_portrait_url(m):
     if int(m.monster_id) != m.monster_id_na:
         return RPAD_PORTRAIT_TEMPLATE.format('na', m.monster_id_na)
     else:
         return RPAD_PORTRAIT_TEMPLATE.format('jp', m.monster_id_jp)
+
 
 def get_pic_url(m):
     if int(m.monster_id) != m.monster_id_na:
@@ -108,6 +114,7 @@ def get_pic_url(m):
 
 
 EXPOSED_PAD_INFO = None
+
 
 class PadInfo:
     def __init__(self, bot):
@@ -141,7 +148,6 @@ class PadInfo:
             dataIO.save_json(self.historic_lookups_file_path, {})
 
         self.historic_lookups = dataIO.load_json(self.historic_lookups_file_path)
-
 
     def __unload(self):
         print("unloading padinfo")
@@ -353,8 +359,10 @@ class PadInfo:
         embed = discord.Embed()
         embed.title = 'Multiplier [{}]\n\n'.format(multiplier_text)
         description = ''
-        description += '\n**' + monsterToHeader(left_m, link=True) + '**\n' + (left_m.leader_text or 'None/Missing')
-        description += '\n**' + monsterToHeader(right_m, link=True) + '**\n' + (right_m.leader_text or 'None/Missing')
+        description += '\n**' + \
+            monsterToHeader(left_m, link=True) + '**\n' + (left_m.leader_text or 'None/Missing')
+        description += '\n**' + \
+            monsterToHeader(right_m, link=True) + '**\n' + (right_m.leader_text or 'None/Missing')
         embed.description = description
         await self.bot.say(embed=embed)
 
@@ -370,7 +378,7 @@ class PadInfo:
 
     @padinfo.command(pass_context=True)
     @checks.is_owner()
-    async def addgroupoverride(self, ctx, monster_id : int, nickname : str):
+    async def addgroupoverride(self, ctx, monster_id: int, nickname: str):
         m = self.id_to_monster[monster_id]
         self.settings.addGroupOverride(monster_id, nickname)
         output = 'mapped tree for No. {} {} to {}'.format(m.monster_id_na, m.name_na, nickname)
@@ -378,7 +386,7 @@ class PadInfo:
 
     @padinfo.command(pass_context=True)
     @checks.is_owner()
-    async def rmgroupoverride(self, ctx, monster_id : int):
+    async def rmgroupoverride(self, ctx, monster_id: int):
         if self.settings.checkGroupOverride(monster_id):
             self.settings.removeGroupOverride(monster_id)
             await self.bot.say(inline('Done'))
@@ -469,7 +477,6 @@ class PadInfo:
         if len(matches):
             return pickBestMonster(matches), None, "Full name, max of {}".format(len(matches))
 
-
         # for nicknames with 2 names, prefix search 2nd word, take max id
         if query in pginfo.two_word_entries:
             return pginfo.two_word_entries[query], None, "Second-word nickname prefix, max of {}".format(len(matches))
@@ -497,8 +504,8 @@ class PadInfo:
             return pginfo.all_entries[matches[0]], None, 'Close nickname match'
 
         # Still no decent matches. Try near hits on full name instead
-        get_na_name = lambda m: m.name_na.lower()
-        na_name_map = {m.name_na.lower() : m for m in pginfo.full_monster_list}
+        def get_na_name(m): return m.name_na.lower()
+        na_name_map = {m.name_na.lower(): m for m in pginfo.full_monster_list}
         matches = difflib.get_close_matches(query, na_name_map.keys(), n=1, cutoff=.9)
         if len(matches):
             return na_name_map[matches[0]], None, 'Close name match'
@@ -509,6 +516,7 @@ class PadInfo:
     def map_awakenings_text(self, m):
         """Exported for use in other cogs"""
         return _map_awakenings_text(m)
+
 
 def pickBestMonster(monster_list):
     return max(monster_list, key=lambda x: (x.selection_priority, x.rarity, x.monster_id_na))
@@ -563,6 +571,7 @@ class PadInfoSettings(CogSettings):
 HIGH_SELECTION_PRIORITY = 2
 LOW_SELECTION_PRIORITY = 1
 UNKNOWN_SELECTION_PRIORITY = 0
+
 
 class Monster:
     def __init__(self,
@@ -626,7 +635,7 @@ class Monster:
             for part in subname.split('・'):
                 roma_part = romkan.to_roma(part)
                 roma_part_undiecode = unidecode.unidecode(part)
-                
+
                 if part != roma_part and not containsJp(roma_part):
                     adjusted_subname += ' ' + roma_part.strip('-')
             adjusted_subname = adjusted_subname.strip()
@@ -671,14 +680,14 @@ class Monster:
         self.in_mpshop = self.buy_mp > 0
         self.sell_mp = monster_price.sell_mp
 
-
         assist_setting = additional_info.extra_val_1 if additional_info else None
         if assist_setting == '1':
             self.is_inheritable = True
         elif assist_setting == '2':
             self.is_inheritable = False
         else:
-            self.is_inheritable = len(self.awakening_names) > 0 and self.rarity >= 5 and self.sell_mp > 3000
+            self.is_inheritable = len(
+                self.awakening_names) > 0 and self.rarity >= 5 and self.sell_mp > 3000
 
         self.alt_evos = list()
 
@@ -689,6 +698,7 @@ class Monster:
         self.monsters_with_skill = list()
 
         self.evo_type = cur_evo.tv_type if cur_evo else None
+
 
 def monsterToInfoText(m: Monster):
     header = monsterToHeader(m)
@@ -716,7 +726,8 @@ def monsterToInfoText(m: Monster):
     if killers:
         info_row += '  |  Avail. Killers: ' + '/'.join(killers)
 
-    stats_row = 'Lv. {}  HP {}  ATK {}  RCV {}  Weighted {}'.format(m.max_level, m.hp, m.atk, m.rcv, m.weighted_stats)
+    stats_row = 'Lv. {}  HP {}  ATK {}  RCV {}  Weighted {}'.format(
+        m.max_level, m.hp, m.atk, m.rcv, m.weighted_stats)
 
     awakenings_row = _map_awakenings_text(m)
 
@@ -724,20 +735,24 @@ def monsterToInfoText(m: Monster):
 
     active_row = 'AS: '
     if m.active_skill:
-        active_row += '({}->{}): {}'.format(m.active_skill.turn_max, m.active_skill.turn_min, m.active_skill.desc)
+        active_row += '({}->{}): {}'.format(m.active_skill.turn_max,
+                                            m.active_skill.turn_min, m.active_skill.desc)
     else:
         active_row += 'None/Missing'
 
-    info_chunk = '{}\n{}\n{}\n{}\n{}\n{}'.format(header, info_row, stats_row, awakenings_row, ls_row, active_row)
+    info_chunk = '{}\n{}\n{}\n{}\n{}\n{}'.format(
+        header, info_row, stats_row, awakenings_row, ls_row, active_row)
     link_row = get_pdx_url(m)
 
     return info_chunk, link_row
 
-def monsterToHeader(m : Monster, link=False):
+
+def monsterToHeader(m: Monster, link=False):
     msg = 'No. {} {}'.format(m.monster_id_na, m.name_na)
     return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
 
-def monsterToJpSuffix(m : Monster):
+
+def monsterToJpSuffix(m: Monster):
     suffix = ""
     if m.roma_subname:
         suffix += ' [{}]'.format(m.roma_subname)
@@ -745,17 +760,21 @@ def monsterToJpSuffix(m : Monster):
         suffix += ' (JP only)'
     return suffix
 
-def monsterToLongHeader(m : Monster, link=False):
+
+def monsterToLongHeader(m: Monster, link=False):
     msg = monsterToHeader(m) + monsterToJpSuffix(m)
     return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
 
-def monsterToLongHeaderWithAttr(m : Monster, link=False):
+
+def monsterToLongHeaderWithAttr(m: Monster, link=False):
     header = 'No. {} {} {}'.format(
         m.monster_id_na,
-        "({}{})".format(attr_prefix_map[m.attr1], "/" + attr_prefix_map[m.attr2] if m.attr2 else ""),
+        "({}{})".format(attr_prefix_map[m.attr1], "/" +
+                        attr_prefix_map[m.attr2] if m.attr2 else ""),
         m.name_na)
     msg = header + monsterToJpSuffix(m)
     return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
+
 
 def monsterToEvoText(m: Monster):
     output = monsterToLongHeader(m)
@@ -763,10 +782,12 @@ def monsterToEvoText(m: Monster):
         output += "\n\t- {}".format(monsterToLongHeader(ae))
     return output
 
-def monsterToThumbnailUrl(m : Monster):
+
+def monsterToThumbnailUrl(m: Monster):
     return get_portrait_url(m)
 
-def monsterToBaseEmbed(m : Monster):
+
+def monsterToBaseEmbed(m: Monster):
     header = monsterToLongHeader(m)
     embed = discord.Embed()
     embed.set_thumbnail(url=monsterToThumbnailUrl(m))
@@ -775,7 +796,8 @@ def monsterToBaseEmbed(m : Monster):
     embed.set_footer(text='Requester may click the reactions below to switch tabs')
     return embed
 
-def monsterToEvoEmbed(m : Monster):
+
+def monsterToEvoEmbed(m: Monster):
     embed = monsterToBaseEmbed(m)
 
     if not len(m.alt_evos):
@@ -791,7 +813,8 @@ def monsterToEvoEmbed(m : Monster):
 
     return embed
 
-def monsterToEvoMatsEmbed(m : Monster):
+
+def monsterToEvoMatsEmbed(m: Monster):
     embed = monsterToBaseEmbed(m)
 
     mats_to_evo_size = len(m.mats_to_evo)
@@ -821,8 +844,9 @@ def monsterToEvoMatsEmbed(m : Monster):
 
     return embed
 
-# def monsterToPantheonEmbed(m : Monster, pginfo : PgDataWrapper):
-def monsterToPantheonEmbed(m : Monster, pginfo):
+
+def monsterToPantheonEmbed(m: Monster, pginfo):
+    # def monsterToPantheonEmbed(m : Monster, pginfo : PgDataWrapper):
     pantheon_list = pginfo.series_id_to_monsters.get(m.series_id, [])
     if len(pantheon_list) == 0 or len(pantheon_list) > 6:
         return None
@@ -837,8 +861,9 @@ def monsterToPantheonEmbed(m : Monster, pginfo):
 
     return embed
 
-# def monsterToSkillupsEmbed(m : Monster, pginfo : PgDataWrapper):
-def monsterToSkillupsEmbed(m : Monster, pginfo):
+
+def monsterToSkillupsEmbed(m: Monster, pginfo):
+    # def monsterToSkillupsEmbed(m : Monster, pginfo : PgDataWrapper):
     skillups_list = m.monsters_with_skill
     if len(skillups_list) + len(m.server_actives) == 0:
         return None
@@ -864,11 +889,13 @@ def monsterToSkillupsEmbed(m : Monster, pginfo):
 
     return embed
 
-def monsterToPicUrl(m : Monster):
+
+def monsterToPicUrl(m: Monster):
     return get_pic_url(m)
 
-# def monsterToSkillupsEmbed(m : Monster, pginfo : PgDataWrapper):
-def monsterToPicEmbed(m : Monster):
+
+def monsterToPicEmbed(m: Monster):
+    # def monsterToSkillupsEmbed(m : Monster, pginfo : PgDataWrapper):
     embed = monsterToBaseEmbed(m)
     url = monsterToPicUrl(m)
     embed.set_image(url=url)
@@ -876,7 +903,8 @@ def monsterToPicEmbed(m : Monster):
     embed.set_thumbnail(url='')
     return embed
 
-def monsterToTypeString(m : Monster):
+
+def monsterToTypeString(m: Monster):
     output = m.type1
     if m.type2:
         output += '/' + m.type2
@@ -884,7 +912,8 @@ def monsterToTypeString(m : Monster):
         output += '/' + m.type3
     return output
 
-def monsterToAcquireString(m : Monster):
+
+def monsterToAcquireString(m: Monster):
     acquire_text = None
     if m.farmable and not m.mp_evo:
         # Some MP shop monsters 'drop' in PADR
@@ -905,13 +934,15 @@ def monsterToAcquireString(m : Monster):
         acquire_text = 'MP Shop Evo'
     return acquire_text
 
+
 def match_emoji(emoji_list, name):
     for e in emoji_list:
         if e.name == name:
             return e
     return None
 
-def monsterToEmbed(m : Monster, emoji_list):
+
+def monsterToEmbed(m: Monster, emoji_list):
     embed = monsterToBaseEmbed(m)
 
     info_row_1 = monsterToTypeString(m)
@@ -951,40 +982,44 @@ def monsterToEmbed(m : Monster, emoji_list):
 
     if len(m.server_actives) >= 2:
         for server, active in m.server_actives.items():
-            active_header = '({} Server) Active Skill ({} -> {})'.format(server, active.turn_max, active.turn_min)
+            active_header = '({} Server) Active Skill ({} -> {})'.format(server,
+                                                                         active.turn_max, active.turn_min)
             active_body = active.desc
             embed.add_field(name=active_header, value=active_body, inline=False)
     else:
         active_header = 'Active Skill'
         active_body = 'None/Missing'
         if m.active_skill:
-            active_header = 'Active Skill ({} -> {})'.format(m.active_skill.turn_max, m.active_skill.turn_min)
+            active_header = 'Active Skill ({} -> {})'.format(m.active_skill.turn_max,
+                                                             m.active_skill.turn_min)
             active_body = m.active_skill.desc
         embed.add_field(name=active_header, value=active_body, inline=False)
 
     ls_row = m.leader_text if m.leader_text else 'None/Missing'
     ls_header = 'Leader Skill'
     if m.multiplier_text:
-            ls_header += " [ {} ]".format(m.multiplier_text)
+        ls_header += " [ {} ]".format(m.multiplier_text)
     embed.add_field(name=ls_header, value=ls_row, inline=False)
 
     return embed
 
+
 attr_prefix_map = {
-  'Fire':'r',
-  'Water':'b',
-  'Wood':'g',
-  'Light':'l',
-  'Dark':'d',
+    'Fire': 'r',
+    'Water': 'b',
+    'Wood': 'g',
+    'Light': 'l',
+    'Dark': 'd',
 }
 
 attr_prefix_long_map = {
-  'Fire':'red',
-  'Water':'blue',
-  'Wood':'green',
-  'Light':'light',
-  'Dark':'dark',
+    'Fire': 'red',
+    'Water': 'blue',
+    'Wood': 'green',
+    'Light': 'light',
+    'Dark': 'dark',
 }
+
 
 def compute_killers(*types):
     if 'Balance' in types:
@@ -994,130 +1029,132 @@ def compute_killers(*types):
         killers.update(type_to_killers_map.get(t, []))
     return sorted(killers)
 
+
 type_to_killers_map = {
-  'God' : ['Devil'],
-  'Devil' : ['God'],
-  'Machine' : ['God', 'Balance'],
-  'Dragon' : ['Machine', 'Healer'],
-  'Physical' : ['Machine', 'Healer'],
-  'Attacker' : ['Devil', 'Physical'],
-  'Healer' : ['Dragon', 'Attacker'],
+    'God': ['Devil'],
+    'Devil': ['God'],
+    'Machine': ['God', 'Balance'],
+    'Dragon': ['Machine', 'Healer'],
+    'Physical': ['Machine', 'Healer'],
+    'Attacker': ['Devil', 'Physical'],
+    'Healer': ['Dragon', 'Attacker'],
 }
 
 series_to_prefix_map = {
-  '130' : ['halloween'],
-  '136' : ['xmas', 'christmas'],
-  '125' : ['summer', 'beach'],
-  '114' : ['school', 'academy', 'gakuen'],
-  '139' : ['new years', 'ny'],
-  '149' : ['wedding', 'bride'],
-  '154' : ['padr'],
+    '130': ['halloween'],
+    '136': ['xmas', 'christmas'],
+    '125': ['summer', 'beach'],
+    '114': ['school', 'academy', 'gakuen'],
+    '139': ['new years', 'ny'],
+    '149': ['wedding', 'bride'],
+    '154': ['padr'],
 }
 
 AWAKENING_NAME_MAP_RPAD = {
-  'Enhanced Attack': 'boost_atk',
-  'Enhanced HP': 'boost_hp',
-  'Enhanced Heal': 'boost_rcv',
+    'Enhanced Attack': 'boost_atk',
+    'Enhanced HP': 'boost_hp',
+    'Enhanced Heal': 'boost_rcv',
 
-  'God Killer': 'killer_god',
-  'Dragon Killer': 'killer_dragon',
-  'Devil Killer': 'killer_devil',
-  'Machine Killer': 'killer_machine',
-  'Balanced Killer': 'killer_balance',
-  'Attacker Killer': 'killer_attacker',
+    'God Killer': 'killer_god',
+    'Dragon Killer': 'killer_dragon',
+    'Devil Killer': 'killer_devil',
+    'Machine Killer': 'killer_machine',
+    'Balanced Killer': 'killer_balance',
+    'Attacker Killer': 'killer_attacker',
 
-  'Physical Killer': 'killer_physical',
-  'Healer Killer': 'killer_healer',
-  'Evolve Material Killer': 'killer_evomat',
-  'Awaken Material Killer': 'killer_awoken',
-  'Enhance Material Killer': 'killer_enhancemat',
-  'Vendor Material Killer': 'killer_vendor',
+    'Physical Killer': 'killer_physical',
+    'Healer Killer': 'killer_healer',
+    'Evolve Material Killer': 'killer_evomat',
+    'Awaken Material Killer': 'killer_awoken',
+    'Enhance Material Killer': 'killer_enhancemat',
+    'Vendor Material Killer': 'killer_vendor',
 
-  'Auto-Recover': 'misc_autoheal',
-  'Recover Bind': 'misc_bindclear',
-  'Enhanced Combo': 'misc_comboboost',
-  'Guard Break' : 'misc_guardbreak',
-  'Multi Boost': 'misc_multiboost',
-  'Additional Attack': 'misc_extraattack',
-  'Skill Boost': 'misc_sb',
-  'Extend Time': 'misc_te',
-  'Two-Pronged Attack': 'misc_tpa',
+    'Auto-Recover': 'misc_autoheal',
+    'Recover Bind': 'misc_bindclear',
+    'Enhanced Combo': 'misc_comboboost',
+    'Guard Break': 'misc_guardbreak',
+    'Multi Boost': 'misc_multiboost',
+    'Additional Attack': 'misc_extraattack',
+    'Skill Boost': 'misc_sb',
+    'Extend Time': 'misc_te',
+    'Two-Pronged Attack': 'misc_tpa',
 
-  'Enhanced Fire Orbs': 'oe_fire',
-  'Enhanced Water Orbs': 'oe_water',
-  'Enhanced Wood Orbs': 'oe_wood',
-  'Enhanced Light Orbs': 'oe_light',
-  'Enhanced Dark Orbs': 'oe_dark',
-  'Enhanced Heal Orbs': 'oe_heart',
+    'Enhanced Fire Orbs': 'oe_fire',
+    'Enhanced Water Orbs': 'oe_water',
+    'Enhanced Wood Orbs': 'oe_wood',
+    'Enhanced Light Orbs': 'oe_light',
+    'Enhanced Dark Orbs': 'oe_dark',
+    'Enhanced Heal Orbs': 'oe_heart',
 
-  'Reduce Fire Damage': 'reduce_fire',
-  'Reduce Water Damage': 'reduce_water',
-  'Reduce Wood Damage': 'reduce_wood',
-  'Reduce Light Damage': 'reduce_light',
-  'Reduce Dark Damage': 'reduce_dark',
+    'Reduce Fire Damage': 'reduce_fire',
+    'Reduce Water Damage': 'reduce_water',
+    'Reduce Wood Damage': 'reduce_wood',
+    'Reduce Light Damage': 'reduce_light',
+    'Reduce Dark Damage': 'reduce_dark',
 
-  'Resistance-Bind': 'res_bind',
-  'Resistance-Dark': 'res_blind',
-  'Resistance-Jammers': 'res_jammer',
-  'Resistance-Poison': 'res_poison',
-  'Resistance-Skill Bind': 'res_skillbind',
+    'Resistance-Bind': 'res_bind',
+    'Resistance-Dark': 'res_blind',
+    'Resistance-Jammers': 'res_jammer',
+    'Resistance-Poison': 'res_poison',
+    'Resistance-Skill Bind': 'res_skillbind',
 
-  'Enhanced Fire Att.': 'row_fire',
-  'Enhanced Water Att.': 'row_water',
-  'Enhanced Wood Att.': 'row_wood',
-  'Enhanced Light Att.': 'row_light',
-  'Enhanced Dark Att.': 'row_dark',
+    'Enhanced Fire Att.': 'row_fire',
+    'Enhanced Water Att.': 'row_water',
+    'Enhanced Wood Att.': 'row_wood',
+    'Enhanced Light Att.': 'row_light',
+    'Enhanced Dark Att.': 'row_dark',
 }
 
 AWAKENING_NAME_MAP = {
-  'Enhanced Fire Orbs': 'R-OE',
-  'Enhanced Water Orbs': 'B-OE',
-  'Enhanced Wood Orbs': 'G-OE',
-  'Enhanced Light Orbs': 'L-OE',
-  'Enhanced Dark Orbs': 'D-OE',
-  'Enhanced Heal Orbs': 'H-OE',
+    'Enhanced Fire Orbs': 'R-OE',
+    'Enhanced Water Orbs': 'B-OE',
+    'Enhanced Wood Orbs': 'G-OE',
+    'Enhanced Light Orbs': 'L-OE',
+    'Enhanced Dark Orbs': 'D-OE',
+    'Enhanced Heal Orbs': 'H-OE',
 
-  'Enhanced Fire Att.': 'R-RE',
-  'Enhanced Water Att.': 'B-RE',
-  'Enhanced Wood Att.': 'G-RE',
-  'Enhanced Light Att.': 'L-RE',
-  'Enhanced Dark Att.': 'D-RE',
+    'Enhanced Fire Att.': 'R-RE',
+    'Enhanced Water Att.': 'B-RE',
+    'Enhanced Wood Att.': 'G-RE',
+    'Enhanced Light Att.': 'L-RE',
+    'Enhanced Dark Att.': 'D-RE',
 
-  'Enhanced HP': 'HP',
-  'Enhanced Attack': 'ATK',
-  'Enhanced Heal': 'RCV',
+    'Enhanced HP': 'HP',
+    'Enhanced Attack': 'ATK',
+    'Enhanced Heal': 'RCV',
 
-  'Auto-Recover': 'AUTO-RECOVER',
-  'Skill Boost': 'SB',
-  'Resistance-Skill Bind': 'SBR',
-  'Two-Pronged Attack': 'TPA',
-  'Multi Boost': 'MULTI-BOOST',
-  'Recover Bind': 'RCV-BIND',
-  'Extend Time': 'TE',
-  'Enhanced Combo': 'COMBO-BOOST',
-  'Guard Break' : 'DEF-BREAK',
-  'Additional Attack' : 'EXTRA-ATK',
+    'Auto-Recover': 'AUTO-RECOVER',
+    'Skill Boost': 'SB',
+    'Resistance-Skill Bind': 'SBR',
+    'Two-Pronged Attack': 'TPA',
+    'Multi Boost': 'MULTI-BOOST',
+    'Recover Bind': 'RCV-BIND',
+    'Extend Time': 'TE',
+    'Enhanced Combo': 'COMBO-BOOST',
+    'Guard Break': 'DEF-BREAK',
+    'Additional Attack': 'EXTRA-ATK',
 
-  'Resistance-Bind': 'RES-BIND',
-  'Resistance-Dark': 'RES-BLIND',
-  'Resistance-Poison': 'RES-POISON',
-  'Resistance-Jammers': 'RES-JAMMER',
+    'Resistance-Bind': 'RES-BIND',
+    'Resistance-Dark': 'RES-BLIND',
+    'Resistance-Poison': 'RES-POISON',
+    'Resistance-Jammers': 'RES-JAMMER',
 
-  'Reduce Fire Damage': 'R-RES',
-  'Reduce Water Damage': 'B-RES',
-  'Reduce Wood Damage': 'G-RES',
-  'Reduce Light Damage': 'L-RES',
-  'Reduce Dark Damage': 'D-RES',
+    'Reduce Fire Damage': 'R-RES',
+    'Reduce Water Damage': 'B-RES',
+    'Reduce Wood Damage': 'G-RES',
+    'Reduce Light Damage': 'L-RES',
+    'Reduce Dark Damage': 'D-RES',
 
-  'Healer Killer': 'K-HEALER',
-  'Machine Killer': 'K-MACHINE',
-  'Dragon Killer': 'K-DRAGON',
-  'Attacker Killer': 'K-ATTACKER',
-  'Physical Killer': 'K-PHYSICAL',
-  'God Killer': 'K-GOD',
-  'Devil Killer': 'K-DEVIL',
-  'Balance Killer': 'K-BALANCE',
+    'Healer Killer': 'K-HEALER',
+    'Machine Killer': 'K-MACHINE',
+    'Dragon Killer': 'K-DRAGON',
+    'Attacker Killer': 'K-ATTACKER',
+    'Physical Killer': 'K-PHYSICAL',
+    'God Killer': 'K-GOD',
+    'Devil Killer': 'K-DEVIL',
+    'Balance Killer': 'K-BALANCE',
 }
+
 
 def addNickname(m: Monster):
     nickname = m.name_na.lower()
@@ -1134,6 +1171,7 @@ def addNickname(m: Monster):
         nickname = nickname.replace('awoken', '')
 
     m.nickname = nickname.strip()
+
 
 def addPrefixes(m: Monster):
     prefixes = set()
@@ -1195,7 +1233,7 @@ class MonsterGroup:
         self.monsters = list()
 
     def computeNickname(self):
-        get_nickname = lambda x: x.nickname
+        def get_nickname(x): return x.nickname
         sorted_monsters = sorted(self.monsters, key=get_nickname)
         grouped = [(c, len(list(cgen))) for c, cgen in groupby(sorted_monsters, get_nickname)]
         best_tuple = max(grouped, key=itemgetter(1))
@@ -1203,13 +1241,15 @@ class MonsterGroup:
         for m in self.monsters:
             m.original_nickname = m.nickname
             m.nickname = self.nickname
-            m.debug_info += ' | Original NN ({}) | Final NN ({})'.format(m.original_nickname, m.nickname)
+            m.debug_info += ' | Original NN ({}) | Final NN ({})'.format(
+                m.original_nickname, m.nickname)
 
     def overrideNickname(self, nickname):
         for m in self.monsters:
             m.original_nickname = m.nickname
             m.nickname = nickname
-            m.debug_info += ' | Original NN ({}) | Override NN ({})'.format(m.original_nickname, m.nickname)
+            m.debug_info += ' | Original NN ({}) | Override NN ({})'.format(
+                m.original_nickname, m.nickname)
 
 
 class PgDataWrapper:
@@ -1218,17 +1258,21 @@ class PgDataWrapper:
         awoken_list = padguide.loadJsonToItem('awokenSkillList.jsp', padguide.PgAwakening)
         evolution_list = padguide.loadJsonToItem('evolutionList.jsp', padguide.PgEvo)
         evolution_mat_list = padguide.loadJsonToItem('evoMaterialList.jsp', padguide.PgEvoMaterial)
-        monster_add_info_list = padguide.loadJsonToItem('monsterAddInfoList.jsp', padguide.PgMonsterAddInfo)
+        monster_add_info_list = padguide.loadJsonToItem(
+            'monsterAddInfoList.jsp', padguide.PgMonsterAddInfo)
         monster_info_list = padguide.loadJsonToItem('monsterInfoList.jsp', padguide.PgMonsterInfo)
         base_monster_list = padguide.loadJsonToItem('monsterList.jsp', padguide.PgBaseMonster)
         skill_list = padguide.loadJsonToItem('skillList.jsp', padguide.PgSkill)
-        skill_leader_data_list = padguide.loadJsonToItem('skillLeaderDataList.jsp', padguide.PgSkillLeaderData)
+        skill_leader_data_list = padguide.loadJsonToItem(
+            'skillLeaderDataList.jsp', padguide.PgSkillLeaderData)
         type_list = padguide.loadJsonToItem('typeList.jsp', padguide.PgType)
         series_list = padguide.loadJsonToItem('seriesList.jsp', padguide.PgSeries)
         mp_list = padguide.loadJsonToItem('monsterPriceList.jsp', padguide.PgMonsterPrice)
 
-        dungeon_monster_list = padguide.loadJsonToItem('dungeonMonsterList.jsp', padguide.PgDungeonMonster)
-        dungeon_monster_drop_list = padguide.loadJsonToItem('dungeonMonsterDropList.jsp', padguide.PgDungeonMonsterDrop)
+        dungeon_monster_list = padguide.loadJsonToItem(
+            'dungeonMonsterList.jsp', padguide.PgDungeonMonster)
+        dungeon_monster_drop_list = padguide.loadJsonToItem(
+            'dungeonMonsterDropList.jsp', padguide.PgDungeonMonsterDrop)
         dungeon_list = padguide.loadJsonToItem('dungeonList.jsp', padguide.PgDungeon)
 
         attribute_map = {x.attribute_id: x for x in attribute_list}
@@ -1264,7 +1308,8 @@ class PgDataWrapper:
         series_map = {x.series_id: x for x in series_list}
         monster_id_to_monster_price = {x.monster_id: x for x in mp_list}
 
-        monster_id_to_drop_info_list = self.computeMonsterDropInfoCombined(dungeon_monster_drop_list, dungeon_monster_list, dungeon_list)
+        monster_id_to_drop_info_list = self.computeMonsterDropInfoCombined(
+            dungeon_monster_drop_list, dungeon_monster_list, dungeon_list)
 
         # Create a mapping of skill IDs to monsters, for computing skillups
         skill_to_monster_list = defaultdict(list)
@@ -1319,7 +1364,6 @@ class PgDataWrapper:
 
             addNickname(full_monster)
             addPrefixes(full_monster)
-
 
             self.full_monster_list.append(full_monster)
             self.full_monster_map[monster_id] = full_monster
@@ -1403,9 +1447,8 @@ class PgDataWrapper:
             else:
                 self.hp_monster_groups.append(mg)
 
-
         for full_monster in self.full_monster_list:
-            for monster_id in  full_monster.monster_ids_with_skill:
+            for monster_id in full_monster.monster_ids_with_skill:
                 if monster_id == '0':
                     continue
 
@@ -1415,7 +1458,6 @@ class PgDataWrapper:
 
                 if not skillup_monster.rem_evo:
                     full_monster.monsters_with_skill.append(skillup_monster)
-
 
         # Unzip the monster groups into monster lists
         self.hp_monsters = list()
@@ -1432,7 +1474,7 @@ class PgDataWrapper:
                 m.debug_info += ' | LP'
 
         # Sort the monster lists by largest group size first, then largest monster id
-        group_id_sort = lambda m: (m.group_size, m.monster_id_na)
+        def group_id_sort(m): return (m.group_size, m.monster_id_na)
         self.hp_monsters.sort(key=group_id_sort, reverse=True)
         self.lp_monsters.sort(key=group_id_sort, reverse=True)
 
@@ -1442,26 +1484,31 @@ class PgDataWrapper:
         self.buildNicknameLists(self.hp_monsters)
         self.buildNicknameLists(self.lp_monsters)
 
-        self.id_to_monster = {m.monster_id_na : m for m in self.full_monster_list}
+        self.id_to_monster = {m.monster_id_na: m for m in self.full_monster_list}
 
         skill_rotation = padguide.loadJsonToItem('skillRotationList.jsp', padguide.PgSkillRotation)
-        dated_skill_rotation = padguide.loadJsonToItem('skillRotationListList.jsp', padguide.PgDatedSkillRotation)
+        dated_skill_rotation = padguide.loadJsonToItem(
+            'skillRotationListList.jsp', padguide.PgDatedSkillRotation)
 
-        id_to_skill_rotation = {sr.tsr_seq : sr for sr in skill_rotation}
-        merged_rotation = [padguide.PgMergedRotation(id_to_skill_rotation[dsr.tsr_seq], dsr) for dsr in dated_skill_rotation]
+        id_to_skill_rotation = {sr.tsr_seq: sr for sr in skill_rotation}
+        merged_rotation = [padguide.PgMergedRotation(
+            id_to_skill_rotation[dsr.tsr_seq], dsr) for dsr in dated_skill_rotation]
 
         skill_id_to_monsters = defaultdict(list)
         for m in self.full_monster_list:
             if m.active_skill:
                 skill_id_to_monsters[m.active_skill.skill_id].append(m)
 
-        monster_id_to_monster = {m.monster_id : m for m in self.full_monster_list}
-        self.computeCurrentRotations(merged_rotation, 'US', NA_TZ_OBJ, monster_id_to_monster, skill_map, skill_id_to_monsters)
-        self.computeCurrentRotations(merged_rotation, 'JP', JP_TZ_OBJ, monster_id_to_monster, skill_map, skill_id_to_monsters)
+        monster_id_to_monster = {m.monster_id: m for m in self.full_monster_list}
+        self.computeCurrentRotations(merged_rotation, 'US', NA_TZ_OBJ,
+                                     monster_id_to_monster, skill_map, skill_id_to_monsters)
+        self.computeCurrentRotations(merged_rotation, 'JP', JP_TZ_OBJ,
+                                     monster_id_to_monster, skill_map, skill_id_to_monsters)
 
     def computeCurrentRotations(self, merged_rotation, server, server_tz, monster_id_to_monster, skill_map, skill_id_to_monsters):
         server_now = datetime.now().replace(tzinfo=server_tz).date()
-        active_rotation = [mr for mr in merged_rotation if mr.server == server and mr.rotation_date <= server_now]
+        active_rotation = [mr for mr in merged_rotation if mr.server ==
+                           server and mr.rotation_date <= server_now]
         server = normalizeServer(server)
 
         monsters_to_rotations = defaultdict(list)
@@ -1572,6 +1619,7 @@ def shouldFilterMonster(m: Monster):
 
     return failed_type or failed_ss or failed_rarity or failed_chibi
 
+
 def shouldFilterGroup(mg: MonsterGroup):
     lp_grp_min_rarity = 5
     max_rarity = max(m.rarity for m in mg.monsters)
@@ -1579,6 +1627,7 @@ def shouldFilterGroup(mg: MonsterGroup):
     failed_max_rarity = max_rarity < lp_grp_min_rarity
 
     return failed_max_rarity
+
 
 def createMultiplierText(hp1, atk1, rcv1, resist1, hp2, atk2, rcv2, resist2):
     def fmtNum(val):
@@ -1590,7 +1639,8 @@ def createMultiplierText(hp1, atk1, rcv1, resist1, hp2, atk2, rcv2, resist2):
         text += ' Resist {}%'.format(fmtNum(100 * (1 - (1 - resist1) * (1 - resist2))))
     return text
 
-def _map_awakenings_text(m : Monster):
+
+def _map_awakenings_text(m: Monster):
     awakenings_row = ''
     unique_awakenings = set(m.awakening_names)
     for a in unique_awakenings:
