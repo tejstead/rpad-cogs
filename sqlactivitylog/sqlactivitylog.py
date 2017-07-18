@@ -439,6 +439,7 @@ class SqlActivityLogger(object):
           INSERT INTO messages(timestamp, server_id, channel_id, user_id, msg_type, content, clean_content)
           VALUES(:timestamp, :server_id, :channel_id, :user_id, :msg_type, :content, :clean_content)
         '''
+        timestamp = timestamp or datetime.utcnow()
         server_id = message.server.id if message.server else -1
         channel_id = message.channel.id if message.channel else -1
 
