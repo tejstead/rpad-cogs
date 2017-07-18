@@ -55,12 +55,22 @@ CREATE INDEX IF NOT EXISTS idx_messages_server_id_user_id
 ON messages(server_id, user_id)
 '''
 
+CREATE_INDEX_3 = '''
+CREATE INDEX IF NOT EXISTS idx_messages_server_id_clean_content
+ON messages(server_id, clean_content)
+'''
+
+CREATE_INDEX_4 = '''
+CREATE INDEX IF NOT EXISTS idx_messages_server_id_timestamp
+ON messages(server_id, timestamp)
+'''
+
 MAX_LOGS = 500
 
 USER_QUERY = '''
 SELECT * FROM (
     SELECT timestamp, channel_id, msg_type, clean_content
-    FROM messages
+    FROM messages INDEXED BY idx_messages_server_id_user_id
     WHERE server_id = :server_id
       AND user_id = :user_id
     ORDER BY timestamp DESC
@@ -72,7 +82,7 @@ ORDER BY timestamp ASC
 CHANNEL_QUERY = '''
 SELECT * FROM (
     SELECT timestamp, user_id, msg_type, clean_content
-    FROM messages
+    FROM messages INDEXED BY idx_messages_server_id_channel_id_user_id
     WHERE server_id = :server_id
       AND channel_id = :channel_id
       AND user_id <> :bot_id
@@ -85,7 +95,7 @@ ORDER BY timestamp ASC
 USER_CHANNEL_QUERY = '''
 SELECT * FROM (
     SELECT timestamp, msg_type, clean_content
-    FROM messages
+    FROM messages INDEXED BY idx_messages_server_id_channel_id_user_id
     WHERE server_id = :server_id
       AND user_id = :user_id
       AND channel_id = :channel_id
@@ -98,7 +108,7 @@ ORDER BY timestamp ASC
 CONTENT_QUERY = '''
 SELECT * FROM (
     SELECT timestamp, channel_id, user_id, msg_type, clean_content
-    FROM messages
+    FROM messages INDEXED BY idx_messages_server_id_clean_content
     WHERE server_id = :server_id
       AND lower(clean_content) LIKE lower(:content_query)
       AND user_id <> :bot_id
@@ -110,7 +120,7 @@ ORDER BY timestamp ASC
 
 WHOSAYS_QUERY = '''
 SELECT user_id, count(*)
-FROM messages
+FROM messages INDEXED BY idx_messages_server_id_clean_content
 WHERE server_id = :server_id
   AND lower(clean_content) LIKE lower(:content_query)
   AND user_id <> :bot_id
@@ -122,7 +132,7 @@ LIMIT :row_count
 
 DAILY_REPORT_QUERY = '''
 SELECT DATE(timestamp) AS date, COUNT(DISTINCT user_id) AS distinct_users, count(*) AS total_messages
-FROM messages
+FROM messages INDEXED BY idx_messages_server_id_timestamp
 WHERE server_id = :server_id
   AND timestamp > :start_timestamp
 GROUP BY date
@@ -132,7 +142,7 @@ LIMIT :row_count
 
 PERIOD_REPORT_QUERY = '''
 SELECT COUNT(DISTINCT user_id) AS distinct_users, count(*) AS total_messages
-FROM messages
+FROM messages INDEXED BY idx_messages_server_id_timestamp
 WHERE server_id = :server_id
   AND timestamp between :start_timestamp and :end_timestamp
 '''
@@ -150,6 +160,8 @@ class SqlActivityLogger(object):
         self.con.execute(CREATE_TABLE)
         self.con.execute(CREATE_INDEX_1)
         self.con.execute(CREATE_INDEX_2)
+        self.con.execute(CREATE_INDEX_3)
+        self.con.execute(CREATE_INDEX_4)
         self.insert_timing = deque(maxlen=1000)
 
     def __unload(self):
@@ -259,7 +271,6 @@ class SqlActivityLogger(object):
         await self.queryAndPrint(server, USER_CHANNEL_QUERY, values, column_data)
 
     @exlog.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
     async def query(self, ctx, query, count=10):
         """exlog query "4 whale" 100
 
@@ -268,6 +279,10 @@ class SqlActivityLogger(object):
         Count is optional, with a low default and a maximum value.
         The bot is excluded from results.
         """
+        if query[0] in ('%', '_'):
+            await self.bot.say('`You cannot start this query with a wildcard`')
+            return
+
         count = min(count, MAX_LOGS)
         server = ctx.message.server
         values = {
@@ -287,7 +302,6 @@ class SqlActivityLogger(object):
         await self.queryAndPrint(server, CONTENT_QUERY, values, column_data)
 
     @exlog.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
     async def whosays(self, ctx, query, count=10):
         """exlog whosays "%:thinking:%" 10
 
@@ -296,6 +310,10 @@ class SqlActivityLogger(object):
         Count is optional, with a low default and a maximum value.
         The bot is excluded from results.
         """
+        if query[0] in ('%', '_'):
+            await self.bot.say('`You cannot start this query with a wildcard`')
+            return
+
         count = min(count, MAX_LOGS)
         server = ctx.message.server
         values = {
@@ -311,7 +329,6 @@ class SqlActivityLogger(object):
         await self.queryAndPrint(server, WHOSAYS_QUERY, values, column_data)
 
     @exlog.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
     async def dailyreport(self, ctx, count=10):
         """exlog dailyreport 10
 
@@ -330,7 +347,6 @@ class SqlActivityLogger(object):
         await self.queryAndPrint(server, DAILY_REPORT_QUERY, values, column_data)
 
     @exlog.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
     async def periodreport(self, ctx, start_date, end_date):
         """exlog periodreport 2017-01-01 2017-01-10
 
