@@ -51,8 +51,8 @@ ON messages(server_id, channel_id, user_id)
 '''
 
 CREATE_INDEX_2 = '''
-CREATE INDEX IF NOT EXISTS idx_messages_server_id_user_id
-ON messages(server_id, user_id)
+CREATE INDEX IF NOT EXISTS idx_messages_server_id_user_id_timestamp
+ON messages(server_id, user_id, timestamp)
 '''
 
 CREATE_INDEX_3 = '''
@@ -70,7 +70,7 @@ MAX_LOGS = 500
 USER_QUERY = '''
 SELECT * FROM (
     SELECT timestamp, channel_id, msg_type, clean_content
-    FROM messages INDEXED BY idx_messages_server_id_user_id
+    FROM messages INDEXED BY idx_messages_server_id_user_id_timestamp
     WHERE server_id = :server_id
       AND user_id = :user_id
     ORDER BY timestamp DESC
