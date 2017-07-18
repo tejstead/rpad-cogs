@@ -25,12 +25,12 @@ JSON = os.path.join(*PATH_LIST, "settings.json")
 DB = os.path.join(*PATH_LIST, "log.db")
 
 ALL_COLUMNS = [
-          ('timestamp', 'Time (PT)'),
-          ('server_id', 'Server'),
-          ('channel_id', 'Channel'),
-          ('user_id', 'User'),
-          ('msg_type', 'Type'),
-          ('clean_content', 'Message'),
+    ('timestamp', 'Time (PT)'),
+    ('server_id', 'Server'),
+    ('channel_id', 'Channel'),
+    ('user_id', 'User'),
+    ('msg_type', 'Type'),
+    ('clean_content', 'Message'),
 ]
 
 CREATE_TABLE = '''
@@ -137,6 +137,7 @@ WHERE server_id = :server_id
   AND timestamp between :start_timestamp and :end_timestamp
 '''
 
+
 class SqlActivityLogger(object):
     """Log activity seen by bot"""
 
@@ -157,7 +158,7 @@ class SqlActivityLogger(object):
 
     @commands.command(pass_context=True)
     @checks.is_owner()
-    async def rawquery(self, ctx, *, query : str):
+    async def rawquery(self, ctx, *, query: str):
         await self.queryAndPrint(ctx.message.server, query, {}, {})
 
     @commands.command(pass_context=True)
@@ -187,7 +188,7 @@ class SqlActivityLogger(object):
             await send_cmd_help(context)
 
     @exlog.command(pass_context=True, no_pm=True)
-    async def user(self, ctx, user : discord.User, count=10):
+    async def user(self, ctx, user: discord.User, count=10):
         """exlog user tactical_retreat 100
 
         List of messages for a user across all channels.
@@ -196,21 +197,21 @@ class SqlActivityLogger(object):
         count = min(count, MAX_LOGS)
         server = ctx.message.server
         values = {
-          'server_id': server.id,
-          'row_count': count,
-          'user_id': user.id,
+            'server_id': server.id,
+            'row_count': count,
+            'user_id': user.id,
         }
         column_data = [
-          ('timestamp', 'Time (PT)'),
-          ('channel_id', 'Channel'),
-          ('msg_type', 'Type'),
-          ('clean_content', 'Message'),
+            ('timestamp', 'Time (PT)'),
+            ('channel_id', 'Channel'),
+            ('msg_type', 'Type'),
+            ('clean_content', 'Message'),
         ]
 
         await self.queryAndPrint(server, USER_QUERY, values, column_data)
 
     @exlog.command(pass_context=True, no_pm=True)
-    async def channel(self, ctx, channel : discord.Channel, count=10):
+    async def channel(self, ctx, channel: discord.Channel, count=10):
         """exlog channel #general_chat 100
 
         List of messages in a given channel.
@@ -220,22 +221,22 @@ class SqlActivityLogger(object):
         count = min(count, MAX_LOGS)
         server = ctx.message.server
         values = {
-          'server_id': server.id,
-          'bot_id': self.bot.user.id,
-          'row_count': count,
-          'channel_id': channel.id,
+            'server_id': server.id,
+            'bot_id': self.bot.user.id,
+            'row_count': count,
+            'channel_id': channel.id,
         }
         column_data = [
-          ('timestamp', 'Time (PT)'),
-          ('user_id', 'User'),
-          ('msg_type', 'Type'),
-          ('clean_content', 'Message'),
+            ('timestamp', 'Time (PT)'),
+            ('user_id', 'User'),
+            ('msg_type', 'Type'),
+            ('clean_content', 'Message'),
         ]
 
         await self.queryAndPrint(server, CHANNEL_QUERY, values, column_data)
 
     @exlog.command(pass_context=True, no_pm=True)
-    async def userchannel(self, ctx, user : discord.User, channel : discord.Channel, count=10):
+    async def userchannel(self, ctx, user: discord.User, channel: discord.Channel, count=10):
         """exlog userchannel tactical_retreat #general_chat 100
 
         List of messages from a user in a given channel.
@@ -244,15 +245,15 @@ class SqlActivityLogger(object):
         count = min(count, MAX_LOGS)
         server = ctx.message.server
         values = {
-          'server_id': server.id,
-          'row_count': count,
-          'channel_id': channel.id,
-          'user_id': user.id,
+            'server_id': server.id,
+            'row_count': count,
+            'channel_id': channel.id,
+            'user_id': user.id,
         }
         column_data = [
-          ('timestamp', 'Time (PT)'),
-          ('msg_type', 'Type'),
-          ('clean_content', 'Message'),
+            ('timestamp', 'Time (PT)'),
+            ('msg_type', 'Type'),
+            ('clean_content', 'Message'),
         ]
 
         await self.queryAndPrint(server, USER_CHANNEL_QUERY, values, column_data)
@@ -270,17 +271,17 @@ class SqlActivityLogger(object):
         count = min(count, MAX_LOGS)
         server = ctx.message.server
         values = {
-          'server_id': server.id,
-          'bot_id': self.bot.user.id,
-          'row_count': count,
-          'content_query': query,
+            'server_id': server.id,
+            'bot_id': self.bot.user.id,
+            'row_count': count,
+            'content_query': query,
         }
         column_data = [
-          ('timestamp', 'Time (PT)'),
-          ('channel_id', 'Channel'),
-          ('user_id', 'User'),
-          ('msg_type', 'Type'),
-          ('clean_content', 'Message'),
+            ('timestamp', 'Time (PT)'),
+            ('channel_id', 'Channel'),
+            ('user_id', 'User'),
+            ('msg_type', 'Type'),
+            ('clean_content', 'Message'),
         ]
 
         await self.queryAndPrint(server, CONTENT_QUERY, values, column_data)
@@ -298,13 +299,13 @@ class SqlActivityLogger(object):
         count = min(count, MAX_LOGS)
         server = ctx.message.server
         values = {
-          'server_id': server.id,
-          'bot_id': self.bot.user.id,
-          'row_count': count,
-          'content_query': query,
+            'server_id': server.id,
+            'bot_id': self.bot.user.id,
+            'row_count': count,
+            'content_query': query,
         }
         column_data = [
-          ('user_id', 'User'),
+            ('user_id', 'User'),
         ]
 
         await self.queryAndPrint(server, WHOSAYS_QUERY, values, column_data)
@@ -320,9 +321,9 @@ class SqlActivityLogger(object):
         start_date = datetime.today() - timedelta(days=(count + 1))
         server = ctx.message.server
         values = {
-          'server_id': server.id,
-          'row_count': count,
-          'start_timestamp': start_date,
+            'server_id': server.id,
+            'row_count': count,
+            'start_timestamp': start_date,
         }
         column_data = []
 
@@ -346,9 +347,9 @@ class SqlActivityLogger(object):
 
         server = ctx.message.server
         values = {
-          'server_id': server.id,
-          'start_timestamp': start_date,
-          'end_timestamp': end_date,
+            'server_id': server.id,
+            'start_timestamp': start_date,
+            'end_timestamp': end_date,
         }
         column_data = []
 
@@ -378,7 +379,7 @@ class SqlActivityLogger(object):
 
         for idx, row in enumerate(rows):
             if idx > max_rows:
-                break;
+                break
 
             table_row = list()
             for col in column_names:
@@ -410,13 +411,13 @@ class SqlActivityLogger(object):
 
             tbl.add_row(table_row)
 
-        result_text = "{} results fetched in {}s\n{}".format(len(rows), round(execution_time, 2), tbl.get_string())
+        result_text = "{} results fetched in {}s\n{}".format(
+            len(rows), round(execution_time, 2), tbl.get_string())
         for p in pagify(result_text):
             await self.bot.say(box(p))
 
     def save_json(self):
         dataIO.save_json(JSON, self.settings)
-
 
     async def on_message(self, message):
         self.log('NEW', message)
@@ -455,13 +456,13 @@ class SqlActivityLogger(object):
             msg_clean_content = (msg_clean_content + extra_txt).strip()
 
         values = {
-          'timestamp': message.timestamp,
-          'server_id': server_id,
-          'channel_id': channel_id,
-          'user_id': message.author.id,
-          'msg_type': msg_type,
-          'content': msg_content,
-          'clean_content': msg_clean_content,
+            'timestamp': message.timestamp,
+            'server_id': server_id,
+            'channel_id': channel_id,
+            'user_id': message.author.id,
+            'msg_type': msg_type,
+            'content': msg_content,
+            'clean_content': msg_clean_content,
         }
 
         before_time = timeit.default_timer()
