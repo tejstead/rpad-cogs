@@ -20,7 +20,7 @@ DONATE_MSG = """
 To donate to cover bot hosting fees you can use one of:
   Patreon : https://www.patreon.com/miru_bot
   Venmo   : https://venmo.com/TacticalRetreat
- 
+
 Read the Patreon or join the Miru Support Server for more details:
   https://discord.gg/zB4QHgn
 
@@ -321,7 +321,7 @@ class Donations:
 
         content = message.clean_content
         # Ignore short messages
-        if len(content) < 7:
+        if len(content) < 10:
             return
 
         msg = message.author.mention
@@ -338,10 +338,10 @@ class Donations:
             await self.bot.send_message(message.channel, msg)
             return
 
-        # Semi-frequetly respond to long messages
+        # Semi-frequently respond to long messages
         long_msg_and_roll = len(content) > 200 and roll(10)
         # Occasionally respond to other messages
-        short_msg_and_roll = roll(2)
+        short_msg_and_roll = roll(1)
 
         if long_msg_and_roll or short_msg_and_roll:
             msg += ' ' + random.choice(self.insults_list)
