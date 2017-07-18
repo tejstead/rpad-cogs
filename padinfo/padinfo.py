@@ -333,6 +333,15 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
+    @commands.command(pass_context=True)
+    async def lookup(self, ctx, *, query):
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            embed = monsterToHeaderEmbed(m)
+            await self.bot.say(embed=embed)
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
     @commands.command(pass_context=True, aliases=['leaders', 'leaderskills', 'ls'])
     async def leaderskill(self, ctx, left_query, right_query=None, *, bad=None):
         """Display the multiplier and leaderskills for two monsters.
@@ -917,6 +926,13 @@ def monstersToLsEmbed(left_m: Monster, right_m: Monster):
         monsterToHeader(right_m, link=True) + '**\n' + (right_m.leader_text or 'None/Missing')
     embed.description = description
 
+    return embed
+
+
+def monsterToHeaderEmbed(m: Monster):
+    header = monsterToLongHeader(m, link=True)
+    embed = discord.Embed()
+    embed.description = header
     return embed
 
 
