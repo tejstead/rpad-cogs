@@ -420,15 +420,15 @@ class SqlActivityLogger(object):
         dataIO.save_json(JSON, self.settings)
 
     async def on_message(self, message):
-        self.log('NEW', message)
+        self.log('NEW', message, message.timestamp)
 
     async def on_message_edit(self, before, after):
-        self.log('EDIT', after)
+        self.log('EDIT', after, after.edited_timestamp)
 
     async def on_message_delete(self, message):
-        self.log('DELETE', message)
+        self.log('DELETE', message, datetime.utcnow())
 
-    def log(self, msg_type, message):
+    def log(self, msg_type, message, timestamp):
         if self.lock:
             return
 
@@ -439,7 +439,6 @@ class SqlActivityLogger(object):
           INSERT INTO messages(timestamp, server_id, channel_id, user_id, msg_type, content, clean_content)
           VALUES(:timestamp, :server_id, :channel_id, :user_id, :msg_type, :content, :clean_content)
         '''
-        timestamp = 0
         server_id = message.server.id if message.server else -1
         channel_id = message.channel.id if message.channel else -1
 
@@ -456,7 +455,7 @@ class SqlActivityLogger(object):
             msg_clean_content = (msg_clean_content + extra_txt).strip()
 
         values = {
-            'timestamp': message.timestamp,
+            'timestamp': timestamp,
             'server_id': server_id,
             'channel_id': channel_id,
             'user_id': message.author.id,
