@@ -20,7 +20,7 @@ DONATE_MSG = """
 To donate to cover bot hosting fees you can use one of:
   Patreon : https://www.patreon.com/miru_bot
   Venmo   : https://venmo.com/TacticalRetreat
-
+ 
 Read the Patreon or join the Miru Support Server for more details:
   https://discord.gg/zB4QHgn
 
@@ -35,7 +35,7 @@ DEFAULT_INSULTS = {
     'miru_references': [
         'Are you talking to me you piece of shit?',
     ],
-    'insults' :  [
+    'insults':  [
         'You are garbage.',
         'Kill yourself.',
     ]
@@ -47,8 +47,10 @@ DEFAULT_LOVE = {
     'perverted': ['{}===>()'],
 }
 
-def roll(chance : int):
+
+def roll(chance: int):
     return random.randrange(100) < chance
+
 
 class Donations:
     """Manages donations and perks."""
@@ -58,14 +60,14 @@ class Donations:
         self.settings = DonationsSettings("donations")
 
         insults_json = dataIO.load_json(INSULTS_FILE) if dataIO.is_valid_json(INSULTS_FILE) else {}
-        self.insults_miru_reference = insults_json.get('miru_references', DEFAULT_INSULTS['miru_references'])
+        self.insults_miru_reference = insults_json.get(
+            'miru_references', DEFAULT_INSULTS['miru_references'])
         self.insults_list = insults_json.get('insults', DEFAULT_INSULTS['insults'])
 
         love_json = dataIO.load_json(LOVE_FILE) if dataIO.is_valid_json(LOVE_FILE) else {}
         self.cute_list = love_json.get('cute', DEFAULT_LOVE['cute'])
         self.sexy_list = love_json.get('sexy', DEFAULT_LOVE['sexy'])
         self.perverted_list = love_json.get('perverted', DEFAULT_LOVE['perverted'])
-
 
     @commands.command(pass_context=True)
     async def donate(self, ctx):
@@ -80,7 +82,7 @@ class Donations:
         await self.bot.say(box(msg))
 
     @commands.command(pass_context=True)
-    async def mycommand(self, ctx, command : str, *, text : str):
+    async def mycommand(self, ctx, command: str, *, text: str):
         """Sets your custom command (donor only)."""
         user_id = ctx.message.author.id
         text = clean_global_mentions(text)
@@ -92,7 +94,7 @@ class Donations:
         await self.bot.say(inline('I set up your command: ' + command))
 
     @commands.command(pass_context=True)
-    async def myembed(self, ctx, command : str, title : str, url : str, footer : str):
+    async def myembed(self, ctx, command: str, title: str, url: str, footer: str):
         """Sets your custom embed command (donor only).
 
         This lets you create a fancier image message. For example you can set up
@@ -183,7 +185,6 @@ class Donations:
             await self.bot.say(ctx.message.author.mention + ' Filthy hentai!')
             await self.bot.whisper(random.choice(self.perverted_list))
 
-
     @commands.group(pass_context=True)
     @checks.admin_or_permissions(manage_server=True)
     async def donations(self, context):
@@ -205,28 +206,28 @@ class Donations:
 
     @donations.command(pass_context=True)
     @checks.is_owner()
-    async def addDonor(self, ctx, user : discord.User):
+    async def addDonor(self, ctx, user: discord.User):
         """Adds a a user as a donor."""
         self.settings.addDonor(user.id)
         await self.bot.say(inline('Done'))
 
     @donations.command(pass_context=True)
     @checks.is_owner()
-    async def rmDonor(self, ctx, user : discord.User):
+    async def rmDonor(self, ctx, user: discord.User):
         """Removes a user as a donor."""
         self.settings.rmDonor(user.id)
         await self.bot.say(inline('Done'))
 
     @donations.command(pass_context=True)
     @checks.is_owner()
-    async def addPatron(self, ctx, user : discord.User):
+    async def addPatron(self, ctx, user: discord.User):
         """Adds a a user as a patron."""
         self.settings.addPatron(user.id)
         await self.bot.say(inline('Done'))
 
     @donations.command(pass_context=True)
     @checks.is_owner()
-    async def rmPatron(self, ctx, user : discord.User):
+    async def rmPatron(self, ctx, user: discord.User):
         """Removes a user as a patron."""
         self.settings.rmPatron(user.id)
         await self.bot.say(inline('Done'))
@@ -241,7 +242,7 @@ class Donations:
         embeds = self.settings.customEmbeds()
         disabled_servers = self.settings.disabledServers()
 
-        id_to_name = {m.id:m.name for m in self.bot.get_all_members()}
+        id_to_name = {m.id: m.name for m in self.bot.get_all_members()}
 
         msg = 'Donations Info'
 
@@ -262,7 +263,6 @@ class Donations:
         msg += '\n{} personal embeds are set'.format(len(cmds))
 
         await self.bot.say(box(msg))
-
 
     async def checkCC(self, message):
         if len(message.content) < 2:
@@ -303,7 +303,6 @@ class Donations:
                 await self.bot.send_message(message.channel, embed=embed)
                 return
 
-
     def get_prefix(self, message):
         for p in self.bot.settings.get_prefixes(message.server):
             if message.content.startswith(p):
@@ -330,7 +329,8 @@ class Donations:
         # Pretty frequently respond to direct messages
         mentions_bot = re.match(r'.*(miru|myr) bot.*', content, re.IGNORECASE) and roll(40)
         # Semi-frequently respond to miru in msg
-        mentions_miru_and_roll = re.match(r'.*\b(miru|myr)\b.*', content, re.IGNORECASE) and roll(20)
+        mentions_miru_and_roll = re.match(
+            r'.*\b(miru|myr)\b.*', content, re.IGNORECASE) and roll(20)
 
         if mentions_bot or mentions_miru_and_roll:
             msg += ' ' + random.choice(self.insults_miru_reference)
@@ -354,6 +354,7 @@ class Donations:
             await self.bot.send_message(message.author, msg)
             return
 
+
 def setup(bot):
     n = Donations(bot)
     bot.add_listener(n.checkCC, "on_message")
@@ -364,12 +365,12 @@ def setup(bot):
 class DonationsSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'patrons' : [],
-          'donors' : [],
-          'custom_commands' : {},
-          'custom_embeds' : {},
-          'disabled_servers' : [],
-          'insults_enabled' : [],
+            'patrons': [],
+            'donors': [],
+            'custom_commands': {},
+            'custom_embeds': {},
+            'disabled_servers': [],
+            'insults_enabled': [],
         }
         return config
 
@@ -409,8 +410,8 @@ class DonationsSettings(CogSettings):
     def addCustomCommand(self, user_id, command, text):
         cmds = self.customCommands()
         cmds[user_id] = {
-            'command' : command.lower(),
-            'text' : text,
+            'command': command.lower(),
+            'text': text,
         }
         self.save_settings()
 
@@ -426,10 +427,10 @@ class DonationsSettings(CogSettings):
     def addCustomEmbed(self, user_id, command, title, url, footer):
         embeds = self.customEmbeds()
         embeds[user_id] = {
-            'command' : command.lower().strip(),
-            'title' : title.strip(),
-            'url' : url.strip(),
-            'footer' : footer.strip(),
+            'command': command.lower().strip(),
+            'title': title.strip(),
+            'url': url.strip(),
+            'footer': footer.strip(),
         }
         self.save_settings()
 
