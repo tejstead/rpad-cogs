@@ -291,12 +291,23 @@ class TrUtils:
         await self.bot.say(inline('Done'))
 
     @commands.command(pass_context=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def dumpchannel(self, ctx, channel: discord.Channel, msg_id: int=None):
+        """Given a channel and an ID for a message printed in that current channel, dumps it 
+        boxed with formatting escaped and some issues cleaned up"""
+        await self._dump(ctx, channel, msg_id)
+
+    @commands.command(pass_context=True)
     async def dumpmsg(self, ctx, msg_id: int=None):
         """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped and some issues cleaned up"""
+        await self._dump(ctx, ctx.message.channel, msg_id)
+
+    async def _dump(self, ctx, channel: discord.Channel=None, msg_id: int=None):
         if msg_id:
-            msg = await self.bot.get_message(ctx.message.channel, msg_id)
+            msg = await self.bot.get_message(channel, msg_id)
         else:
-            async for message in self.bot.logs_from(ctx.message.channel, limit=2):
+            msg_limit = 2 if channel == ctx.message.channel else 1
+            async for message in self.bot.logs_from(channel, limit=msg_limit):
                 msg = message
         content = msg.clean_content.strip()
         content = re.sub(r'<(:[0-9a-z_]+:)\d{18}>', r'\1', content, flags=re.IGNORECASE)
