@@ -63,6 +63,7 @@ class PadGlobal:
         """
         command = command.lower()
         text = clean_global_mentions(text)
+        text = text.replace(u'\u200b', '')
         if command in self.bot.commands.keys():
             await self.bot.say("That is already a standard command.")
             return
