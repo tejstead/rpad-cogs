@@ -194,33 +194,34 @@ The '^p' command can be used to prevent users from executing specific commands o
 in specific channels, or unless they have specific roles. Read the documentation carefully.
 """
 
+
 class TrUtils:
     def __init__(self, bot):
         self.bot = bot
         self.settings = TrUtilsSettings("trutils")
         self.colors = [
-           discord.Color.blue(),
-           discord.Color.dark_blue(),
-           discord.Color.dark_gold(),
-           discord.Color.dark_green(),
-           discord.Color.dark_grey(),
-           discord.Color.dark_magenta(),
-           discord.Color.dark_orange(),
-           discord.Color.dark_purple(),
-           discord.Color.dark_red(),
-           discord.Color.dark_teal(),
-           discord.Color.darker_grey(),
-           discord.Color.default(),
-           discord.Color.gold(),
-           discord.Color.green(),
-           discord.Color.light_grey(),
-           discord.Color.lighter_grey(),
-           discord.Color.magenta(),
-           discord.Color.orange(),
-           discord.Color.purple(),
-           discord.Color.red(),
-           discord.Color.teal(),
-       ]
+            discord.Color.blue(),
+            discord.Color.dark_blue(),
+            discord.Color.dark_gold(),
+            discord.Color.dark_green(),
+            discord.Color.dark_grey(),
+            discord.Color.dark_magenta(),
+            discord.Color.dark_orange(),
+            discord.Color.dark_purple(),
+            discord.Color.dark_red(),
+            discord.Color.dark_teal(),
+            discord.Color.darker_grey(),
+            discord.Color.default(),
+            discord.Color.gold(),
+            discord.Color.green(),
+            discord.Color.light_grey(),
+            discord.Color.lighter_grey(),
+            discord.Color.magenta(),
+            discord.Color.orange(),
+            discord.Color.purple(),
+            discord.Color.red(),
+            discord.Color.teal(),
+        ]
 
     def registerTasks(self, event_loop):
         print("registering tasks")
@@ -290,7 +291,7 @@ class TrUtils:
         await self.bot.say(inline('Done'))
 
     @commands.command(pass_context=True)
-    async def dumpmsg(self, ctx, msg_id : int=None):
+    async def dumpmsg(self, ctx, msg_id: int=None):
         """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped and some issues cleaned up"""
         if msg_id:
             msg = await self.bot.get_message(ctx.message.channel, msg_id)
@@ -303,7 +304,7 @@ class TrUtils:
         await self.bot.say(content)
 
     @commands.command(pass_context=True)
-    async def dumpmsgexact(self, ctx, msg_id : int):
+    async def dumpmsgexact(self, ctx, msg_id: int):
         """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped"""
         msg = await self.bot.get_message(ctx.message.channel, msg_id)
         content = msg.clean_content.strip()
@@ -338,13 +339,13 @@ class TrUtils:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def imagecopy(self, ctx, source_channel : discord.Channel, dest_channel : discord.Channel):
+    async def imagecopy(self, ctx, source_channel: discord.Channel, dest_channel: discord.Channel):
         self.settings.setImageCopy(ctx.message.server.id, source_channel.id, dest_channel.id)
         await self.bot.say('`done`')
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def clearimagecopy(self, ctx, channel : discord.Channel):
+    async def clearimagecopy(self, ctx, channel: discord.Channel):
         self.settings.clearImageCopy(ctx.message.server.id, channel.id)
         await self.bot.say('`done`')
 
@@ -428,14 +429,15 @@ class TrUtils:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def bulkimagecopy(self, ctx, source_channel : discord.Channel, dest_channel : discord.Channel, number: int):
+    async def bulkimagecopy(self, ctx, source_channel: discord.Channel, dest_channel: discord.Channel, number: int):
         copy_items = []
         async for message in self.bot.logs_from(source_channel, limit=number):
             if message.author.id == self.bot.user.id or message.channel.is_private:
                 continue
             img_url = extract_image_url(message)
             if img_url:
-                copy_items.append((img_url, message.author.name, message.channel.name, dest_channel.id))
+                copy_items.append((img_url, message.author.name,
+                                   message.channel.name, dest_channel.id))
 
         copy_items.reverse()
         for item in copy_items:
@@ -446,13 +448,13 @@ class TrUtils:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def imagetypeblacklist(self, ctx, channel : discord.Channel, image_type : str):
+    async def imagetypeblacklist(self, ctx, channel: discord.Channel, image_type: str):
         self.settings.setImageTypeBlacklist(ctx.message.server.id, channel.id, image_type)
         await self.bot.say('`done`')
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def clearimagetypeblacklist(self, ctx, channel : discord.Channel, image_type : str):
+    async def clearimagetypeblacklist(self, ctx, channel: discord.Channel, image_type: str):
         self.settings.clearImageTypeBlacklist(ctx.message.server.id, channel.id, image_type)
         await self.bot.say('`done`')
 
@@ -508,9 +510,9 @@ class TrUtils:
                       bot_miru_url, bot_miru_author))
 
         using = (
-             "You can use `^help` to get a full list of commands.\n"
-             "Use `^userhelp` to get a summary of useful user features.\n"
-             "Use `^modhelp` to get info on moderator-only features."
+            "You can use `^help` to get a full list of commands.\n"
+            "Use `^userhelp` to get a summary of useful user features.\n"
+            "Use `^modhelp` to get info on moderator-only features."
         )
 
         embed = discord.Embed()
@@ -573,7 +575,7 @@ class TrUtils:
                 result = await result
 
     @commands.command(pass_context=True)
-    async def checkimg(self, ctx, img : str):
+    async def checkimg(self, ctx, img: str):
         if img.startswith('https://cdn.discordapp'):
             await self.bot.say(inline('That URL probably wont work because Discord blocks non-browser requests'))
 
@@ -588,7 +590,7 @@ class TrUtils:
         else:
             await self.bot.say(inline('not sure what that is'))
 
-    def _get_image_labels(self, img : str):
+    def _get_image_labels(self, img: str):
         client = vision.Client(project='rpad-discord')
         image = client.image(source_uri=img)
         try:
@@ -596,7 +598,7 @@ class TrUtils:
         except:
             return None
 
-    def _check_labels_for_blacklist(self, img : str, blacklist : str):
+    def _check_labels_for_blacklist(self, img: str, blacklist: str):
         blacklist = blacklist.lower()
         labels = self._get_image_labels(img)
         if labels is None:
@@ -605,6 +607,7 @@ class TrUtils:
             if blacklist in l.description.lower():
                 return True
         return False
+
 
 def setup(bot):
     print('trutils bot setup')
@@ -622,7 +625,7 @@ def setup(bot):
 class TrUtilsSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'servers': {},
+            'servers': {},
         }
         return config
 
@@ -710,4 +713,3 @@ class TrUtilsSettings(CogSettings):
         if channel_id in imagebl:
             imagebl.pop(channel_id)
             self.save_settings()
-
