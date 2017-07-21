@@ -26,11 +26,14 @@ PADGLOBAL_COG = None
 
 BLACKLISTED_CHARACTERS = '^[]*`~_'
 
+
 def is_padglobal_admin_check(ctx):
     return PADGLOBAL_COG.settings.checkAdmin(ctx.message.author.id)
 
+
 def is_padglobal_admin():
     return commands.check(is_padglobal_admin_check)
+
 
 class PadGlobal:
     """Global PAD commands."""
@@ -52,7 +55,7 @@ class PadGlobal:
             await send_cmd_help(context)
 
     @padglobal.command(pass_context=True)
-    async def add(self, ctx, command : str, *, text):
+    async def add(self, ctx, command: str, *, text):
         """Adds a PAD global command
 
         Example:
@@ -76,7 +79,7 @@ class PadGlobal:
         await self.bot.say("PAD command successfully added/edited.")
 
     @padglobal.command(pass_context=True)
-    async def delete(self, ctx, command : str):
+    async def delete(self, ctx, command: str):
         """Deletes a PAD global command
 
         Example:
@@ -91,7 +94,7 @@ class PadGlobal:
             await self.bot.say("PAD command doesn't exist.")
 
     @padglobal.command(pass_context=True)
-    async def setgeneral(self, ctx, command : str):
+    async def setgeneral(self, ctx, command: str):
         """Sets a command to show up in ^pad (the default).
 
         Example:
@@ -105,7 +108,7 @@ class PadGlobal:
         await self.bot.say("PAD command set to general.")
 
     @padglobal.command(pass_context=True)
-    async def setfaq(self, ctx, command : str):
+    async def setfaq(self, ctx, command: str):
         """Sets a command to show up in ^padfaq.
 
         Example:
@@ -118,9 +121,8 @@ class PadGlobal:
         self.settings.setFaq(command)
         await self.bot.say("PAD command set to faq.")
 
-
     @padglobal.command(pass_context=True)
-    async def setboards(self, ctx, command : str):
+    async def setboards(self, ctx, command: str):
         """Sets a command to show up in ^boards.
 
         Example:
@@ -137,19 +139,19 @@ class PadGlobal:
     async def pad(self, ctx):
         """Shows PAD global command list"""
         configured = self.settings.faq() + self.settings.boards()
-        cmdlist = {k:v for k, v in self.c_commands.items() if k not in configured}
+        cmdlist = {k: v for k, v in self.c_commands.items() if k not in configured}
         await self.print_cmdlist(ctx, cmdlist)
 
     @commands.command(pass_context=True)
     async def padfaq(self, ctx):
         """Shows PAD FAQ command list"""
-        cmdlist = {k:v for k, v in self.c_commands.items() if k in self.settings.faq()}
+        cmdlist = {k: v for k, v in self.c_commands.items() if k in self.settings.faq()}
         await self.print_cmdlist(ctx, cmdlist)
 
     @commands.command(pass_context=True)
     async def boards(self, ctx):
         """Shows PAD Boards command list"""
-        cmdlist = {k:v for k, v in self.c_commands.items() if k in self.settings.boards()}
+        cmdlist = {k: v for k, v in self.c_commands.items() if k in self.settings.boards()}
         await self.print_cmdlist(ctx, cmdlist)
 
     async def print_cmdlist(self, ctx, cmdlist, inline=False):
@@ -194,8 +196,9 @@ class PadGlobal:
                 if cmd.startswith(good_prefix):
                     prefix_to_other[prefix].append(cmd)
                     should_skip = True
-                    break;
-            if should_skip: continue
+                    break
+            if should_skip:
+                continue
 
             msg += " {}{}\n".format(ctx.prefix, cmd)
 
@@ -216,9 +219,8 @@ class PadGlobal:
         for page in pagify(msg):
             await self.bot.whisper(box(page))
 
-
     @commands.command(pass_context=True)
-    async def glossaryto(self, ctx, to_user : discord.Member, *, term : str):
+    async def glossaryto(self, ctx, to_user: discord.Member, *, term: str):
         """Send a user a glossary entry
 
         ^glossaryto @tactical_retreat godfest
@@ -227,7 +229,7 @@ class PadGlobal:
         await self._do_send_term(ctx, to_user, term, corrected_term, result)
 
     @commands.command(pass_context=True)
-    async def padto(self, ctx, to_user : discord.Member, *, term : str):
+    async def padto(self, ctx, to_user: discord.Member, *, term: str):
         """Send a user a pad/padfaq entry
 
         ^padto @tactical_retreat jewels?
@@ -236,11 +238,12 @@ class PadGlobal:
         result = self.c_commands.get(corrected_term, None)
         await self._do_send_term(ctx, to_user, term, corrected_term, result)
 
-    async def _do_send_term(self, ctx, to_user : discord.Member, term, corrected_term, result):
+    async def _do_send_term(self, ctx, to_user: discord.Member, term, corrected_term, result):
         """Does the heavy lifting shared by padto and glossaryto."""
         if result:
             result_output = '**{}** : {}'.format(corrected_term, result)
-            result = "{} asked me to send you this:\n{}".format(ctx.message.author.name, result_output)
+            result = "{} asked me to send you this:\n{}".format(
+                ctx.message.author.name, result_output)
             await self.bot.send_message(to_user, result)
             msg = "Sent that info to {}".format(to_user.name)
             if term != corrected_term:
@@ -250,7 +253,7 @@ class PadGlobal:
             await self.bot.say(inline('No definition found'))
 
     @commands.command(pass_context=True)
-    async def glossary(self, ctx, *, term : str=None):
+    async def glossary(self, ctx, *, term: str=None):
         """Shows PAD Glossary entries"""
         if term:
             term, definition = self.lookup_glossary(term)
@@ -264,7 +267,6 @@ class PadGlobal:
         msg = self.glossary_to_text()
         for page in pagify(msg):
             await self.bot.whisper(page)
-
 
     def glossary_to_text(self):
         glossary = self.settings.glossary()
@@ -283,7 +285,7 @@ class PadGlobal:
             return term, definition
 
         matches = difflib.get_close_matches(term, glossary.keys(), n=1, cutoff=.8)
-        
+
         if not matches:
             matches = self._get_corrected_cmds(term, glossary.keys())
 
@@ -350,7 +352,7 @@ class PadGlobal:
 
     def _lookup_command(self, cmd):
         """Returns the corrected cmd name.
-        
+
         Checks the raw command list, and if that fails, applies some corrections and takes
         the most likely result. Returns None if no good match.
         """
@@ -365,7 +367,7 @@ class PadGlobal:
                 return corrected_cmds[0]
 
         return None
-        
+
     def _get_corrected_cmds(self, cmd, options):
         """Applies some corrections to cmd and returns the best matches in order."""
         cmd = cmd.lower()
@@ -402,10 +404,10 @@ class PadGlobal:
         """
         raw_result = "{" + result + "}"
         objects = {
-            "message" : message,
-            "author"  : message.author,
-            "channel" : message.channel,
-            "server"  : message.server
+            "message": message,
+            "author": message.author,
+            "channel": message.channel,
+            "server": message.server
         }
         if result in objects:
             return str(objects[result])
@@ -419,16 +421,19 @@ class PadGlobal:
             return raw_result
         return str(getattr(first, second, raw_result))
 
+
 def check_folders():
     if not os.path.exists("data/padglobal"):
         print("Creating data/padglobal folder...")
         os.makedirs("data/padglobal")
+
 
 def check_files():
     f = "data/padglobal/commands.json"
     if not dataIO.is_valid_json(f):
         print("Creating empty commands.json...")
         dataIO.save_json(f, {})
+
 
 def setup(bot):
     check_folders()
@@ -441,10 +446,10 @@ def setup(bot):
 class PadGlobalSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'admins' : [],
-          'faq' : [],
-          'boards' : [],
-          'glossary' : {},
+            'admins': [],
+            'faq': [],
+            'boards': [],
+            'glossary': {},
         }
         return config
 
@@ -480,8 +485,10 @@ class PadGlobalSettings(CogSettings):
         return self.bot_settings[key]
 
     def clearCmd(self, cmd):
-        if cmd in self.faq(): self.faq().remove(cmd)
-        if cmd in self.boards(): self.boards().remove(cmd)
+        if cmd in self.faq():
+            self.faq().remove(cmd)
+        if cmd in self.boards():
+            self.boards().remove(cmd)
 
     def setGeneral(self, cmd):
         self.clearCmd(cmd)
