@@ -91,7 +91,7 @@ class ChannelMod:
         except Exception as ex:
             print('failed to check inactivity channel')
             traceback.print_exc()
-#             self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
+            self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
 
     async def check_inactive_channels(self):
         for server_id in self.settings.servers().keys():
@@ -102,7 +102,10 @@ class ChannelMod:
 
     async def channel_inactivity_monitor(self):
         while self == self.bot.get_cog('ChannelMod'):
-            await self.check_inactive_channels()
+            try:
+                await self.check_inactive_channels()
+            except:
+                traceback.print_exc()
             await asyncio.sleep(20)
 
 
