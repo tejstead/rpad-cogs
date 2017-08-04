@@ -985,6 +985,8 @@ def monsterToEmbed(m: Monster, emoji_list):
         info_row_2 += '\n**{}**'.format(acquire_text)
     if m.is_inheritable:
         info_row_2 += '\n**Inheritable**'
+    else:
+        info_row_2 += '\n**Not inheritable**'
 
     embed.add_field(name=info_row_1, value=info_row_2)
 
