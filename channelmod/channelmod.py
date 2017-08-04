@@ -66,11 +66,11 @@ class ChannelMod:
     async def check_inactive_channel(self, server_id: str, channel_id: str, timeout: int):
         try:
             channel = self.bot.get_channel(channel_id)
-            server = channel.server
             if channel is None:
-                print('cannot find channel, disabling', channel_id)
-                self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
+                print('timeout check: cannot find channel', channel_id)
                 return
+
+            server = channel.server
 
             has_permissions = channel.permissions_for(server.me).manage_channels
             if not has_permissions:
