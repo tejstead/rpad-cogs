@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS messages(
 '''
 
 CREATE_INDEX_1 = '''
-CREATE INDEX IF NOT EXISTS idx_messages_server_id_channel_id_user_id
-ON messages(server_id, channel_id, user_id)
+CREATE INDEX IF NOT EXISTS idx_messages_server_id_channel_id_user_id_timestamp
+ON messages(server_id, channel_id, user_id, timestamp)
 '''
 
 CREATE_INDEX_2 = '''
@@ -63,6 +63,11 @@ ON messages(server_id, clean_content)
 CREATE_INDEX_4 = '''
 CREATE INDEX IF NOT EXISTS idx_messages_server_id_timestamp
 ON messages(server_id, timestamp)
+'''
+
+CREATE_INDEX_5 = '''
+CREATE INDEX IF NOT EXISTS idx_messages_server_id_channel_id_timestamp
+ON messages(server_id, channel_id, timestamp)
 '''
 
 MAX_LOGS = 500
@@ -82,7 +87,7 @@ ORDER BY timestamp ASC
 CHANNEL_QUERY = '''
 SELECT * FROM (
     SELECT timestamp, user_id, msg_type, clean_content
-    FROM messages INDEXED BY idx_messages_server_id_channel_id_user_id
+    FROM messages INDEXED BY idx_messages_server_id_channel_id_timestamp
     WHERE server_id = :server_id
       AND channel_id = :channel_id
       AND user_id <> :bot_id
@@ -95,7 +100,7 @@ ORDER BY timestamp ASC
 USER_CHANNEL_QUERY = '''
 SELECT * FROM (
     SELECT timestamp, msg_type, clean_content
-    FROM messages INDEXED BY idx_messages_server_id_channel_id_user_id
+    FROM messages INDEXED BY idx_messages_server_id_channel_id_user_id_timestamp
     WHERE server_id = :server_id
       AND user_id = :user_id
       AND channel_id = :channel_id
