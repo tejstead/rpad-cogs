@@ -695,7 +695,7 @@ class Monster:
             self.is_inheritable = False
         else:
             self.is_inheritable = len(
-                self.awakening_names) > 0 and self.rarity >= 5 and self.sell_mp > 3000
+                self.awakening_names) > 0 and self.rarity >= 5 and self.sell_mp >= 3000
 
         self.alt_evos = list()
 
