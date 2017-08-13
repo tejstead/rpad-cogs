@@ -23,11 +23,14 @@ class Memes:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
-    async def addmeme(self, ctx, command : str, *, text):
+    async def addmeme(self, ctx, command: str, *, text):
         """Adds a meme
 
         Example:
-        !addmeme yourmeme Text you want
+        [p]addmeme yourmeme Text you want
+
+        Memes can be enhanced with arguments:
+        https://twentysix26.github.io/Red-Docs/red_guide_command_args/
         """
         server = ctx.message.server
         command = command.lower()
@@ -47,11 +50,11 @@ class Memes:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
-    async def editmeme(self, ctx, command : str, *, text):
+    async def editmeme(self, ctx, command: str, *, text):
         """Edits a meme
 
         Example:
-        !editmeme yourcommand Text you want
+        [p]editmeme yourcommand Text you want
         """
         server = ctx.message.server
         command = command.lower()
@@ -65,15 +68,15 @@ class Memes:
             else:
                 await self.bot.say("That command doesn't exist. Use addmeme [command] [text]")
         else:
-             await self.bot.say("There are no custom memes in this server. Use addmeme [command] [text]")
+            await self.bot.say("There are no custom memes in this server. Use addmeme [command] [text]")
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
-    async def delmeme(self, ctx, command : str):
+    async def delmeme(self, ctx, command: str):
         """Deletes a meme
 
         Example:
-        !delmeme yourcommand"""
+        [p]delmeme yourcommand"""
         server = ctx.message.server
         command = command.lower()
         if server.id in self.c_commands:
@@ -90,11 +93,11 @@ class Memes:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(administrator=True)
-    async def setmemerole(self, ctx, rolename : str):
+    async def setmemerole(self, ctx, rolename: str):
         """Sets the meme role
 
         Example:
-        !setmemerole Regular"""
+        [p]setmemerole Regular"""
 
         role = get_role(ctx.message.server.roles, rolename)
         self.settings.setPrivileged(ctx.message.server.id, role.id)
@@ -174,10 +177,10 @@ class Memes:
         """
         raw_result = "{" + result + "}"
         objects = {
-            "message" : message,
-            "author"  : message.author,
-            "channel" : message.channel,
-            "server"  : message.server
+            "message": message,
+            "author": message.author,
+            "channel": message.channel,
+            "server": message.server
         }
         if result in objects:
             return str(objects[result])
@@ -191,16 +194,19 @@ class Memes:
             return raw_result
         return str(getattr(first, second, raw_result))
 
+
 def check_folders():
     if not os.path.exists("data/memes"):
         print("Creating data/memes folder...")
         os.makedirs("data/memes")
+
 
 def check_files():
     f = "data/memes/commands.json"
     if not dataIO.is_valid_json(f):
         print("Creating empty commands.json...")
         dataIO.save_json(f, {})
+
 
 def setup(bot):
     check_folders()
@@ -213,7 +219,7 @@ def setup(bot):
 class MemesSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'configs' : {}
+            'configs': {}
         }
         return config
 
