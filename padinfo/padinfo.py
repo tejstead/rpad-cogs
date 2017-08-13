@@ -1564,6 +1564,8 @@ class PgDataWrapper:
             cur_rotations.append(max(rotations, key=lambda x: x.rotation_date))
 
         for mr in cur_rotations:
+            if mr.monster_id not in monster_id_to_monster:
+                continue
             mr.resolved_monster = monster_id_to_monster[mr.monster_id]
             mr.resolved_active = skill_map[mr.active_id]
 
