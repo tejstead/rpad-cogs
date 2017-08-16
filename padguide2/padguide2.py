@@ -7,13 +7,22 @@ combines them into a an in-memory interconnected database.
 Don't hold on to any of the dastructures exported from here, or the
 entire database could be leaked when the module is reloaded.
 """
+from _collections import defaultdict
+import asyncio
+import csv
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum
+from itertools import groupby
+from macpath import basename
+from operator import itemgetter
 import re
+import traceback
 
 import discord
 from discord.ext import commands
+from html5lib.constants import prefixes
+from numpy.core.defchararray import lower
 import pytz
 import romkan
 import unidecode
@@ -23,9 +32,15 @@ from .utils.cog_settings import CogSettings
 from .utils.dataIO import dataIO
 
 
-# from .rpadutils import *
 DUMMY_FILE_PATTERN = 'data/padguide2/{}.dummy'
 JSON_FILE_PATTERN = 'data/padguide2/{}.json'
+CSV_FILE_PATTERN = 'data/padguide2/{}.csv'
+
+GROUP_BASENAMES_OVERRIDES_SHEET = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid=2070615818&single=true&output=csv'
+NICKNAME_OVERRIDES_SHEET = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid=0&single=true&output=csv'
+
+NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames.csv')
+BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames.csv')
 
 
 class PadGuide2(object):
@@ -54,9 +69,79 @@ class PadGuide2(object):
         ]
 
         self._download_files()
+
+        # A string -> int mapping, nicknames to monster_id_na
+        self.nickname_overrides = {}
+
+        # An int -> set(string), monster_id_na to set of basename overrides
+        self.basename_overrides = defaultdict(set)
+
+        self.database = PgRawDatabase(skip_load=True)
+
+    async def reload_data_task(self):
+        await self.bot.wait_until_ready()
+        while self == self.bot.get_cog('PadGuide2'):
+            short_wait = False
+            try:
+                self.download_and_refresh_nicknames()
+            except Exception as ex:
+                short_wait = True
+                print("padguide2 data download/refresh failed", ex)
+                traceback.print_exc()
+
+            try:
+                wait_time = 60 if short_wait else 60 * 60 * 4
+                await asyncio.sleep(wait_time)
+            except Exception as ex:
+                print("padguide2 data wait loop failed", ex)
+                traceback.print_exc()
+                raise ex
+
+    def download_and_refresh_nicknames(self):
+        self._download_files()
+
+        nickname_overrides = self._csv_to_key_value_map(NICKNAME_FILE_PATTERN)
+        basename_overrides = self._csv_to_key_value_map(BASENAME_FILE_PATTERN)
+
+        self.nickname_overrides = {k.lower(): int(v)
+                                   for k, v in nickname_overrides.items() if v.isdigit()}
+
+        self.basename_overrides = defaultdict(set)
+        for k, v in basename_overrides.items():
+            if k.isdigit():
+                self.basename_overrides[int(k)].add(v.lower())
+
+        print('done loading')
+        print(nickname_overrides)
+        print(basename_overrides)
+
         self.database = PgRawDatabase()
 
+    def _load_overrides(self, file_path: str):
+        # Loads a two-column CSV into a dict, and cleans it a bit by ensuring the
+        # key is lowercase and the value is an integer.
+        data = self._csv_to_key_value_map(file_path)
+        return
+
+    def _csv_to_key_value_map(self, file_path: str):
+        # Loads a two-column CSV into a dict.
+        results = {}
+        with open(file_path, encoding='utf-8') as f:
+            file_reader = csv.reader(f, delimiter=',')
+            for row in file_reader:
+                if len(row) < 2:
+                    continue
+                key = row[0].strip()
+                value = row[1].strip()
+
+                if not (len(key) and len(value)):
+                    continue
+
+                results[key] = value
+        return results
+
     def _download_files(self):
+        # Use a dummy file to proxy for the entire database being out of date
         # twelve hours expiry
         general_dummy_file = DUMMY_FILE_PATTERN.format('general')
         general_expiry_secs = 12 * 60 * 60
@@ -69,6 +154,12 @@ class PadGuide2(object):
             result_file = JSON_FILE_PATTERN.format(file_name)
             rpadutils.makeCachedPadguideRequest2(file_name, result_file)
 
+        overrides_expiry_secs = 1 * 60 * 60
+        rpadutils.makeCachedPlainRequest2(
+            NICKNAME_FILE_PATTERN, NICKNAME_OVERRIDES_SHEET, overrides_expiry_secs)
+        rpadutils.makeCachedPlainRequest2(
+            BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, overrides_expiry_secs)
+
 
 class PadGuide2Settings(CogSettings):
     def make_default_settings(self):
@@ -80,10 +171,12 @@ class PadGuide2Settings(CogSettings):
 def setup(bot):
     n = PadGuide2(bot)
     bot.add_cog(n)
+    bot.loop.create_task(n.reload_data_task())
 
 
 class PgRawDatabase(object):
-    def __init__(self):
+    def __init__(self, skip_load=False):
+        self._skip_load = skip_load
         self._all_pg_items = []
 
         # Load raw data items into id->value maps
@@ -105,10 +198,30 @@ class PgRawDatabase(object):
         self._skill_rotation_dated_map = self._load(PgSkillRotationDated)
         self._type_map = self._load(PgType)
 
+        # Ensure that every item has loaded its dependencies
         for i in self._all_pg_items:
             self._ensure_loaded(i)
 
+        # Finish loading now that all the dependencies are resolved
+        for i in self._all_pg_items:
+            i.finalize()
+
+        # Stick the monsters into groups so that we can calculate info across
+        # the entire group
+        self.grouped_monsters = list()
+        for m in self._monster_map.values():
+            if m.cur_evo_type != EvoType.Base:
+                continue
+            self.grouped_monsters.append(MonsterGroup(m))
+
+        # Used to normalize from monster NA values back to monster number
+        self.monster_no_na_to_monster_no = {
+            m.monster_no_na: m.monster_no for m in self._monster_map.values()}
+
     def _load(self, itemtype):
+        if self._skip_load:
+            return {}
+
         file_path = JSON_FILE_PATTERN.format(itemtype.file_name())
         item_list = []
 
@@ -126,6 +239,9 @@ class PgRawDatabase(object):
         if item:
             item.ensure_loaded(self)
         return item
+
+    def normalize_monster_no_na(self, monster_no_na: int):
+        return self.monster_no_na_to_monster_no[monster_no_na]
 
     def getAttributeEnum(self, ta_seq: int):
         attr = self._ensure_loaded(self._attribute_map.get(ta_seq))
@@ -211,6 +327,10 @@ class PgItem(object):
         """Override to inject dependencies."""
         raise NotImplementedError()
 
+    def finalize(self):
+        """Finish filling in anything that requires completion but no dependencies."""
+        pass
+
 
 class Attribute(Enum):
     """Standard 5 PAD colors in enum form. Values correspond to PadGuide values."""
@@ -285,6 +405,7 @@ class PgAwakening(PgItem):
         self.monster = database.getMonster(self.monster_no)
 
         self.monster.awakenings.append(self)
+        self.skill.monsters_with_awakening.append(self.monster)
 
 
 # dungeonList.jsp
@@ -493,7 +614,8 @@ class PgEvolutionMaterial(PgItem):
             return
 
         target_monster = self.evolution.to_monster
-        target_monster.material_for.append(self.fodder_monster)
+        # TODO: this is unsorted
+        target_monster.mats_for_evo.append(self.fodder_monster)
         self.fodder_monster.material_of.append(target_monster)
 
 
@@ -645,23 +767,38 @@ class PgMonster(PgItem):
         self.active_skill = None  # type: PgSkill
         self.leader_skill = None  # type: PgSkill
 
+        # ???
         self.cur_evo_type = EvoType.Base
         self.evo_to = []
         self.evo_from = None
 
-        self.material_for = []
+        self.mats_for_evo = []
         self.material_of = []
 
         self.awakenings = []
         self.drop_dungeons = []
+
+#         self.selection_priority = UNKNOWN_SELECTION_PRIORITY
+#         self.active_skill = active_skill
+#         self.server_actives = {}
+#         self.server_skillups = {}
+#         self.alt_evos = list()
+
+#         self.monster_ids_with_skill = monster_ids_with_skill
+#         self.monsters_with_skill = list()
 
     def key(self):
         return self.monster_no
 
     def load(self, database: PgRawDatabase):
         self.active_skill = database.getSkill(self.ts_seq_active)
+        if self.active_skill:
+            self.active_skill.monsters_with_active.append(self)
+
         self.leader_skill = database.getSkill(self.ts_seq_leader)
         self.leader_skill_data = database.getSkillLeaderData(self.ts_seq_leader)
+        if self.leader_skill:
+            self.leader_skill.monsters_with_leader.append(self)
 
         self.attr1 = database.getAttributeEnum(self.ta_seq_1)
         self.attr2 = database.getAttributeEnum(self.ta_seq_2)
@@ -678,17 +815,19 @@ class PgMonster(PgItem):
 
         monster_info = database.getMonsterInfo(self.monster_no)
         self.on_na = monster_info.on_na
-        self.series_id = monster_info.tsr_seq
-        self.is_gfe = self.series_id == 34
+        self.series = database.getSeries(monster_info.tsr_seq)
+        self.series.monsters.append(self)
+        self.is_gfe = self.series.tsr_seq == 34
         self.in_pem = monster_info.in_pem
         self.in_rem = monster_info.in_rem
         self.pem_evo = self.in_pem
         self.rem_evo = self.in_rem
 
         monster_price = database.getMonsterPrice(self.monster_no)
+        self.sell_mp = monster_price.sell_mp
         self.buy_mp = monster_price.buy_mp
         self.in_mpshop = self.buy_mp > 0
-        self.sell_mp = monster_price.sell_mp
+        self.mp_evo = self.in_mpshop
 
         if assist_setting == 1:
             self.is_inheritable = True
@@ -698,6 +837,41 @@ class PgMonster(PgItem):
             has_awakenings = len(self.awakenings) > 0
             self.is_inheritable = has_awakenings and self.rarity >= 5 and self.sell_mp > 3000
 
+    def finalize(self):
+        self.farmable = len(self.drop_dungeons) > 0
+        self.farmable_evo = self.farmable
+
+
+class MonsterGroup(object):
+    """Computes shared values across a tree of monsters and injects them."""
+
+    def __init__(self, base_monster: PgMonster):
+        self.base_monster = base_monster
+        self.members = list()
+        self._recursive_add(base_monster)
+        self._initialize_members()
+
+    def _recursive_add(self, m: PgMonster):
+        self.members.append(m)
+        for em in m.evo_to:
+            self._recursive_add(em)
+
+    def _initialize_members(self):
+        # Compute tree acquisition status
+        farmable_evo, pem_evo, rem_evo, mp_evo = False, False, False, False
+        for m in self.members:
+            farmable_evo = farmable_evo or m.farmable
+            pem_evo = pem_evo or m.in_pem
+            rem_evo = rem_evo or m.in_rem
+            mp_evo = mp_evo or m.in_mpshop
+
+        # Override tree acquisition status
+        for m in self.members:
+            m.farmable_evo = farmable_evo
+            m.pem_evo = pem_evo
+            m.rem_evo = rem_evo
+            m.mp_evo = mp_evo
+
 
 # monsterPriceList.jsp
 # {
@@ -706,6 +880,8 @@ class PgMonster(PgItem):
 #     "SELL_PRICE": "99",
 #     "TSTAMP": "1492101772974"
 # }
+
+
 class PgMonsterPrice(PgItem):
     @staticmethod
     def file_name():
@@ -744,6 +920,8 @@ class PgSeries(PgItem):
         self.tsr_seq = int(item['TSR_SEQ'])
         self.name = item['NAME_US']
         self.deleted_yn = item['DEL_YN']  # Either Y(discard) or N.
+
+        self.monsters = []
 
     def key(self):
         return self.tsr_seq
@@ -793,6 +971,10 @@ class PgSkill(PgItem):
         self.desc = item['TS_DESC_US']
         self.turn_min = int(item['TURN_MIN'])
         self.turn_max = int(item['TURN_MAX'])
+
+        self.monsters_with_active = []
+        self.monsters_with_leader = []
+        self.monsters_with_awakening = []
 
     def key(self):
         return self.ts_seq
@@ -1392,3 +1574,292 @@ def make_roma_subname(name_jp):
 
 def int_or_none(maybe_int: str):
     return int(maybe_int) if len(maybe_int) else None
+
+
+class MonsterIndex(object):
+    def __init__(self, monster_database, nickname_overrides, basename_overrides):
+        # Important not to hold onto anything except IDs here so we don't leak memory
+        # Other usecases can provide a filter?
+
+        monster_groups = monster_database.grouped_monsters
+
+        self.attr_short_prefix_map = {
+            Attribute.Fire: ['r'],
+            Attribute.Water: ['b'],
+            Attribute.Wood: ['g'],
+            Attribute.Light: ['l'],
+            Attribute.Dark: ['d'],
+        }
+        self.attr_long_prefix_map = {
+            Attribute.Fire: ['red', 'fire'],
+            Attribute.Water: ['blue', 'water'],
+            Attribute.Wood: ['green', 'wood'],
+            Attribute.Light: ['light'],
+            Attribute.Dark: ['dark'],
+        }
+
+        self.series_to_prefix_map = {
+            130: ['halloween'],
+            136: ['xmas', 'christmas'],
+            125: ['summer', 'beach'],
+            114: ['school', 'academy', 'gakuen'],
+            139: ['new years', 'ny'],
+            149: ['wedding', 'bride'],
+            154: ['padr'],
+        }
+
+        monster_no_na_to_nicknames = defaultdict(set)
+        for nickname, monster_no_na in nickname_overrides.items():
+            monster_no_na_to_nicknames[monster_no_na].add(nickname)
+
+        named_monsters = []
+        for mg in monster_groups:
+            group_basename_overrides = basename_overrides.get(mg.base_monster.monster_no_na, [])
+            named_mg = NamedMonsterGroup(mg, group_basename_overrides)
+            for monster in named_mg.monsters:
+                prefixes = self.compute_prefixes(monster)
+                extra_nicknames = monster_no_na_to_nicknames[monster.monster_no_na]
+                named_monster = NamedMonster(monster, named_mg, prefixes, extra_nicknames)
+                named_monsters.append(named_monster)
+
+        # Sort the NamedMonsters into the opposite order we want to accept their nicknames in
+        # This order is:
+        #  1) High priority first
+        #  2) Monsters with larger group sizes
+        #  3) Monsters with higher ID values
+        def named_monsters_sort(nm: NamedMonster):
+            return (not nm.is_low_priority, nm.group_size, nm.monster_no_na)
+        named_monsters.sort(key=named_monsters_sort)
+
+        self.all_entries = {}
+        self.two_word_entries = {}
+        for nm in named_monsters:
+            for nickname in nm.final_nicknames:
+                self.all_entries[nickname] = nm.monster_no
+            for nickname in nm.final_two_word_nicknames:
+                self.two_word_entries[nickname] = nm.monster_no
+
+        for nickname, monster_no_na in nickname_overrides.items():
+            self.all_entries[nickname] = monster_database.normalize_monster_no_na(monster_no_na)
+
+    def init_index(self):
+        pass
+
+    def compute_prefixes(self, m: PgMonster):
+        prefixes = set()
+
+        attr1_short_prefixes = self.attr_short_prefix_map[m.attr1]
+        attr1_long_prefixes = self.attr_long_prefix_map[m.attr1]
+        prefixes.update(attr1_short_prefixes)
+        prefixes.update(attr1_long_prefixes)
+
+        if m.attr2 is not None:
+            attr2_short_prefixes = self.attr_short_prefix_map[m.attr2]
+            for a1 in attr1_short_prefixes:
+                for a2 in attr2_short_prefixes:
+                    prefixes.add(a1 + a2)
+                    prefixes.add(a1 + '/' + a2)
+
+        # TODO: add prefixes based on type
+
+        # Chibi monsters have the same NA name, except lowercased
+        if m.name_na != m.name_jp:
+            if m.name_na.lower() == m.name_na:
+                prefixes.add('chibi')
+        elif 'ミニ' in m.name_jp:
+            # Guarding this separately to prevent 'gemini' from triggering (e.g. 2645)
+            prefixes.add('chibi')
+
+        lower_name = m.name_na.lower()
+        awoken = lower_name.startswith('awoken') or '覚醒' in lower_name
+        revo = lower_name.startswith('reincarnated') or '転生' in lower_name
+        awoken_or_revo = awoken or revo
+
+        # These clauses need to be separate to handle things like 'Awoken Thoth' which are
+        # actually Evos but have awoken in the name
+        if awoken:
+            prefixes.add('a')
+            prefixes.add('awoken')
+
+        if revo:
+            prefixes.add('revo')
+            prefixes.add('reincarnated')
+
+        # Prefixes for evo type
+        if m.cur_evo_type == EvoType.Base:
+            prefixes.add('base')
+        elif m.cur_evo_type == EvoType.Evo:
+            prefixes.add('evo')
+        elif m.cur_evo_type == EvoType.UvoAwoken and not awoken_or_revo:
+            prefixes.add('uvo')
+            prefixes.add('uevo')
+        elif m.cur_evo_type == EvoType.UuvoReincarnated and not awoken_or_revo:
+            prefixes.add('uuvo')
+            prefixes.add('uuevo')
+
+        # Collab prefixes
+        prefixes.update(self.series_to_prefix_map.get(m.series.tsr_seq, []))
+
+        return prefixes
+
+
+class NamedMonsterGroup(object):
+    def __init__(self, monster_group: MonsterGroup, basename_overrides: list):
+        self.monster_group = monster_group
+        self.monsters = monster_group.members
+        self.group_size = len(self.monsters)
+
+        self.monster_no_to_basename = {
+            m.monster_no: self._compute_monster_basename(m) for m in self.monsters
+        }
+
+        self.computed_basename = self._compute_group_basename()
+        self.computed_basenames = set([self.computed_basename])
+        if '-' in self.computed_basename:
+            self.computed_basenames.add(self.computed_basename.replace('-', ' '))
+
+        self.basenames = basename_overrides or self.computed_basenames
+
+    def _compute_monster_basename(self, m: PgMonster):
+        basename = m.name_na.lower()
+        if ',' in basename:
+            name_parts = basename.split(',')
+            if name_parts[1].strip().startswith('the '):
+                # handle names like 'xxx, the yyy' where xxx is the name
+                basename = name_parts[0]
+            else:
+                # otherwise, grab the chunk after the last comma
+                basename = name_parts[-1]
+
+        for x in ['awoken', 'reincarnated']:
+            if basename.startswith(x):
+                basename = basename.replace(x, '')
+
+        return basename.strip()
+
+    def _compute_group_basename(self):
+        def get_basename(x): return self.monster_no_to_basename[x.monster_no]
+        sorted_monsters = sorted(self.monsters, key=get_basename)
+        grouped = [(c, len(list(cgen))) for c, cgen in groupby(sorted_monsters, get_basename)]
+        # TODO: best_tuple selection could be better
+        best_tuple = max(grouped, key=itemgetter(1))
+        return best_tuple[0]
+
+    def is_low_priority(self):
+        return (self._is_low_priority_monster(self.monster_group.base_monster)
+                or self._is_low_priority_group(self.monster_group))
+
+    def _is_low_priority_monster(self, m: PgMonster):
+        lp_types = ['evolve', 'enhance', 'protected', 'awoken', 'vendor']
+        lp_substrings = ['tamadra']
+        lp_min_rarity = 2
+        name = m.name_na.lower()
+
+        failed_type = m.type1.lower() in lp_types
+        failed_ss = any([x in name for x in lp_substrings])
+        failed_rarity = m.rarity < lp_min_rarity
+        failed_chibi = name == m.name_na
+        return failed_type or failed_ss or failed_rarity or failed_chibi
+
+    def _is_low_priority_group(self, mg: MonsterGroup):
+        lp_grp_min_rarity = 5
+        max_rarity = max(m.rarity for m in mg.members)
+        failed_max_rarity = max_rarity < lp_grp_min_rarity
+        return failed_max_rarity
+
+
+class NamedMonster(object):
+    def __init__(self, monster: PgMonster, monster_group: NamedMonsterGroup, prefixes: set, extra_nicknames: set):
+        # Must not hold onto monster or monster_group!
+        self.monster_no = monster.monster_no
+        self.monster_no_na = monster.monster_no_na
+
+        # This stuff is important for nickname generation
+        self.group_basenames = monster_group.basenames
+        self.prefixes = prefixes
+
+        # Data used to determine how to rank the nicknames
+        self.is_low_priority = monster_group.is_low_priority()
+        self.group_size = monster_group.group_size
+
+        # These are just extra metadata
+        self.monster_basename = monster_group.monster_no_to_basename[self.monster_no]
+        self.group_computed_basename = monster_group.computed_basename
+        self.extra_nicknames = extra_nicknames
+
+        # Compute extra basenames by checking for two-word basenames and using the second half
+        self.two_word_basenames = set()
+        for basename in self.group_basenames:
+            basename_words = basename.split(' ')
+            if len(basename_words) == 2:
+                self.two_word_basenames.add(basename_words[1])
+
+        # The primary result nicknames
+        self.final_nicknames = set()
+        # Set the configured override nicknames
+        self.final_nicknames.update(self.extra_nicknames)
+        # Set the roma subname for JP monsters
+        if monster.roma_subname:
+            self.final_nicknames.add(monster.roma_subname)
+
+        # For each basename, add nicknames
+        for basename in self.group_basenames:
+            # Add the basename directly
+            self.final_nicknames.add(basename)
+            # Add the prefix plus basename, and the prefix with a space between basename
+            for prefix in self.prefixes:
+                self.final_nicknames.add(prefix + basename)
+                self.final_nicknames.add(prefix + ' ' + basename)
+
+        self.final_two_word_nicknames = set()
+        # Slightly different process for two-word basenames. Does this make sense? Who knows.
+        for basename in self.two_word_basenames:
+            # Add the prefix plus basename, and the prefix with a space between basename
+            for prefix in self.prefixes:
+                self.final_two_word_nicknames.add(prefix + basename)
+                self.final_two_word_nicknames.add(prefix + ' ' + basename)
+
+
+#         skill_rotation = padguide.loadJsonToItem('skillRotationList.jsp', padguide.PgSkillRotation)
+#         dated_skill_rotation = padguide.loadJsonToItem(
+#             'skillRotationListList.jsp', padguide.PgDatedSkillRotation)
+
+#         id_to_skill_rotation = {sr.tsr_seq: sr for sr in skill_rotation}
+#         merged_rotation = [padguide.PgMergedRotation(
+#             id_to_skill_rotation[dsr.tsr_seq], dsr) for dsr in dated_skill_rotation]
+
+#         skill_id_to_monsters = defaultdict(list)
+#         for m in self.full_monster_list:
+#             if m.active_skill:
+#                 skill_id_to_monsters[m.active_skill.skill_id].append(m)
+
+#         self.computeCurrentRotations(merged_rotation, 'US', NA_TZ_OBJ,
+#                                      monster_id_to_monster, skill_map, skill_id_to_monsters)
+#         self.computeCurrentRotations(merged_rotation, 'JP', JP_TZ_OBJ,
+#                                      monster_id_to_monster, skill_map, skill_id_to_monsters)
+
+#     def computeCurrentRotations(self, merged_rotation, server, server_tz, monster_id_to_monster, skill_map, skill_id_to_monsters):
+#         server_now = datetime.now().replace(tzinfo=server_tz).date()
+#         active_rotation = [mr for mr in merged_rotation if mr.server ==
+#                            server and mr.rotation_date <= server_now]
+#         server = normalizeServer(server)
+#
+#         monsters_to_rotations = defaultdict(list)
+#         for ar in active_rotation:
+#             monsters_to_rotations[ar.monster_id].append(ar)
+#
+#         cur_rotations = list()
+#         for _, rotations in monsters_to_rotations.items():
+#             cur_rotations.append(max(rotations, key=lambda x: x.rotation_date))
+#
+#         for mr in cur_rotations:
+#             mr.resolved_monster = monster_id_to_monster[mr.monster_id]
+#             mr.resolved_active = skill_map[mr.active_id]
+#
+#             mr.resolved_monster.server_actives[server] = mr.resolved_active
+#             monsters_with_skill = skill_id_to_monsters[mr.resolved_active.skill_id]
+#             for m in monsters_with_skill:
+#                 if m.monster_id != mr.resolved_monster.monster_id:
+#                     m.server_skillups[server] = mr.resolved_monster
+#
+#         return cur_rotations
