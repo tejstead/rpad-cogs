@@ -32,6 +32,7 @@ from .utils.twitter_stream import *
 
 SUPPORTED_SERVERS = ["NA", "KR", "JP", "FAKE"]
 
+
 def dl_events():
     # two hours expiry
     expiry_secs = 2 * 60 * 60
@@ -42,6 +43,7 @@ def dl_events():
     for item in resp["items"]:
         events.append(padguide.PgEvent(item))
     return events
+
 
 def dl_event_type_map():
     # eight hours expiry
@@ -68,10 +70,11 @@ def dl_dungeon_map():
         dungeons_map[dungeon.seq] = dungeon
     return dungeons_map
 
+
 EXTRA_FILES = [
     "attributeList.jsp",
     "awokenSkillList.jsp",
-#     "dungeonList.jsp",
+    #     "dungeonList.jsp",
     "dungeonTypeList.jsp",
     "dungeonMonsterList.jsp",
     "dungeonMonsterDropList.jsp",
@@ -96,9 +99,11 @@ EXTRA_FILES = [
     "typeList.jsp",
 ]
 
+
 def clear_extras():
     for ef in EXTRA_FILES:
         rmCachedPadguideRequest(ef)
+
 
 def dl_extras():
     # three days expiry
@@ -165,7 +170,8 @@ class PadEvents:
         print("starting check_started")
         while "PadEvents" in self.bot.cogs:
             try:
-                events = filter(lambda e: e.isStarted() and not e.uid in self.started_events, self.events)
+                events = filter(lambda e: e.isStarted()
+                                and not e.uid in self.started_events, self.events)
 
                 daily_refresh_servers = set()
                 for e in events:
@@ -174,14 +180,16 @@ class PadEvents:
                         for gr in list(self.settings.listGuerrillaReg()):
                             if e.server == gr['server']:
                                 try:
-                                    message = box("Server " + e.server + ", group " + e.group + " : " + e.nameAndModifier())
+                                    message = box("Server " + e.server + ", group " +
+                                                  e.group + " : " + e.nameAndModifier())
                                     channel = self.bot.get_channel(gr['channel_id'])
 
                                     try:
                                         role_name = '{}_group_{}'.format(e.server, e.group)
                                         role = get_role(channel.server.roles, role_name)
                                         if role and role.mentionable:
-                                            message = "{} `: {} is starting`".format(role.mention, e.nameAndModifier())
+                                            message = "{} `: {} is starting`".format(
+                                                role.mention, e.nameAndModifier())
                                     except:
                                         pass  # do nothing if role is missing
 
@@ -190,8 +198,10 @@ class PadEvents:
                                     # deregister gr
                                     traceback.print_exc()
                                     self.settings.removeGuerrillaReg(gr['channel_id'], gr['server'])
-                                    print("caught exception while sending guerrilla msg, deregistering " + str(ex))
-                                    print('for ' + (channel.name if channel else 'unknown') + ' sending ' + message)
+                                    print(
+                                        "caught exception while sending guerrilla msg, deregistering " + str(ex))
+                                    print('for ' + (channel.name if channel else 'unknown') +
+                                          ' sending ' + message)
 
                     else:
                         if not e.isForNormal():
@@ -205,9 +215,9 @@ class PadEvents:
                                 await self.pageOutput(msg, channel_id=daily_registration['channel_id'])
                         except Exception as ex:
                             traceback.print_exc()
-                            self.settings.removeDailyReg(daily_registration['channel_id'], daily_registration['server'])
+                            self.settings.removeDailyReg(
+                                daily_registration['channel_id'], daily_registration['server'])
                             print("caught exception while sending daily msg, deregistering " + str(ex))
-
 
             except Exception as ex:
                 traceback.print_exc()
@@ -384,13 +394,15 @@ class PadEvents:
 
         msg = "Listing all events for " + server
 
-        special_events = active_events.withType(padguide.EventType.EventTypeSpecial).itemsByCloseTime()
+        special_events = active_events.withType(
+            padguide.EventType.EventTypeSpecial).itemsByCloseTime()
         if len(special_events) > 0:
             msg += "\n\n" + self.makeActiveOutput('Special Events', special_events)
 
         all_etc_events = active_events.withType(padguide.EventType.EventTypeEtc)
 
-        etc_events = all_etc_events.withDungeonType(padguide.DungeonType.Etc).excludeUnwantedEvents().itemsByCloseTime()
+        etc_events = all_etc_events.withDungeonType(
+            padguide.DungeonType.Etc).excludeUnwantedEvents().itemsByCloseTime()
         if len(etc_events) > 0:
             msg += "\n\n" + self.makeActiveOutput('Etc Events', etc_events)
 
@@ -398,9 +410,11 @@ class PadEvents:
 #         if len(etc_events) > 0:
 #             msg += "\n\n" + self.makeActiveOutput('Technical Events', tech_events)
 
-        active_guerrilla_events = active_events.withType(padguide.EventType.EventTypeGuerrilla).items()
+        active_guerrilla_events = active_events.withType(
+            padguide.EventType.EventTypeGuerrilla).items()
         if len(active_guerrilla_events) > 0:
-            msg += "\n\n" + self.makeActiveGuerrillaOutput('Active Guerrillas', active_guerrilla_events)
+            msg += "\n\n" + \
+                self.makeActiveGuerrillaOutput('Active Guerrillas', active_guerrilla_events)
 
         guerrilla_events = pending_events.withType(padguide.EventType.EventTypeGuerrilla).items()
         if len(guerrilla_events) > 0:
@@ -410,17 +424,24 @@ class PadEvents:
         if len(week_events):
             msg += "\n\n" + "Found " + str(len(week_events)) + " unexpected week events!"
 
-        special_week_events = available_events.withType(padguide.EventType.EventTypeSpecialWeek).items()
+        special_week_events = available_events.withType(
+            padguide.EventType.EventTypeSpecialWeek).items()
         if len(special_week_events):
-            msg += "\n\n" + "Found " + str(len(special_week_events)) + " unexpected special week events!"
+            msg += "\n\n" + "Found " + str(len(special_week_events)) + \
+                " unexpected special week events!"
 
-        active_guerrilla_new_events = active_events.withType(padguide.EventType.EventTypeGuerrillaNew).items()
+        active_guerrilla_new_events = active_events.withType(
+            padguide.EventType.EventTypeGuerrillaNew).items()
         if len(active_guerrilla_new_events) > 0:
-            msg += "\n\n" + self.makeActiveGuerrillaOutput('Active New Guerrillas', active_guerrilla_new_events)
+            msg += "\n\n" + \
+                self.makeActiveGuerrillaOutput('Active New Guerrillas', active_guerrilla_new_events)
 
-        guerrilla_new_events = pending_events.withType(padguide.EventType.EventTypeGuerrillaNew).items()
+        guerrilla_new_events = pending_events.withType(
+            padguide.EventType.EventTypeGuerrillaNew).items()
         if len(guerrilla_new_events) > 0:
-            msg += "\n\n" + self.makeFullGuerrillaOutput('New Guerrilla Events', guerrilla_new_events, new_guerrilla=True)
+            msg += "\n\n" + \
+                self.makeFullGuerrillaOutput('New Guerrilla Events',
+                                             guerrilla_new_events, new_guerrilla=True)
 
         # clean up long headers
         msg = msg.replace('-------------------------------------', '-----------------------')
@@ -528,19 +549,18 @@ class PadEvents:
         active_events = events.activeOnly().itemsByOpenTime(reverse=True)
         pending_events = events.pendingOnly().itemsByOpenTime(reverse=True)
 
-        group_to_active_event = {e.group : e for e in active_events}
-        group_to_pending_event = {e.group : e for e in pending_events}
+        group_to_active_event = {e.group: e for e in active_events}
+        group_to_pending_event = {e.group: e for e in pending_events}
 
         active_events = list(group_to_active_event.values())
         pending_events = list(group_to_pending_event.values())
 
-        active_events.sort(key=lambda e : e.group)
-        pending_events.sort(key=lambda e : e.group)
+        active_events.sort(key=lambda e: e.group)
+        pending_events.sort(key=lambda e: e.group)
 
         if len(active_events) == 0 and len(pending_events) == 0:
             await self.bot.say("No events available for " + server)
             return
-
 
         output = "Events for {}".format(server)
 
@@ -556,6 +576,7 @@ class PadEvents:
 
         await self.bot.say(box(output))
 
+
 def setup(bot):
     print('padevent bot setup')
     n = PadEvents(bot)
@@ -563,18 +584,20 @@ def setup(bot):
     bot.add_cog(n)
     print('done adding padevent bot')
 
+
 def makeChannelReg(channel_id, server):
     server = normalizeServer(server)
     return {
         "channel_id": channel_id,
-        "server" : server
+        "server": server
     }
+
 
 class PadEventSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'guerrilla_regs' : [],
-          'daily_regs' : [],
+            'guerrilla_regs': [],
+            'daily_regs': [],
         }
         return config
 
