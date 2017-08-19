@@ -12,6 +12,7 @@ import asyncio
 import csv
 from datetime import datetime
 from datetime import timedelta
+import difflib
 from enum import Enum
 from itertools import groupby
 from macpath import basename
@@ -28,6 +29,8 @@ import romkan
 import unidecode
 
 from . import rpadutils
+from .utils import checks
+from .utils.chat_formatting import box, inline
 from .utils.cog_settings import CogSettings
 from .utils.dataIO import dataIO
 
@@ -39,8 +42,8 @@ CSV_FILE_PATTERN = 'data/padguide2/{}.csv'
 GROUP_BASENAMES_OVERRIDES_SHEET = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid=2070615818&single=true&output=csv'
 NICKNAME_OVERRIDES_SHEET = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid=0&single=true&output=csv'
 
-NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames.csv')
-BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames.csv')
+NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames')
+BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
 
 
 class PadGuide2(object):
@@ -77,6 +80,13 @@ class PadGuide2(object):
         self.basename_overrides = defaultdict(set)
 
         self.database = PgRawDatabase(skip_load=True)
+#         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
+
+    def create_index(self, accept_filter=None):
+        return MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, accept_filter=accept_filter)
+
+    def get_monster_by_no(self, monster_no: int):
+        return self.database.getMonster(monster_no)
 
     async def reload_data_task(self):
         await self.bot.wait_until_ready()
@@ -111,11 +121,8 @@ class PadGuide2(object):
             if k.isdigit():
                 self.basename_overrides[int(k)].add(v.lower())
 
-        print('done loading')
-        print(nickname_overrides)
-        print(basename_overrides)
-
         self.database = PgRawDatabase()
+        self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
 
     def _load_overrides(self, file_path: str):
         # Loads a two-column CSV into a dict, and cleans it a bit by ensuring the
@@ -159,6 +166,32 @@ class PadGuide2(object):
             NICKNAME_FILE_PATTERN, NICKNAME_OVERRIDES_SHEET, overrides_expiry_secs)
         rpadutils.makeCachedPlainRequest2(
             BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, overrides_expiry_secs)
+
+    @commands.group(pass_context=True)
+    async def padguide2(self, ctx):
+        """PAD database management"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+
+    @padguide2.command(pass_context=True)
+    @checks.is_owner()
+    async def query(self, ctx, query: str):
+        m, err, debug_info = self.index.find_monster(query)
+        if m is None:
+            await self.bot.say(box("no result"))
+        else:
+            msg = "{}. {}".format(m.monster_no_na, m.name_na)
+            msg += "\n group_basenames: {}".format(m.group_basenames)
+            msg += "\n prefixes: {}".format(m.prefixes)
+            msg += "\n is_low_priority: {}".format(m.is_low_priority)
+            msg += "\n group_size: {}".format(m.group_size)
+            msg += "\n rarity: {}".format(m.rarity)
+            msg += "\n monster_basename: {}".format(m.monster_basename)
+            msg += "\n group_computed_basename: {}".format(m.group_computed_basename)
+            msg += "\n extra_nicknames: {}".format(m.extra_nicknames)
+            msg += "\n final_nicknames: {}".format(m.final_nicknames)
+            msg += "\n final_two_word_nicknames: {}".format(m.final_two_word_nicknames)
+            await self.bot.say(box(msg))
 
 
 class PadGuide2Settings(CogSettings):
@@ -407,6 +440,8 @@ class PgAwakening(PgItem):
         self.monster.awakenings.append(self)
         self.skill.monsters_with_awakening.append(self.monster)
 
+    def get_name(self):
+        return self.skill.name
 
 # dungeonList.jsp
 # {
@@ -425,6 +460,8 @@ class PgAwakening(PgItem):
 #     "TDT_SEQ": "10",
 #     "TSTAMP": "1373289123410"
 # },
+
+
 class PgDungeon(PgItem):
     @staticmethod
     def file_name():
@@ -775,14 +812,14 @@ class PgMonster(PgItem):
         self.mats_for_evo = []
         self.material_of = []
 
-        self.awakenings = []
+        self.awakenings = []  # PgAwakening
         self.drop_dungeons = []
 
-#         self.selection_priority = UNKNOWN_SELECTION_PRIORITY
-#         self.active_skill = active_skill
-#         self.server_actives = {}
-#         self.server_skillups = {}
-#         self.alt_evos = list()
+        self.alt_evos = []  # PgMonster
+
+        self.server_actives = {}  # str -> ?
+        self.server_skillups = {}  # str -> ?
+
 
 #         self.monster_ids_with_skill = monster_ids_with_skill
 #         self.monsters_with_skill = list()
@@ -815,9 +852,9 @@ class PgMonster(PgItem):
 
         monster_info = database.getMonsterInfo(self.monster_no)
         self.on_na = monster_info.on_na
-        self.series = database.getSeries(monster_info.tsr_seq)
+        self.series = database.getSeries(monster_info.tsr_seq)  # PgSeries
         self.series.monsters.append(self)
-        self.is_gfe = self.series.tsr_seq == 34
+        self.is_gfe = self.series.tsr_seq == 34  # godfest
         self.in_pem = monster_info.in_pem
         self.in_rem = monster_info.in_rem
         self.pem_evo = self.in_pem
@@ -1049,6 +1086,9 @@ class PgSkillLeaderData(PgItem):
 
     def load(self, database: PgRawDatabase):
         pass
+
+    def get_data(self):
+        return self.hp, self.atk, self.rcv, self.resist
 
 
 # skillRotationList.jsp
@@ -1576,11 +1616,13 @@ def int_or_none(maybe_int: str):
     return int(maybe_int) if len(maybe_int) else None
 
 
-class MonsterIndex(object):
-    def __init__(self, monster_database, nickname_overrides, basename_overrides):
-        # Important not to hold onto anything except IDs here so we don't leak memory
-        # Other usecases can provide a filter?
+def empty_index():
+    return MonsterIndex(PgRawDatabase(skip_load=True), {}, {})
 
+
+class MonsterIndex(object):
+    def __init__(self, monster_database, nickname_overrides, basename_overrides, accept_filter=None):
+        # Important not to hold onto anything except IDs here so we don't leak memory
         monster_groups = monster_database.grouped_monsters
 
         self.attr_short_prefix_map = {
@@ -1617,6 +1659,8 @@ class MonsterIndex(object):
             group_basename_overrides = basename_overrides.get(mg.base_monster.monster_no_na, [])
             named_mg = NamedMonsterGroup(mg, group_basename_overrides)
             for monster in named_mg.monsters:
+                if accept_filter and not accept_filter(monster):
+                    continue
                 prefixes = self.compute_prefixes(monster)
                 extra_nicknames = monster_no_na_to_nicknames[monster.monster_no_na]
                 named_monster = NamedMonster(monster, named_mg, prefixes, extra_nicknames)
@@ -1635,12 +1679,19 @@ class MonsterIndex(object):
         self.two_word_entries = {}
         for nm in named_monsters:
             for nickname in nm.final_nicknames:
-                self.all_entries[nickname] = nm.monster_no
+                self.all_entries[nickname] = nm
             for nickname in nm.final_two_word_nicknames:
-                self.two_word_entries[nickname] = nm.monster_no
+                self.two_word_entries[nickname] = nm
+
+        self.all_monsters = named_monsters
+        self.all_na_name_to_monsters = {m.name_na.lower(): m for m in named_monsters}
+        self.monster_no_na_to_named_monster = {m.monster_no_na: m for m in named_monsters}
+        self.monster_no_to_named_monster = {m.monster_no: m for m in named_monsters}
 
         for nickname, monster_no_na in nickname_overrides.items():
-            self.all_entries[nickname] = monster_database.normalize_monster_no_na(monster_no_na)
+            nm = self.monster_no_na_to_named_monster.get(monster_no_na)
+            if nm:
+                self.all_entries[nickname] = nm
 
     def init_index(self):
         pass
@@ -1701,6 +1752,92 @@ class MonsterIndex(object):
         prefixes.update(self.series_to_prefix_map.get(m.series.tsr_seq, []))
 
         return prefixes
+
+    def find_monster(self, query):
+        query = rpadutils.rmdiacritics(query).lower().strip()
+
+        # id search
+        if query.isdigit():
+            m = self.monster_no_na_to_named_monster.get(int(query))
+            if m is None:
+                return None, 'Looks like a monster ID but was not found', None
+            else:
+                return m, None, "ID lookup"
+            # special handling for na/jp
+
+        # TODO: need to handle na_only?
+
+        # handle exact nickname match
+        if query in self.all_entries:
+            return self.all_entries[query], None, "Exact nickname"
+
+        contains_jp = rpadutils.containsJp(query)
+        if len(query) < 2 and contains_jp:
+            return None, 'Japanese queries must be at least 2 characters', None
+        elif len(query) < 4 and not contains_jp:
+            return None, 'Your query must be at least 4 letters', None
+
+        # TODO: this should be a length-limited priority queue
+        matches = set()
+        # prefix search for nicknames, space-preceeded, take max id
+        for nickname, m in self.all_entries.items():
+            if nickname.startswith(query + ' '):
+                matches.add(m)
+        if len(matches):
+            return self.pickBestMonster(matches), None, "Space nickname prefix, max of {}".format(len(matches))
+
+        # prefix search for nicknames, take max id
+        for nickname, m in self.all_entries.items():
+            if nickname.startswith(query):
+                matches.add(m)
+        if len(matches):
+            all_names = ",".join(map(lambda x: x.name_na, matches))
+            return self.pickBestMonster(matches), None, "Nickname prefix, max of {}, matches=({})".format(len(matches), all_names)
+
+        # prefix search for full name, take max id
+        for nickname, m in self.all_entries.items():
+            if (m.name_na.lower().startswith(query) or m.name_jp.lower().startswith(query)):
+                matches.add(m)
+        if len(matches):
+            return self.pickBestMonster(matches), None, "Full name, max of {}".format(len(matches))
+
+        # for nicknames with 2 names, prefix search 2nd word, take max id
+        if query in self.two_word_entries:
+            return self.two_word_entries[query], None, "Second-word nickname prefix, max of {}".format(len(matches))
+
+        # TODO: refactor 2nd search characteristcs for 2nd word
+
+        # full name contains on nickname, take max id
+        for nickname, m in self.all_entries.items():
+            if (query in m.name_na.lower() or query in m.name_jp.lower()):
+                matches.add(m)
+        if len(matches):
+            return self.pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(len(matches))
+
+        # full name contains on full monster list, take max id
+
+        for m in self.all_monsters:
+            if (query in m.name_na.lower() or query in m.name_jp.lower()):
+                matches.add(m)
+        if len(matches):
+            return self.pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(len(matches))
+
+        # No decent matches. Try near hits on nickname instead
+        matches = difflib.get_close_matches(query, self.all_entries.keys(), n=1, cutoff=.8)
+        if len(matches):
+            return self.all_entries[matches[0]], None, 'Close nickname match'
+
+        # Still no decent matches. Try near hits on full name instead
+        matches = difflib.get_close_matches(
+            query, self.all_na_name_to_monsters.keys(), n=1, cutoff=.9)
+        if len(matches):
+            return self.all_na_name_to_monsters[matches[0]], None, 'Close name match'
+
+        # couldn't find anything
+        return None, "Could not find a match for: " + query, None
+
+    def pickBestMonster(self, named_monster_list):
+        return max(named_monster_list, key=lambda x: (not x.is_low_priority, x.rarity, x.monster_no_na))
 
 
 class NamedMonsterGroup(object):
@@ -1771,6 +1908,8 @@ class NamedMonsterGroup(object):
 class NamedMonster(object):
     def __init__(self, monster: PgMonster, monster_group: NamedMonsterGroup, prefixes: set, extra_nicknames: set):
         # Must not hold onto monster or monster_group!
+
+        # Hold on to the IDs instead
         self.monster_no = monster.monster_no
         self.monster_no_na = monster.monster_no_na
 
@@ -1781,6 +1920,11 @@ class NamedMonster(object):
         # Data used to determine how to rank the nicknames
         self.is_low_priority = monster_group.is_low_priority()
         self.group_size = monster_group.group_size
+        self.rarity = monster.rarity
+
+        # Used in fallback searches
+        self.name_na = monster.name_na
+        self.name_jp = monster.name_jp
 
         # These are just extra metadata
         self.monster_basename = monster_group.monster_no_to_basename[self.monster_no]
@@ -1814,11 +1958,14 @@ class NamedMonster(object):
         self.final_two_word_nicknames = set()
         # Slightly different process for two-word basenames. Does this make sense? Who knows.
         for basename in self.two_word_basenames:
+            self.final_two_word_nicknames.add(basename)
             # Add the prefix plus basename, and the prefix with a space between basename
             for prefix in self.prefixes:
                 self.final_two_word_nicknames.add(prefix + basename)
                 self.final_two_word_nicknames.add(prefix + ' ' + basename)
 
+
+# Code that still needs to be added somewhere
 
 #         skill_rotation = padguide.loadJsonToItem('skillRotationList.jsp', padguide.PgSkillRotation)
 #         dated_skill_rotation = padguide.loadJsonToItem(
@@ -1863,3 +2010,47 @@ class NamedMonster(object):
 #                     m.server_skillups[server] = mr.resolved_monster
 #
 #         return cur_rotations
+
+#     def computeMonsterDropInfoCombined(self,
+#                                        dungeon_monster_drop_list,  # unused
+#                                        dungeon_monster_list,
+#                                        dungeon_list):
+#         """Stuff for computing monster drops"""
+#
+#         # TODO: consider merging in dungeon_monster_drop_list info
+#         dungeon_id_to_dungeon = {x.seq: x for x in dungeon_list}
+#
+#         monster_id_to_drop_info = defaultdict(list)
+#         for dungeon_monster in dungeon_monster_list:
+#             monster_id = dungeon_monster.drop_monster_id
+#             dungeon_seq = dungeon_monster.dungeon_seq
+#
+#             if dungeon_seq not in dungeon_id_to_dungeon:
+#                 # In case downloaded files are out of sync, skip
+#                 continue
+#             dungeon = dungeon_id_to_dungeon[dungeon_seq]
+#
+#             info = padguide.PgMonsterDropInfoCombined(monster_id, None, dungeon_monster, dungeon)
+#             monster_id_to_drop_info[monster_id].append(info)
+#
+#         return monster_id_to_drop_info
+
+
+def compute_killers(*types):
+    if 'Balance' in types:
+        return ['Any']
+    killers = set()
+    for t in types:
+        killers.update(type_to_killers_map.get(t, []))
+    return sorted(killers)
+
+
+type_to_killers_map = {
+    'God': ['Devil'],
+    'Devil': ['God'],
+    'Machine': ['God', 'Balance'],
+    'Dragon': ['Machine', 'Healer'],
+    'Physical': ['Machine', 'Healer'],
+    'Attacker': ['Devil', 'Physical'],
+    'Healer': ['Dragon', 'Attacker'],
+}
