@@ -312,8 +312,6 @@ class PgRemWrapper:
             mods = [emm for emm in modifier_list if emm.server == server]
             rem_list = jp_rem_list if server == 'JP' else na_rem_list
             gfe_rem_list = jp_gfe_rem_list if server == 'JP' else na_gfe_rem_list
-#             print(mods)
-#             print(gfe_rem_list)
             self.server_to_config[server] = PgServerRemConfig(server, rem_list, gfe_rem_list, mods)
 
 
