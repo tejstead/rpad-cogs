@@ -17,10 +17,12 @@ class RpadUtils:
     def __init__(self, bot):
         self.bot = bot
 
+
 def setup(bot):
     print('rpadutils setup')
     n = RpadUtils(bot)
     bot.add_cog(n)
+
 
 # TZ used for PAD NA
 # NA_TZ_OBJ = pytz.timezone('America/Los_Angeles')
@@ -43,8 +45,9 @@ JP_TZ_OBJ = pytz.timezone('Asia/Tokyo')
 # 2190-2195 : Arrows
 # u203B     : Weird asterisk thing
 
-JP_REGEX_STR = r'[\u3000-\u303F]|[\u3040-\u309F]|[\u30A0-\u30FF]|[\uFF00-\uFFEF]|[\u4E00-\u9FAF]|[\u2605-\u2606]|[\u2190-\u2195]|\u203B';
+JP_REGEX_STR = r'[\u3000-\u303F]|[\u3040-\u309F]|[\u30A0-\u30FF]|[\uFF00-\uFFEF]|[\u4E00-\u9FAF]|[\u2605-\u2606]|[\u2190-\u2195]|\u203B'
 JP_REGEX = re.compile(JP_REGEX_STR)
+
 
 def containsJp(txt):
     return JP_REGEX.search(txt)
@@ -78,6 +81,7 @@ class SpaceNotation(BadCommand):
     """
     pass
 
+
 def get_role(roles, role_string):
     if role_string.lower() == "everyone":
         role_string = "@everyone"
@@ -89,6 +93,7 @@ def get_role(roles, role_string):
         raise RoleNotFound()
 
     return role
+
 
 def get_role_from_id(bot, server, roleid):
     try:
@@ -105,14 +110,18 @@ def get_role_from_id(bot, server, roleid):
         raise RoleNotFound(server, roleid)
     return role
 
+
 def get_server_from_id(bot, serverid):
     return discord.utils.get(bot.servers, id=serverid)
+
 
 def normalizeServer(server):
     server = server.upper()
     return 'NA' if server == 'US' else server
 
+
 cache_folder = 'data/padevents'
+
 
 def shouldDownload(file_path, expiry_secs):
     if not os.path.exists(file_path):
@@ -121,7 +130,8 @@ def shouldDownload(file_path, expiry_secs):
 
     ftime = os.path.getmtime(file_path)
     file_age = time.time() - ftime
-    print("for " + file_path + " got " + str(ftime) + ", age " + str(file_age) + " against expiry of " + str(expiry_secs))
+    print("for " + file_path + " got " + str(ftime) + ", age " +
+          str(file_age) + " against expiry of " + str(expiry_secs))
 
     if file_age > expiry_secs:
         print("file too old, download it")
@@ -129,13 +139,16 @@ def shouldDownload(file_path, expiry_secs):
     else:
         return False
 
+
 def writeJsonFile(file_path, js_data):
     with open(file_path, "w") as f:
         json.dump(js_data, f, sort_keys=True, indent=4)
 
+
 def readJsonFile(file_path):
     with open(file_path, "r") as f:
         return json.load(f)
+
 
 def makeCachedPadguideRequest(time_ms, endpoint, expiry_secs):
     file_path = cache_folder + '/' + endpoint
@@ -144,6 +157,7 @@ def makeCachedPadguideRequest(time_ms, endpoint, expiry_secs):
         writeJsonFile(file_path, resp)
     return readJsonFile(file_path)
 
+
 def rmCachedPadguideRequest(endpoint):
     file_path = cache_folder + '/' + endpoint
     try:
@@ -151,18 +165,22 @@ def rmCachedPadguideRequest(endpoint):
     except:
         pass
 
+
 def writePlainFile(file_path, text_data):
     with open(file_path, "wt", encoding='utf-8') as f:
         f.write(text_data)
+
 
 def readPlainFile(file_path):
     with open(file_path, "r", encoding='utf-8') as f:
         return f.read()
 
+
 def makePlainRequest(file_url):
     response = urllib.request.urlopen(file_url)
     data = response.read()  # a `bytes` object
     return data.decode('utf-8')
+
 
 def makeCachedPlainRequest(file_name, file_url, expiry_secs):
     file_path = cache_folder + '/' + file_name
@@ -170,6 +188,7 @@ def makeCachedPlainRequest(file_name, file_url, expiry_secs):
         resp = makePlainRequest(file_url)
         writePlainFile(file_path, resp)
     return readPlainFile(file_path)
+
 
 async def boxPagifySay(say_fn, msg):
     for page in pagify(msg, delims=["\n"]):
@@ -181,10 +200,10 @@ class Forbidden():
 
 
 def default_check(reaction, user):
-        if user.bot:
-            return False
-        else:
-            return True
+    if user.bot:
+        return False
+    else:
+        return True
 
 
 class Menu():
@@ -258,7 +277,7 @@ class Menu():
         else:
             if type(new_message_content) == discord.Embed:
                 return await self.bot.send_message(ctx.message.channel,
-                                                      embed=new_message_content)
+                                                   embed=new_message_content)
             else:
                 return await self.bot.say(new_message_content)
 
@@ -318,6 +337,7 @@ class Menu():
             check=check,
             message=message)
 
+
 def char_to_emoji(c):
     c = c.lower()
     if c < 'a' or c > 'z':
@@ -326,8 +346,6 @@ def char_to_emoji(c):
     base = ord('\N{REGIONAL INDICATOR SYMBOL LETTER A}')
     adjustment = ord(c) - ord('a')
     return chr(base + adjustment)
-
-
 
 
 ##############################
@@ -358,6 +376,7 @@ class UserConverter2(converter.IDConverter):
             raise BadArgument('Member "{}" not found'.format(self.argument))
 
         return result
+
 
 converter.UserConverter = UserConverter2
 
@@ -393,9 +412,11 @@ def fix_emojis_for_server(emoji_list, msg_text):
                 break
     return msg_text
 
+
 def is_valid_image_url(url):
     url = url.lower()
     return url.startswith('http') and (url.endswith('.png') or url.endswith('.jpg'))
+
 
 def extract_image_url(m):
     if is_valid_image_url(m.content):
@@ -403,6 +424,7 @@ def extract_image_url(m):
     if m.attachments and len(m.attachments) and is_valid_image_url(m.attachments[0]['url']):
         return m.attachments[0]['url']
     return None
+
 
 def rmdiacritics(input):
     '''
@@ -417,6 +439,7 @@ def rmdiacritics(input):
             desc = desc[:cutoff]
         output += unicodedata.lookup(desc)
     return output
+
 
 def clean_global_mentions(content):
     """Wipes out mentions to @everyone and @here."""
