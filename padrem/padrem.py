@@ -28,16 +28,15 @@ from setuptools.command.alias import alias
 
 from __main__ import user_allowed, send_cmd_help
 
-from . import padguide
-from .padinfo import EXPOSED_PAD_INFO
+from . import padguide2
 from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
-from .utils.twitter_stream import *
 
 SUPPORTED_SERVERS = ["NA", "JP"]
+
 
 class PadRem:
     def __init__(self, bot):
@@ -45,20 +44,36 @@ class PadRem:
 
         self.settings = PadRemSettings("padrem")
 
-        self.pgrem = PgRemWrapper()
-
-        if EXPOSED_PAD_INFO is not None:
-            self.pgrem.populateWithMonsters(EXPOSED_PAD_INFO.pginfo_all.full_monster_map, self.settings.getBoosts())
+        self.pgrem = PgRemWrapper(None, {}, skip_load=True)
 
 
-    async def on_ready(self):
-        """ready"""
-        print("started padrem")
-        self.pgrem.populateWithMonsters(EXPOSED_PAD_INFO.pginfo_all.full_monster_map, self.settings.getBoosts())
+#     async def on_ready(self):
+#         """ready"""
+#         print("started padrem")
+#         self.pgrem.populateWithMonsters(
+#             EXPOSED_PAD_INFO.pginfo_all.full_monster_map, self.settings.getBoosts())
+
+    async def reload_padrem(self):
+        await self.bot.wait_until_ready()
+        # Sleep 10s to let padguide finish loading
+        await asyncio.sleep(1)
+        while self == self.bot.get_cog('PadRem'):
+            try:
+                self.refresh_data()
+            except Exception as ex:
+                print("reload padrem loop caught exception " + str(ex))
+                traceback.print_exc()
+
+            await asyncio.sleep(60 * 60 * 1)
+
+    def refresh_data(self):
+        database = self.bot.get_cog('PadGuide2').database
+        self.pgrem = PgRemWrapper(database, self.settings.getBoosts())
+        print('done refreshing padrem')
 
     @commands.command(name="setboost", pass_context=True)
-    @checks.mod_or_permissions(manage_server=True)
-    async def _setboost(self, ctx, machine_id : str, boost_rate : int):
+    @checks.is_owner()
+    async def _setboost(self, ctx, machine_id: str, boost_rate: int):
         """Sets the boost rate for a specific REM.
 
         machine_id should be the value in () in the rem list, e.g for
@@ -131,11 +146,11 @@ class PadRem:
         machine = config.machines[rem_name]
         monster = machine.pickMonster()
 
-        msg = 'You rolled : #{} {}'.format(monster.monster_id_jp, monster.name_na)
+        msg = 'You rolled : #{} {}'.format(monster.monster_no_na, monster.name_na)
         await self.bot.say(box(msg))
 
     @commands.command(name="rollremfor", pass_context=True)
-    async def _rollremfor(self, ctx, server : str, rem_name : str, monster_query : str):
+    async def _rollremfor(self, ctx, server: str, rem_name: str, monster_query: str):
         """Rolls a rare egg machine until the selected monster pops out.
 
         You must specify the server, NA or JP.
@@ -143,6 +158,7 @@ class PadRem:
         set of REMs that can be rolled.
         You must specify a monster id present within the egg machine.
         """
+        monster_query = monster_query.lower()
         server = normalizeServer(server)
         if server not in SUPPORTED_SERVERS:
             await self.bot.say("Unsupported server, pick one of NA, JP")
@@ -156,12 +172,15 @@ class PadRem:
 
         machine = config.machines[rem_name]
 
-        check_monster_fn = lambda m: monster_query.lower() in m.name_na.lower() or monster_query.lower() in m.name_jp.lower()
         if monster_query.isdigit():
-            check_monster_fn = lambda m: int(monster_query) == m.monster_id_jp
+            def check_monster_fn(m):
+                return int(monster_query) == m.monster_no_na
+        else:
+            def check_monster_fn(m):
+                return monster_query in m.name_na.lower()
 
         found = False
-        for m in machine.monster_id_jp_to_monster.values():
+        for m in machine.monster_no_to_monster.values():
             if check_monster_fn(m):
                 found = True
                 break
@@ -179,7 +198,8 @@ class PadRem:
             if check_monster_fn(monster):
                 stones = picks * roll_stones
                 price = stones * stone_price
-                msg = 'It took {} tries, ${:.0f}, and {} stones to pull : #{} {}'.format(picks, price, stones, monster.monster_id_jp, monster.name_na)
+                msg = 'It took {} tries, ${:.0f}, and {} stones to pull : #{} {}'.format(
+                    picks, price, stones, monster.monster_no_na, monster.name_na)
                 await self.bot.say(box(msg))
                 return
 
@@ -210,13 +230,14 @@ def setup(bot):
     print('padrem bot setup')
     n = PadRem(bot)
     bot.add_cog(n)
+    bot.loop.create_task(n.reload_padrem())
     print('done adding padrem bot')
 
 
 class PadRemSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'machine_id_to_boost': {}
+            'machine_id_to_boost': {}
         }
         return config
 
@@ -228,93 +249,71 @@ class PadRemSettings(CogSettings):
         self.save_settings()
 
 
-class PgEggMachine:
-    def __init__(self, egg_instance, egg_name, egg_monster_list):
-        self.egg_instance = egg_instance
-        self.egg_name = egg_name
-        self.egg_monster_list = egg_monster_list
+class RemMonster(object):
+    def __init__(self, monster: padguide2.PgMonster):
+        self.monster_no = monster.monster_no
+        self.monster_no_na = monster.monster_no_na
+        self.rarity = monster.rarity
+        self.name_na = monster.name_na
+        self.on_na = monster.on_na
+
 
 class PgRemWrapper:
-    def __init__(self):
-        egg_instance_list = padguide.loadJsonToItem('eggTitleList.jsp', padguide.PgEggInstance)
-        egg_name_list = padguide.loadJsonToItem('eggTitleNameList.jsp', padguide.PgEggName)
-        egg_monster_list = padguide.loadJsonToItem('eggMonsterList.jsp', padguide.PgEggMonster)
-
-        # Make sure machine is live
-        egg_instance_list = list(filter(lambda x: x.show == 'Y' and x.delete == 'N', egg_instance_list))
-
-        # Make sure machine is not PAL
-        egg_instance_list = list(filter(lambda x: x.rem_type in (padguide.RemType.godfest, padguide.RemType.rare), egg_instance_list))
-
-        # Get rid of Korea, no one plays there
-        egg_instance_list = list(filter(lambda x: x.server != 'KR', egg_instance_list))
-
-        # Make sure name is live, and English
-        egg_name_list = list(filter(lambda x: x.language == 'US' and x.delete == 'N', egg_name_list))
-
-        # Get rid of deleted/bad eggs
-        egg_monster_list = list(filter(lambda x: x.delete == 'N' and x.monster_id != '0', egg_monster_list))
-
-        egg_id_to_egg_name = {egg_name.egg_id: egg_name for egg_name in egg_name_list}
-        egg_id_to_egg_monster = defaultdict(list)
-
-        for egg_monster in egg_monster_list:
-            egg_id_to_egg_monster[egg_monster.egg_id].append(egg_monster)
-
-        egg_machines = list()
-        for egg_instance in egg_instance_list:
-            egg_name = egg_id_to_egg_name.get(egg_instance.egg_id)
-            if egg_name is None:
-                egg_name = padguide.makeBlankEggName(egg_instance.egg_id)
-            monster_list = egg_id_to_egg_monster[egg_instance.egg_id]
-            egg_machines.append(PgEggMachine(egg_instance, egg_name, monster_list))
-
-        self.egg_machines = list(sorted(egg_machines, key=lambda x: (x.egg_instance.server, x.egg_instance.rem_type.value, x.egg_instance.order)))
-
-    def populateWithMonsters(self, monster_map, id_to_boost_map):
-        gfe_rem_list = list()
-        for m in monster_map.values():
-            if m.is_gfe and len(m.evo_from) == 0:
-                gfe_rem_list.append(m)
-
-        self.gfe_rem_list = gfe_rem_list
-
-        global_rem_list = list()
-
-        current_list = None
-        modifier_list = list()
-
-        for em in self.egg_machines:
-            converted_monsters = list()
-            for m in em.egg_monster_list:
-                rm = monster_map.get(m.monster_id)
-                if rm is not None:
-                    converted_monsters.append(rm)
-                else:
-                    print('\t failed to look up {}'.format(m.monster_id))
-
-            egg_instance = em.egg_instance
-            egg_name = em.egg_name
-            boost_rate = id_to_boost_map.get(egg_instance.egg_id)
-
-            if egg_instance.server == '':
-                for m in converted_monsters:
-                    if m.monster_id_jp not in PADGUIDE_EXCLUSIVE_MISTAKES:
-                        global_rem_list.append(m)
-            else:
-                if egg_instance.row_type == padguide.RemRowType.divider:
-                    current_list = list()
-                    modifier_list.append(EggMachineModifier(egg_instance, egg_name, current_list, boost_rate))
-
-                current_list.extend(converted_monsters)
-
-        self.global_rem_list = global_rem_list
-        self.modifier_list = modifier_list
-
+    def __init__(self, database: padguide2.PgRawDatabase, id_to_boost_map: dict, skip_load=False):
         self.server_to_config = {}
+        if skip_load:
+            return
+
+        modifier_list = []
+        jp_rem_list = []
+        na_rem_list = []
+        jp_gfe_rem_list = []
+        na_gfe_rem_list = []
+
+        for m in database.getSeries(34).monsters:
+            if m.is_gfe and m.evo_from is None:
+                rm = RemMonster(m)
+                jp_gfe_rem_list.append(rm)
+                if m.on_na:
+                    na_gfe_rem_list.append(rm)
+
+        egg_instances = database.all_egg_instances()
+        egg_instances.sort(key=lambda x: (x.server, x.rem_type.value, x.order))
+
+        cur_mon_list = None
+
+        for ei in egg_instances:
+            rem_monsters = []
+            for em in ei.egg_monsters:
+                rem_monsters.append(RemMonster(em.monster))
+
+            boost_rate = id_to_boost_map.get(ei.key())
+
+            if ei.server == '':
+                # A blank server means this is the global rem list
+                for rm in rem_monsters:
+                    if rm.monster_no in PADGUIDE_EXCLUSIVE_MISTAKES:
+                        continue
+                    jp_rem_list.append(rm)
+                    if rm.on_na:
+                        na_rem_list.append(rm)
+            else:
+                # Otherwise this is special rems or carnivals
+                if ei.row_type == padguide2.RemRowType.divider:
+                    # We started a new machine (always happens for first row)
+                    cur_mon_list = []
+                    modifier_list.append(EggMachineModifier(ei, cur_mon_list, boost_rate))
+
+                # For new or continued machines, keep adding monsters to the current list
+                cur_mon_list.extend(rem_monsters)
+
         for server in ['NA', 'JP']:
             mods = [emm for emm in modifier_list if emm.server == server]
-            self.server_to_config[server] = PgServerRemConfig(server, global_rem_list, gfe_rem_list, mods)
+            rem_list = jp_rem_list if server == 'JP' else na_rem_list
+            gfe_rem_list = jp_gfe_rem_list if server == 'JP' else na_gfe_rem_list
+#             print(mods)
+#             print(gfe_rem_list)
+            self.server_to_config[server] = PgServerRemConfig(server, rem_list, gfe_rem_list, mods)
 
 
 class EggMachine:
@@ -322,17 +321,15 @@ class EggMachine:
         self.machine_id = None
         self.machine_name = None
 
-        self.monster_id_to_boost = {}
-        self.monster_id_to_monster = {}
-        self.monster_id_jp_to_monster = {}
+        self.monster_no_to_boost = {}
+        self.monster_no_to_monster = {}
         self.monster_entries = list()
         self.stone_count = 5
 
     def addMonsterAndBoost(self, monster, boost):
-        saved_boost = self.monster_id_to_boost.get(monster.monster_id, boost)
-        self.monster_id_to_boost[monster.monster_id] = max(boost, saved_boost)
-        self.monster_id_to_monster[monster.monster_id] = monster
-        self.monster_id_jp_to_monster[monster.monster_id_jp] = monster
+        saved_boost = self.monster_no_to_boost.get(monster.monster_no, boost)
+        self.monster_no_to_boost[monster.monster_no] = max(boost, saved_boost)
+        self.monster_no_to_monster[monster.monster_no] = monster
 
     def addMonster(self, monster, rate):
         for i in range(0, rate):
@@ -345,17 +342,17 @@ class EggMachine:
 
     def computeMonsterEntries(self):
         self.monster_entries.clear()
-        for monster_id in self.monster_id_to_boost.keys():
-            m = self.monster_id_to_monster[monster_id]
+        for monster_no in self.monster_no_to_boost.keys():
+            m = self.monster_no_to_monster[monster_no]
             self.addMonster(m, self.pointsForMonster(m))
 
     def pointsForMonster(self, monster):
-        return (9 - monster.rarity) * self.monster_id_to_boost[monster.monster_id]
+        return (9 - monster.rarity) * self.monster_no_to_boost[monster.monster_no]
 
     def pointsForMonster(self, monster):
-        id_monster_rates = self.rem_config['monster_id']
-        if monster.monster_id_jp in id_monster_rates:
-            return id_monster_rates[monster.monster_id_jp]
+        id_monster_rates = self.rem_config['monster_no']
+        if monster.monster_no_na in id_monster_rates:
+            return id_monster_rates[monster.monster_no]
         else:
             return self.rem_config['rarity'][monster.rarity]
 
@@ -373,7 +370,7 @@ class EggMachine:
         cum_chance = None
         cur_msg = None
 
-        for m in sorted(self.monster_id_to_monster.values(), key=lambda m: (m.rarity, m.monster_id_jp), reverse=True):
+        for m in sorted(self.monster_no_to_monster.values(), key=lambda m: (m.rarity, m.monster_no), reverse=True):
             if cur_rarity != m.rarity:
                 if cur_rarity is not None:
                     msg += '{}* ({} monsters at {:.1%})\n'.format(cur_rarity, cur_count, cum_chance)
@@ -389,11 +386,12 @@ class EggMachine:
             cum_chance += chance
 
             if include_monsters and cur_rarity >= rarity_cutoff and (chance >= chance_cutoff or cur_rarity > 6):
-                cur_msg += '\t{: 5.1%} #{:4d} {}\n'.format(chance, m.monster_id_jp, m.name_na)
+                cur_msg += '\t{: 5.1%} #{:4d} {}\n'.format(chance, m.monster_no_na, m.name_na)
 
         msg += '{}* ({} monsters at {:.1%})\n'.format(cur_rarity, cur_count, cum_chance)
         msg += cur_msg
         return msg
+
 
 class RareEggMachine(EggMachine):
     def __init__(self, server, global_rem_list, carnival_modifier):
@@ -404,16 +402,17 @@ class RareEggMachine(EggMachine):
         self.stones_per_roll = self.rem_config['stones_per_roll']
 
         if carnival_modifier:
-            self.machine_name += ' with {} x{} ({})'.format(carnival_modifier.name, carnival_modifier.boost_rate, carnival_modifier.egg_id)
+            self.machine_name += ' with {} x{} ({})'.format(carnival_modifier.name,
+                                                            carnival_modifier.boost_rate, carnival_modifier.tet_seq)
 
         for m in global_rem_list:
-            if server == 'NA' and not m.on_us:
+            if server == 'NA' and not m.on_na:
                 continue
             self.addMonsterAndBoost(m, 1)
 
         if carnival_modifier is not None:
-            for m in carnival_modifier.monster_list:
-                if m.monster_id_jp in PADGUIDE_EXCLUSIVE_MISTAKES:
+            for m in carnival_modifier.rem_monsters:
+                if m.monster_no_na in PADGUIDE_EXCLUSIVE_MISTAKES:
                     self.addMonsterAndBoost(m, 1)
                 else:
                     self.addMonsterAndBoost(m, carnival_modifier.boost_rate)
@@ -423,16 +422,18 @@ class RareEggMachine(EggMachine):
     def toDescription(self):
         return self.toLongDescription(False, 0)
 
+
 class GfEggMachine(RareEggMachine):
     def __init__(self, server, global_rem_list, gfe_rem_list, carnival_modifier, godfest_modifier):
         super(GfEggMachine, self).__init__(server, global_rem_list, carnival_modifier)
 
-        self.machine_name = '{} Godfest x{} ({}) {}'.format(godfest_modifier.open_date_str, godfest_modifier.boost_rate, godfest_modifier.egg_id, self.machine_name)
+        self.machine_name = '{} Godfest x{} ({}) {}'.format(
+            godfest_modifier.open_date_str, godfest_modifier.boost_rate, godfest_modifier.tet_seq, self.machine_name)
 
         for m in gfe_rem_list:
             self.addMonsterAndBoost(m, 1)
 
-        for m in godfest_modifier.monster_list:
+        for m in godfest_modifier.rem_monsters:
             self.addMonsterAndBoost(m, godfest_modifier.boost_rate)
 
         self.computeMonsterEntries()
@@ -440,12 +441,13 @@ class GfEggMachine(RareEggMachine):
     def toDescription(self):
         return self.toLongDescription(True, 6)
 
+
 class CollabEggMachine(EggMachine):
     def __init__(self, collab_modifier):
         super(CollabEggMachine, self).__init__()
 
-        self.machine_id = int(collab_modifier.egg_id)
-        self.machine_name = '{} ({})'.format(collab_modifier.name, collab_modifier.egg_id)
+        self.machine_id = int(collab_modifier.tet_seq)
+        self.machine_name = '{} ({})'.format(collab_modifier.name, collab_modifier.tet_seq)
 
         self.rem_config = DEFAULT_COLLAB_CONFIG
         if self.machine_id == 905:
@@ -459,7 +461,7 @@ class CollabEggMachine(EggMachine):
 
         self.stones_per_roll = self.rem_config['stones_per_roll']
 
-        for m in collab_modifier.monster_list:
+        for m in collab_modifier.rem_monsters:
             self.addMonsterAndBoost(m, 1)
 
         self.computeMonsterEntries()
@@ -470,7 +472,7 @@ class CollabEggMachine(EggMachine):
 
 DEFAULT_MACHINE_CONFIG = {
     'stones_per_roll': 5,
-    'monster_id': {},
+    'monster_no': {},
     'rarity': {
         8: 3,
         7: 3,
@@ -482,7 +484,7 @@ DEFAULT_MACHINE_CONFIG = {
 
 DEFAULT_COLLAB_CONFIG = {
     'stones_per_roll': 5,
-    'monster_id': {},
+    'monster_no': {},
     'rarity': {
         8: 1,
         7: 3,
@@ -495,7 +497,7 @@ DEFAULT_COLLAB_CONFIG = {
 # TODO: make this configurable
 IMOUTO_COLLAB_CONFIG = {
     'stones_per_roll': 10,
-    'monster_id': {},
+    'monster_no': {},
     'rarity': {
         8: 0,
         7: 15,
@@ -505,7 +507,7 @@ IMOUTO_COLLAB_CONFIG = {
 }
 IMOUTO_COLLAB_CONFIG_2 = {
     'stones_per_roll': 10,
-    'monster_id': {
+    'monster_no': {
         3274: 30,
         3524: 15,
     },
@@ -517,10 +519,9 @@ IMOUTO_COLLAB_CONFIG_2 = {
     },
 }
 
-# TODO: make this configurable
 FF_COLLAB_CONFIG = {
     'stones_per_roll': 5,
-    'monster_id': {},
+    'monster_no': {},
     'rarity': {
         8: 0,
         7: 0,
@@ -532,7 +533,7 @@ FF_COLLAB_CONFIG = {
 
 MH_COLLAB_CONFIG = {
     'stones_per_roll': 10,
-    'monster_id': {},
+    'monster_no': {},
     'rarity': {
         8: 0,
         7: 8,
@@ -544,44 +545,41 @@ MH_COLLAB_CONFIG = {
 
 
 class EggMachineModifier:
-    def __init__(self, egg_instance, egg_name, monster_list, boost_rate):
+    def __init__(self, egg_instance, rem_monsters, boost_rate):
+        """Do not hold onto a ref to egg_instance."""
         self.server = egg_instance.server
-        self.egg_id = egg_instance.egg_id
+        self.tet_seq = egg_instance.tet_seq
         self.order = egg_instance.order
         self.start_datetime = egg_instance.start_datetime
         self.end_datetime = egg_instance.end_datetime
         self.open_date_str = egg_instance.open_date_str
 
-
         self.rem_type = egg_instance.rem_type
-        self.name = egg_name.name
+        self.name = egg_instance.egg_name_us.name if egg_instance.egg_name_us else 'unknown'
 
-        self.monster_list = monster_list
-#         self.monster_to_boost = {}
+        self.rem_monsters = rem_monsters
 
         self.boost_rate = 1
-        self.boost_is_default = True
 
         if boost_rate is not None:
             self.boost_rate = boost_rate
-            self.boost_is_default = False
         elif self.isGodfest():
             self.boost_rate = 4
         elif self.isCarnival():
             self.boost_rate = 3
 
     def isGodfest(self):
-        return self.rem_type == padguide.RemType.godfest
+        return self.rem_type == padguide2.RemType.godfest
 
     def isRare(self):
-        return self.rem_type == padguide.RemType.rare
+        return self.rem_type == padguide2.RemType.rare
 
     def isCarnival(self):
         name = self.name.lower()
-        return self.isRare() and ('gala' in name or 'carnival' in name)
+        return self.isRare() and ('gala' in name or 'carnival' in name or 'special!' in name)
 
     def getName(self):
-        if self.rem_type == padguide.RemType.godfest.value:
+        if self.rem_type == padguide2.RemType.godfest.value:
             return 'Godfest x{}'.format(self.boost_rate)
         else:
             return self.name
@@ -605,7 +603,8 @@ class PgServerRemConfig:
 
         self.godfest_machines = list()
         for godfest_modifier in self.godfest_modifiers:
-            self.godfest_machines.append(GfEggMachine(server, global_rem_list, gfe_rem_list, self.carnival_modifier, godfest_modifier))
+            self.godfest_machines.append(GfEggMachine(
+                server, global_rem_list, gfe_rem_list, self.carnival_modifier, godfest_modifier))
 
         self.collab_machines = list()
         for collab_modifier in self.collab_modifiers:
@@ -621,39 +620,26 @@ class PgServerRemConfig:
             self.machines['collab' + suffix] = machine
 
 
-
 PADGUIDE_EXCLUSIVE_MISTAKES = [
-  2665,  # Red Gemstone, Silk
-  2666,  # Evo'd Silk
-  2667,  # Blue Gemstone, Carat
-  2668,  # Evo'd Carat
-  2669,  # Green Gemstone, Cameo
-  2670,  # Evo'd Cameo
-  2671,  # Light Gemstone, Facet
-  2672,  # Evo'd Facet
-  2673,  # Dark Gemstone, Sheen
-  2674,  # Evo'd Sheen
+    2665,  # Red Gemstone, Silk
+    2666,  # Evo'd Silk
+    2667,  # Blue Gemstone, Carat
+    2668,  # Evo'd Carat
+    2669,  # Green Gemstone, Cameo
+    2670,  # Evo'd Cameo
+    2671,  # Light Gemstone, Facet
+    2672,  # Evo'd Facet
+    2673,  # Dark Gemstone, Sheen
+    2674,  # Evo'd Sheen
 
-  2915,  # Red Hero, Napoleon
-  2916,  # Evo'd Napoleon
-  2917,  # Blue Hero, Barbarossa
-  2918,  # Evo'd Barbarossa
-  2919,  # Green Hero, Robin Hood
-  2920,  # Evo'd Robin Hood
-  2921,  # Light Hero, Yang Guifei
-  2922,  # Evo'd Yang Guifei
-  2923,  # Dark Hero, Oda Nobunaga
-  2924,  # Evo'd Oda Nobunaga
+    2915,  # Red Hero, Napoleon
+    2916,  # Evo'd Napoleon
+    2917,  # Blue Hero, Barbarossa
+    2918,  # Evo'd Barbarossa
+    2919,  # Green Hero, Robin Hood
+    2920,  # Evo'd Robin Hood
+    2921,  # Light Hero, Yang Guifei
+    2922,  # Evo'd Yang Guifei
+    2923,  # Dark Hero, Oda Nobunaga
+    2924,  # Evo'd Oda Nobunaga
 ]
-
-# eggCategoryList.jsp
-# lists the tec_sec order and visibility, not useful
-
-# eggCategoryNameList
-# using language=US
-# TECN_SEQ is primary key?
-# "TEC_SEQ": "1" -> 'Godfest', "TECN_SEQ": "5",
-# "TEC_SEQ": "2" -> 'Rare Egg', "TECN_SEQ": "8",
-# "TEC_SEQ": "3" -> 'Pal Egg'
-
-
