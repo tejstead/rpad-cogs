@@ -1,10 +1,10 @@
 from datetime import datetime
 from datetime import timedelta
+from enum import Enum
 import re
 
 import discord
 from discord.ext import commands
-from enum import Enum
 import pytz
 
 from .rpadutils import *
@@ -14,6 +14,7 @@ from .utils.dataIO import fileIO
 class PadGuide:
     def __init__(self, bot):
         self.bot = bot
+
 
 def setup(bot):
     print('padguide setup')
@@ -28,10 +29,12 @@ def loadJsonToItem(filename, itemtype):
         results.append(itemtype(item))
     return results
 
+
 class PgAttribute:
     def __init__(self, item):
         self.name = item['TA_NAME_US']
         self.attribute_id = item['TA_SEQ']
+
 
 class PgAwakening:
     def __init__(self, item):
@@ -42,6 +45,8 @@ class PgAwakening:
         self.awakening_id = item['TS_SEQ']
 
 # evolutionList.jsp
+
+
 class PgEvo:
     def __init__(self, item):
         self.monster_id = item['MONSTER_NO']
@@ -57,6 +62,8 @@ class PgEvo:
 #     "TV_SEQ": "332"
 # },
 # evoMaterialList.jsp
+
+
 class PgEvoMaterial:
     def __init__(self, item):
         self.evo_id = item['TV_SEQ']  # evo unique id
@@ -76,6 +83,8 @@ class PgEvoMaterial:
 #     "TSTAMP": "1480435906788"
 # },
 # monsterAddInfoList.jsp
+
+
 class PgMonsterAddInfo:
     def __init__(self, item):
         self.monster_id = item['MONSTER_NO']
@@ -97,6 +106,8 @@ class PgMonsterAddInfo:
 #             "TSR_SEQ": "86",
 #             "TSTAMP": "1481846935838"
 #         },
+
+
 class PgMonsterInfo:
     def __init__(self, item):
         self.monster_id = item['MONSTER_NO']
@@ -104,6 +115,7 @@ class PgMonsterInfo:
         self.series_id = item['TSR_SEQ']
         self.in_pem = item['PAL_EGG']
         self.in_rem = item['RARE_EGG']
+
 
 class PgBaseMonster:
     def __init__(self, item):
@@ -139,6 +151,8 @@ class PgBaseMonster:
 #     "SELL_PRICE": "99",
 #     "TSTAMP": "1492101772974"
 # }
+
+
 class PgMonsterPrice:
     def __init__(self, item):
         self.monster_id = item['MONSTER_NO']
@@ -155,10 +169,13 @@ class PgMonsterPrice:
 #     "TSTAMP": "1380587210667"
 # },
 # seriesList.jsp
+
+
 class PgSeries:
     def __init__(self, item):
         self.series_id = item['TSR_SEQ']
         self.name = item['NAME_US']
+
 
 class PgSkill:
     def __init__(self, item):
@@ -218,25 +235,29 @@ class PgSkillLeaderData:
                 resist *= mult
         return hp, atk, rcv, resist
 
+
 EMPTY_SKILL_LEADER_DATA = PgSkillLeaderData({
     'TS_SEQ': '0',
     'LEADER_DATA': '1/1|2/1|3/1',
 })
+
 
 class PgType:
     def __init__(self, item):
         self.type_id = item['TT_SEQ']
         self.name = item['TT_NAME_US']
 
+
 class RemType(Enum):
-     godfest = '1'
-     rare = '2'
-     pal = '3'
-     unknown1 = '4'
+    godfest = '1'
+    rare = '2'
+    pal = '3'
+    unknown1 = '4'
+
 
 class RemRowType(Enum):
-     subsection = '0'
-     divider = '1'
+    subsection = '0'
+    divider = '1'
 
 # eggTitleList.jsp
 #       {
@@ -251,6 +272,8 @@ class RemRowType(Enum):
 #            "TSTAMP": "1476490114488",
 #            "TYPE": "1"
 #        },
+
+
 class PgEggInstance:
     def __init__(self, item):
         self.server = normalizeServer(item['SERVER'])
@@ -271,8 +294,10 @@ class PgEggInstance:
 
         self.pt_date_str = None
         if len(self.start_date_str):
-            self.start_datetime = datetime.strptime(self.start_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
-            self.end_datetime = datetime.strptime(self.end_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+            self.start_datetime = datetime.strptime(
+                self.start_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+            self.end_datetime = datetime.strptime(
+                self.end_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
 
             if self.server == 'NA':
                 pt_tz_obj = pytz.timezone('America/Los_Angeles')
@@ -290,6 +315,8 @@ class PgEggInstance:
 #            "TET_SEQ": "64",
 #            "TSTAMP": "1441589491425"
 #        },
+
+
 class PgEggName:
     def __init__(self, item):
         self.name = item['NAME']
@@ -298,13 +325,14 @@ class PgEggName:
         self.primary_id = item['TETN_SEQ']  # primary key
         self.egg_id = item['TET_SEQ']  # fk to PgEggInstance
 
+
 def makeBlankEggName(egg_id):
     return PgEggName({
-      'NAME': '',
-      'LANGUAGE': 'US',
-      'DEL_YN': 'N',
-      'TETN_SEQ': '',
-      'TET_SEQ': egg_id
+        'NAME': '',
+        'LANGUAGE': 'US',
+        'DEL_YN': 'N',
+        'TETN_SEQ': '',
+        'TET_SEQ': egg_id
     })
 
 # eggMonsterList.jsp
@@ -316,6 +344,8 @@ def makeBlankEggName(egg_id):
 #            "TET_SEQ": "1",
 #            "TSTAMP": "1405245537715"
 #        },
+
+
 class PgEggMonster:
     def __init__(self, item):
         self.delete = item['DEL_YN']
@@ -326,6 +356,7 @@ class PgEggMonster:
 
 TIME_FMT = """%a %b %d %H:%M:%S %Y"""
 
+
 class EventType(Enum):
     EventTypeWeek = 0
     EventTypeSpecial = 1
@@ -334,12 +365,14 @@ class EventType(Enum):
     EventTypeGuerrillaNew = 4
     EventTypeEtc = -100
 
+
 class DungeonType(Enum):
     Unknown = -1
     Normal = 0
     CoinDailyOther = 1
     Technical = 2
     Etc = 3
+
 
 class TdtType(Enum):
     Normal = 0
@@ -348,16 +381,20 @@ class TdtType(Enum):
     Weekly = 2
     Descended = 3
 
+
 def fmtTime(dt):
     return dt.strftime("%Y-%m-%d %H:%M")
 
+
 def fmtTimeShort(dt):
     return dt.strftime("%H:%M")
+
 
 def fmtHrsMins(seconds):
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     return '{:2}h {:2}m'.format(int(hours), int(minutes))
+
 
 def fmtDaysHrsMinsShort(sec):
     days = sec // 86400
@@ -378,6 +415,7 @@ def normalizeServer(server):
     server = server.upper()
     return 'NA' if server == 'US' else server
 
+
 def isEventWanted(event):
     name = event.nameAndModifier().lower()
     if 'castle of satan' in name:
@@ -385,6 +423,7 @@ def isEventWanted(event):
         return False
 
     return True
+
 
 def cleanDungeonNames(name):
     if 'tamadra invades in some tech' in name.lower():
@@ -434,6 +473,8 @@ def cleanDungeonNames(name):
 #     "TSTAMP": "1373289123410"
 # },
 # dungeonList.jsp
+
+
 class PgDungeon:
     def __init__(self, item):
         self.seq = item['DUNGEON_SEQ']
@@ -451,6 +492,8 @@ class PgDungeon:
 # },
 # dungeonMonsterDropList.jsp
 # Seems to be dedicated skillups only, like collab drops
+
+
 class PgDungeonMonsterDrop:
     def __init__(self, item):
         self.monster_id = item['MONSTER_NO']
@@ -486,12 +529,14 @@ class PgDungeonMonster:
         self.dungeon_seq = item['DUNGEON_SEQ']  # PgDungeon uniqueId
         self.tsd_seq = item['TSD_SEQ']  # ??
 
+
 class PgMonsterDropInfoCombined:
     def __init__(self, monster_id, dungeon_monster_drop, dungeon_monster, dungeon):
         self.monster_id = monster_id
         self.dungeon_monster_drop = dungeon_monster_drop
         self.dungeon_monster = dungeon_monster
         self.dungeon = dungeon
+
 
 class PgEventList:
     def __init__(self, event_list):
@@ -502,7 +547,6 @@ class PgEventList:
             return PgEventList(list(itertools.filterfalse(func, self.event_list)))
         else:
             return PgEventList(list(filter(func, self.event_list)))
-
 
     def withServer(self, server):
         return self.withFunc(lambda e: e.server == normalizeServer(server))
@@ -540,6 +584,7 @@ class PgEventList:
     def itemsByCloseTime(self, reverse=False):
         return list(sorted(self.event_list, key=(lambda e: (e.close_datetime, e.dungeon_name)), reverse=reverse))
 
+
 class PgEvent:
     def __init__(self, item, ignore_bad=False):
         if item is None and ignore_bad:
@@ -560,10 +605,12 @@ class PgEvent:
 
         tz = pytz.UTC
         open_time_str = item['OPEN_DATE'] + " " + item['OPEN_HOUR'] + ":" + item['OPEN_MINUTE']
-        close_time_strstr = item['CLOSE_DATE'] + " " + item['CLOSE_HOUR'] + ":" + item['CLOSE_MINUTE']
+        close_time_strstr = item['CLOSE_DATE'] + " " + \
+            item['CLOSE_HOUR'] + ":" + item['CLOSE_MINUTE']
 
         self.open_datetime = datetime.strptime(open_time_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
-        self.close_datetime = datetime.strptime(close_time_strstr, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+        self.close_datetime = datetime.strptime(
+            close_time_strstr, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
 
     def updateDungeonName(self, dungeon_seq_map):
         if self.dungeon_code in dungeon_seq_map:
@@ -579,14 +626,14 @@ class PgEvent:
         return self.dungeon_type == '0'
 
     def nameAndModifier(self):
-         output = self.name()
-         if self.event_modifier != '':
-             output += ', ' + self.event_modifier.replace('!', '').replace(' ', '')
-         return output
+        output = self.name()
+        if self.event_modifier != '':
+            output += ', ' + self.event_modifier.replace('!', '').replace(' ', '')
+        return output
 
     def name(self):
-         output = cleanDungeonNames(self.dungeon_name)
-         return output;
+        output = cleanDungeonNames(self.dungeon_name)
+        return output
 
     def tostr(self):
         return fmtTime(self.open_datetime) + "," + fmtTime(self.close_datetime) + "," + self.group + "," + self.dungeon_code + "," + self.event_type + "," + self.event_seq
@@ -645,6 +692,7 @@ class PgEvent:
         else:
             return self.group + " " + fmtTimeShort(self.startPst()) + " " + fmtTimeShort(self.startEst()) + " " + self.startFromNow() + " " + self.nameAndModifier()
 
+
 class PgEventType:
     def __init__(self, item):
         self.seq = item['EVENT_SEQ']
@@ -679,6 +727,8 @@ class PgSkillRotation:
 # TSRL_SEQ is the primary key
 # TS_SEQ is the current skill
 # TSR_SEQ links to skillRotationList, get the monster_no out of there
+
+
 class PgDatedSkillRotation:
     def __init__(self, item):
         self.tsrl_seq = item['TSRL_SEQ']
@@ -688,7 +738,8 @@ class PgDatedSkillRotation:
 
         self.rotation_date = None
         if len(self.rotation_date_str):
-             self.rotation_date = datetime.strptime(self.rotation_date_str, "%Y-%m-%d").date()
+            self.rotation_date = datetime.strptime(self.rotation_date_str, "%Y-%m-%d").date()
+
 
 class PgMergedRotation:
     def __init__(self, rotation, dated_rotation):
