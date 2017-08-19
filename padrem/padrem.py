@@ -278,7 +278,8 @@ class PgRemWrapper:
                     na_gfe_rem_list.append(rm)
 
         egg_instances = database.all_egg_instances()
-        egg_instances.sort(key=lambda x: (x.server, x.rem_type.value, x.order))
+        egg_instances.sort(key=lambda x: (
+            x.server, x.rem_type.value, x.order, (x.row_type.value * -1)))
 
         cur_mon_list = None
 
