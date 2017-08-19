@@ -564,7 +564,7 @@ def monsterToPantheonEmbed(m: padguide2.PgMonster):
 
     embed = monsterToBaseEmbed(m)
 
-    field_name = 'Pantheon: ' + m.series_name
+    field_name = 'Pantheon: ' + m.series.name
     field_data = ''
     for monster in sorted(pantheon_list, key=lambda x: x.monster_no_na):
         field_data += '\n' + monsterToHeader(monster, link=True)
