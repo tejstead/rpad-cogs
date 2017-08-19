@@ -154,14 +154,14 @@ class PadGuide2(object):
         # twelve hours expiry
         general_dummy_file = DUMMY_FILE_PATTERN.format('general')
         general_expiry_secs = 12 * 60 * 60
-        if not rpadutils.checkPadguideCacheFile(general_dummy_file, general_expiry_secs):
-            return
+        download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, general_expiry_secs)
 
         # Need to add something that downloads if missing
         for type in self._general_types:
-            file_name = type.file_name()
-            result_file = JSON_FILE_PATTERN.format(file_name)
-            rpadutils.makeCachedPadguideRequest2(file_name, result_file)
+            endpoint = type.file_name()
+            result_file = JSON_FILE_PATTERN.format(endpoint)
+            if download_all or rpadutils.should_download(result_file, general_expiry_secs):
+                rpadutils.makeCachedPadguideRequest2(endpoint, result_file)
 
         overrides_expiry_secs = 1 * 60 * 60
         rpadutils.makeCachedPlainRequest2(
