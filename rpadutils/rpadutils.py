@@ -124,7 +124,7 @@ def normalizeServer(server):
 cache_folder = 'data/padevents'
 
 
-def shouldDownload(file_path, expiry_secs):
+def should_download(file_path, expiry_secs):
     if not os.path.exists(file_path):
         print("file does not exist, downloading " + file_path)
         return True
@@ -139,6 +139,10 @@ def shouldDownload(file_path, expiry_secs):
         return True
     else:
         return False
+
+
+def shouldDownload(file_path, expiry_secs):
+    return should_download(file_path, expiry_secs)
 
 
 def writeJsonFile(file_path, js_data):
