@@ -71,49 +71,6 @@ def dl_dungeon_map():
     return dungeons_map
 
 
-EXTRA_FILES = [
-    "attributeList.jsp",
-    "awokenSkillList.jsp",
-    #     "dungeonList.jsp",
-    "dungeonTypeList.jsp",
-    "dungeonMonsterList.jsp",
-    "dungeonMonsterDropList.jsp",
-    "dungeonTypeList.jsp",
-    "eggCategoryList.jsp",
-    "eggCategoryNameList.jsp",
-    "eggMonsterList.jsp",
-    "eggTitleList.jsp",
-    "eggTitleNameList.jsp",
-    "evolutionList.jsp",
-    "evoMaterialList.jsp",
-    "monsterAddInfoList.jsp",
-    "monsterInfoList.jsp",
-    "monsterList.jsp",
-    "monsterPriceList.jsp",
-    "skillDataList.jsp",
-    "skillLeaderDataList.jsp",
-    "seriesList.jsp",
-    "skillList.jsp",
-    "skillRotationList.jsp",
-    "skillRotationListList.jsp",
-    "typeList.jsp",
-]
-
-
-def clear_extras():
-    for ef in EXTRA_FILES:
-        rmCachedPadguideRequest(ef)
-
-
-def dl_extras():
-    # three days expiry
-    expiry_secs = 3 * 24 * 60 * 60
-    # pull for all-time
-    time_ms = 0
-    for ef in EXTRA_FILES:
-        makeCachedPadguideRequest(time_ms, ef, expiry_secs)
-
-
 class PadEvents:
     def __init__(self, bot):
         self.bot = bot
@@ -123,9 +80,6 @@ class PadEvents:
         # Load all dungeon data
         self.dungeons_map = dl_dungeon_map()
         self.event_type_map = dl_event_type_map()
-
-        # DL extra files and cache locally
-        dl_extras()
 
         # Load event data
         self.events = list()
@@ -281,14 +235,6 @@ class PadEvents:
         self.events.append(te)
 
         await self.bot.say("Fake event injected.")
-
-    @padevents.command(pass_context=True)
-    @checks.is_owner()
-    async def clearcache(self, ctx):
-        clear_extras()
-        await self.bot.say("Cached files cleared. Downloads started.")
-        dl_extras()
-        await self.bot.say("Done.")
 
     @padevents.command(name="addchannel", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
