@@ -22,8 +22,6 @@ import traceback
 
 import discord
 from discord.ext import commands
-from html5lib.constants import prefixes
-from numpy.core.defchararray import lower
 import pytz
 import romkan
 import unidecode
@@ -52,6 +50,7 @@ class PadGuide2(object):
         self.settings = PadGuide2Settings("padguide2")
 
         self._general_types = [
+            # PadInfo
             PgAttribute,
             PgAwakening,
             PgDungeon,
@@ -69,9 +68,11 @@ class PadGuide2(object):
             PgSkillRotation,
             PgSkillRotationDated,
             PgType,
+            # PadRem
+            PgEggInstance,
+            PgEggMonster,
+            PgEggName,
         ]
-
-        self._download_files()
 
         # A string -> int mapping, nicknames to monster_id_na
         self.nickname_overrides = {}
@@ -80,12 +81,13 @@ class PadGuide2(object):
         self.basename_overrides = defaultdict(set)
 
         self.database = PgRawDatabase(skip_load=True)
-#         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
 
     def create_index(self, accept_filter=None):
+        """Exported function that allows a client cog to create a monster index"""
         return MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, accept_filter=accept_filter)
 
     def get_monster_by_no(self, monster_no: int):
+        """Exported function that allows a client cog to get a full PgMonster by monster_no"""
         return self.database.getMonster(monster_no)
 
     async def reload_data_task(self):
@@ -231,6 +233,10 @@ class PgRawDatabase(object):
         self._skill_rotation_dated_map = self._load(PgSkillRotationDated)
         self._type_map = self._load(PgType)
 
+        self._egg_instance_map = self._load(PgEggInstance)
+        self._egg_monster_map = self._load(PgEggMonster)
+        self._egg_name_map = self._load(PgEggName)
+
         # Ensure that every item has loaded its dependencies
         for i in self._all_pg_items:
             self._ensure_loaded(i)
@@ -275,6 +281,14 @@ class PgRawDatabase(object):
 
     def normalize_monster_no_na(self, monster_no_na: int):
         return self.monster_no_na_to_monster_no[monster_no_na]
+
+    def all_monsters(self):
+        """Exported for access to the full monster list."""
+        return list(self._monster_map.values())
+
+    def all_egg_instances(self):
+        """Exported for access to the full egg machine list."""
+        return list(self._egg_instance_map.values())
 
     def getAttributeEnum(self, ta_seq: int):
         attr = self._ensure_loaded(self._attribute_map.get(ta_seq))
@@ -328,6 +342,15 @@ class PgRawDatabase(object):
     def getTypeName(self, tt_seq: int):
         type = self._ensure_loaded(self._type_map.get(tt_seq))
         return type.name if type else None
+
+    def getEggInstance(self, tet_seq: int):
+        return self._ensure_loaded(self._egg_instance_map.get(tet_seq))
+
+    def getEggMonster(self, tem_seq: int):
+        return self._ensure_loaded(self._egg_monster_map.get(tem_seq))
+
+    def getEggName(self, tetn_seq: int):
+        return self._ensure_loaded(self._egg_name_map.get(tetn_seq))
 
 
 class PgItem(object):
@@ -1201,11 +1224,7 @@ class PgMonsterDropInfoCombined(object):
 
 
 # ================================================================================
-# Items below are deferred (padrem, padevents)
-#
-#
-#
-#
+# PadRem items below
 # ================================================================================
 
 class RemType(Enum):
@@ -1236,26 +1255,30 @@ class RemRowType(Enum):
 class PgEggInstance(PgItem):
     @staticmethod
     def file_name():
-        return 'attributeList.jsp'
+        return 'eggTitleList.jsp'
 
     def __init__(self, item):
+        super().__init__()
         self.server = normalizeServer(item['SERVER'])
-        self.delete = item['DEL_YN']  # Y, N
-        self.show = item['SHOW_YN']  # Y, N
+        self.deleted_yn = item['DEL_YN']  # Y, N
+        self.show_yn = item['SHOW_YN']  # Y, N
         self.rem_type = RemType(item['TEC_SEQ'])  # matches RemType
-        self.egg_id = item['TET_SEQ']  # primary key
+        self.tet_seq = int(item['TET_SEQ'])  # primary key
         self.row_type = RemRowType(item['TYPE'])  # 0-> row with just name, 1-> row with date
 
         self.order = int(item["ORDER_IDX"])
         self.start_date_str = item['START_DATE']
         self.end_date_str = item['END_DATE']
 
+        self.egg_name_us = None
+        self.egg_monsters = []
+
         tz = pytz.UTC
         self.start_datetime = None
         self.end_datetime = None
         self.open_date_str = None
 
-        self.pt_date_str = None
+#         self.pt_date_str = None
         if len(self.start_date_str):
             self.start_datetime = datetime.strptime(
                 self.start_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
@@ -1268,6 +1291,54 @@ class PgEggInstance(PgItem):
             if self.server == 'JP':
                 jp_tz_obj = pytz.timezone('Asia/Tokyo')
                 self.open_date_str = self.start_datetime.replace(tzinfo=jp_tz_obj).strftime('%m/%d')
+
+    def key(self):
+        return self.tet_seq
+
+    def deleted(self):
+        return (self.deleted_yn == 'Y' or
+                self.show_yn == 'N' or
+                self.server == 'KR' or
+                self.rem_type in (RemType.pal, RemType.unknown1))
+
+    def load(self, database: PgRawDatabase):
+        pass
+#         self.monster = database.getMonster(self.monster_no)
+
+
+# eggMonsterList.jsp
+#        {
+#            "DEL_YN": "Y",
+#            "MONSTER_NO": "120",
+#            "ORDER_IDX": "1",
+#            "TEM_SEQ": "1",
+#            "TET_SEQ": "1",
+#            "TSTAMP": "1405245537715"
+#        },
+class PgEggMonster(PgItem):
+    @staticmethod
+    def file_name():
+        return 'eggMonsterList.jsp'
+
+    def __init__(self, item):
+        super().__init__()
+        self.deleted_yn = item['DEL_YN']
+        self.monster_no = int(item['MONSTER_NO'])
+        self.tem_seq = int(item['TEM_SEQ'])  # primary key
+        self.tet_seq = int(item['TET_SEQ'])  # fk to PgEggInstance
+
+    def key(self):
+        return self.tem_seq
+
+    def deleted(self):
+        return self.deleted_yn == 'Y' or self.monster_no == 0
+
+    def load(self, database: PgRawDatabase):
+        self.monster = database.getMonster(self.monster_no)
+        self.egg_instance = database.getEggInstance(self.tet_seq)
+        if self.egg_instance:
+            # For KR stuff we clipped out
+            self.egg_instance.egg_monsters.append(self)
 
 
 # eggTitleNameList.jsp
@@ -1282,49 +1353,42 @@ class PgEggInstance(PgItem):
 class PgEggName(PgItem):
     @staticmethod
     def file_name():
-        return 'attributeList.jsp'
+        return 'eggTitleNameList.jsp'
 
     def __init__(self, item):
+        super().__init__()
         self.name = item['NAME']
         self.language = item['LANGUAGE']  # US, JP, KR
-        self.delete = item['DEL_YN']  # Y, N
-        self.primary_id = item['TETN_SEQ']  # primary key
-        self.egg_id = item['TET_SEQ']  # fk to PgEggInstance
-
-
-def makeBlankEggName(egg_id):
-    return PgEggName({
-        'NAME': '',
-        'LANGUAGE': 'US',
-        'DEL_YN': 'N',
-        'TETN_SEQ': '',
-        'TET_SEQ': egg_id
-    })
-
-# eggMonsterList.jsp
-#        {
-#            "DEL_YN": "Y",
-#            "MONSTER_NO": "120",
-#            "ORDER_IDX": "1",
-#            "TEM_SEQ": "1",
-#            "TET_SEQ": "1",
-#            "TSTAMP": "1405245537715"
-#        },
-
-
-class PgEggMonster(PgItem):
-    @staticmethod
-    def file_name():
-        return 'attributeList.jsp'
-
-    def __init__(self, item):
-        self.delete = item['DEL_YN']
-        self.monster_id = item['MONSTER_NO']
-        self.tem_seq = item['TEM_SEQ']  # primary key
-        self.egg_id = item['TET_SEQ']  # fk to PgEggInstance
+        self.deleted_yn = item['DEL_YN']  # Y, N
+        self.tetn_seq = int(item['TETN_SEQ'])  # primary key
+        self.tet_seq = int(item['TET_SEQ'])  # fk to PgEggInstance
 
     def key(self):
-        return self.tem_seq
+        return self.tetn_seq
+
+    def deleted(self):
+        return self.deleted_yn == 'Y' or self.language != 'US'
+
+    def load(self, database: PgRawDatabase):
+        self.egg_instance = database.getEggInstance(self.tet_seq)
+        if self.egg_instance:
+            # For KR stuff we clipped out
+            self.egg_instance.egg_name_us = self
+
+
+# def makeBlankEggName(egg_id):
+#     return PgEggName({
+#         'NAME': '',
+#         'LANGUAGE': 'US',
+#         'DEL_YN': 'N',
+#         'TETN_SEQ': '',
+#         'TET_SEQ': egg_id
+#     })
+
+
+# ================================================================================
+# PadEvents items below
+# ================================================================================
 
 
 TIME_FMT = """%a %b %d %H:%M:%S %Y"""
