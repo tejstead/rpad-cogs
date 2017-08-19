@@ -1228,15 +1228,15 @@ class PgMonsterDropInfoCombined(object):
 # ================================================================================
 
 class RemType(Enum):
-    godfest = '1'
-    rare = '2'
-    pal = '3'
-    unknown1 = '4'
+    godfest = 1
+    rare = 2
+    pal = 3
+    unknown1 = 4
 
 
 class RemRowType(Enum):
-    subsection = '0'
-    divider = '1'
+    subsection = 0
+    divider = 1
 
 
 # eggTitleList.jsp
@@ -1262,9 +1262,9 @@ class PgEggInstance(PgItem):
         self.server = normalizeServer(item['SERVER'])
         self.deleted_yn = item['DEL_YN']  # Y, N
         self.show_yn = item['SHOW_YN']  # Y, N
-        self.rem_type = RemType(item['TEC_SEQ'])  # matches RemType
+        self.rem_type = RemType(int(item['TEC_SEQ']))  # matches RemType
         self.tet_seq = int(item['TET_SEQ'])  # primary key
-        self.row_type = RemRowType(item['TYPE'])  # 0-> row with just name, 1-> row with date
+        self.row_type = RemRowType(int(item['TYPE']))  # 0-> row with just name, 1-> row with date
 
         self.order = int(item["ORDER_IDX"])
         self.start_date_str = item['START_DATE']
