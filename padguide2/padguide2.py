@@ -872,11 +872,11 @@ class PgMonster(PgItem):
         self.type2 = database.getTypeName(self.tt_seq_2)
         self.type3 = None
 
-        assist_setting = None
+        self.assist_setting = None
         monster_add_info = database.getMonsterAddInfo(self.monster_no)
         if monster_add_info:
             self.type3 = database.getTypeName(monster_add_info.sub_type)
-            assist_setting = monster_add_info.extra_val_1
+            self.assist_setting = monster_add_info.extra_val_1
 
         monster_info = database.getMonsterInfo(self.monster_no)
         self.on_na = monster_info.on_na
@@ -895,17 +895,17 @@ class PgMonster(PgItem):
         self.in_mpshop = self.buy_mp > 0
         self.mp_evo = self.in_mpshop
 
-        if assist_setting == 1:
+    def finalize(self):
+        self.farmable = len(self.drop_dungeons) > 0
+        self.farmable_evo = self.farmable
+
+        if self.assist_setting == 1:
             self.is_inheritable = True
-        elif assist_setting == 2:
+        elif self.assist_setting == 2:
             self.is_inheritable = False
         else:
             has_awakenings = len(self.awakenings) > 0
             self.is_inheritable = has_awakenings and self.rarity >= 5 and self.sell_mp > 3000
-
-    def finalize(self):
-        self.farmable = len(self.drop_dungeons) > 0
-        self.farmable_evo = self.farmable
 
         if self.evo_from is None:
             def link(m: PgMonster, alt_evos: list):
