@@ -575,6 +575,7 @@ def monsterToPantheonEmbed(m: padguide2.PgMonster):
 
 def monsterToSkillupsEmbed(m: padguide2.PgMonster):
     skillups_list = m.active_skill.monsters_with_active if m.active_skill else []
+    skillups_list = list(filter(lambda m: not m.rem_evo, skillups_list))
     if len(skillups_list) + len(m.server_actives) == 0:
         return None
 
