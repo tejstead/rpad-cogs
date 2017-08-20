@@ -331,7 +331,11 @@ class PgRawDatabase(object):
         return self._ensure_loaded(self._skill_map.get(ts_seq))
 
     def getSkillLeaderData(self, ts_seq: int):
-        return self._ensure_loaded(self._skill_leader_data_map.get(ts_seq))
+        skill_leader = self._skill_leader_data_map.get(ts_seq)
+        if skill_leader:
+            return self._ensure_loaded(skill_leader)
+        else:
+            return PgSkillLeaderData.empty()
 
     def getSkillRotation(self, tsr_seq: int):
         return self._ensure_loaded(self._skill_rotation_map.get(tsr_seq))
@@ -1087,6 +1091,13 @@ class PgSkill(PgItem):
 #     "TS_SEQ": "10835"
 # },
 class PgSkillLeaderData(PgItem):
+    @staticmethod
+    def empty():
+        return PgSkillLeaderData({
+            'TS_SEQ': '-1',
+            'LEADER_DATA': '',
+        })
+
     @staticmethod
     def file_name():
         return 'skillLeaderDataList.jsp'

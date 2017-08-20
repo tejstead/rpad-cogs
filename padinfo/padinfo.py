@@ -627,17 +627,19 @@ def monsterToPicEmbed(m: padguide2.PgMonster):
 
 
 def monstersToLsEmbed(left_m: padguide2.PgMonster, right_m: padguide2.PgMonster):
-    lhp, latk, lrcv, lresist = left_m.leader_skill_data.getMaxMultipliers()
-    rhp, ratk, rrcv, rresist = right_m.leader_skill_data.getMaxMultipliers()
+    lhp, latk, lrcv, lresist = left_m.leader_skill_data.get_data()
+    rhp, ratk, rrcv, rresist = right_m.leader_skill_data.get_data()
     multiplier_text = createMultiplierText(lhp, latk, lrcv, lresist, rhp, ratk, rrcv, rresist)
 
     embed = discord.Embed()
     embed.title = 'Multiplier [{}]\n\n'.format(multiplier_text)
     description = ''
-    description += '\n**' + \
-        monsterToHeader(left_m, link=True) + '**\n' + (left_m.leader_text or 'None/Missing')
-    description += '\n**' + \
-        monsterToHeader(right_m, link=True) + '**\n' + (right_m.leader_text or 'None/Missing')
+    description += '\n**{}**\n{}'.format(
+        monsterToHeader(left_m, link=True),
+        left_m.leader_skill.desc if left_m.leader_skill else 'None/Missing')
+    description += '\n**{}**\n{}'.format(
+        monsterToHeader(right_m, link=True),
+        right_m.leader_skill.desc if right_m.leader_skill else 'None/Missing')
     embed.description = description
 
     return embed
