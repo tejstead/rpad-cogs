@@ -901,6 +901,14 @@ class PgMonster(PgItem):
         self.farmable = len(self.drop_dungeons) > 0
         self.farmable_evo = self.farmable
 
+        if self.evo_from is None:
+            def link(m: PgMonster, alt_evos: list):
+                m.alt_evos = alt_evos
+                for em in m.evo_to:
+                    alt_evos.append(em)
+                    link(em, alt_evos)
+            link(self, [])
+
 
 class MonsterGroup(object):
     """Computes shared values across a tree of monsters and injects them."""
