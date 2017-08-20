@@ -743,6 +743,7 @@ class PgMonsterInfo(PgItem):
         self.tsr_seq = int_or_none(item['TSR_SEQ'])  # PgSeries id
         self.in_pem = item['PAL_EGG'] == '1'
         self.in_rem = item['RARE_EGG'] == '1'
+        self.history_us = item['HISTORY_US']
 
     def key(self):
         return self.monster_no
@@ -798,6 +799,9 @@ class PgMonster(PgItem):
         self.monster_no = int(item['MONSTER_NO'])
         self.monster_no_na = int(item['MONSTER_NO_US'])
         self.monster_no_jp = int(item['MONSTER_NO_JP'])
+        self.min_hp = int(item['HP_MIN'])
+        self.min_atk = int(item['ATK_MIN'])
+        self.min_rcv = int(item['RCV_MIN'])
         self.hp = int(item['HP_MAX'])
         self.atk = int(item['ATK_MAX'])
         self.rcv = int(item['RCV_MAX'])
@@ -805,6 +809,7 @@ class PgMonster(PgItem):
         self.ts_seq_leader = int_or_none(item['TS_SEQ_LEADER'])
         self.rarity = int(item['RARITY'])
         self.cost = int(item['COST'])
+        self.exp = int(item['EXP'])
         self.max_level = int(item['LEVEL'])
         self.name_na = item['TM_NAME_US']
         self.name_jp = item['TM_NAME_JP']
@@ -882,6 +887,7 @@ class PgMonster(PgItem):
         self.in_rem = monster_info.in_rem
         self.pem_evo = self.in_pem
         self.rem_evo = self.in_rem
+        self.history_us = monster_info.history_us
 
         monster_price = database.getMonsterPrice(self.monster_no)
         self.sell_mp = monster_price.sell_mp

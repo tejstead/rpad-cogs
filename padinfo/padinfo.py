@@ -76,6 +76,8 @@ INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
 RPAD_PIC_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/full/{}.png'
 RPAD_PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/portrait/{}.png'
 
+YT_SEARCH_TEMPLATE = 'https://www.youtube.com/results?search_query={}'
+
 # This was overwritten by voltron. PDX opted to copy it +10,000 ids away
 CROWS_1 = {x: x + 10000 for x in range(2601, 2635 + 1)}
 # This isn't overwritten but PDX adjusted anyway
@@ -134,6 +136,7 @@ class PadInfo:
         self.pantheon_emoji = '\N{CLASSICAL BUILDING}'
         self.skillups_emoji = '\N{MEAT ON BONE}'
         self.pic_emoji = '\N{FRAME WITH PICTURE}'
+        self.other_info_emoji = '\N{SCROLL}'
 
         self.historic_lookups_file_path = "data/padinfo/historic_lookups.json"
         if not dataIO.is_valid_json(self.historic_lookups_file_path):
@@ -242,6 +245,7 @@ class PadInfo:
         evo_embed = monsterToEvoEmbed(m)
         mats_embed = monsterToEvoMatsEmbed(m)
         pic_embed = monsterToPicEmbed(m)
+        other_info_embed = monsterToOtherInfoEmbed(m)
 
         emoji_to_embed = OrderedDict()
         emoji_to_embed[self.id_emoji] = id_embed
@@ -256,6 +260,8 @@ class PadInfo:
         skillups_embed = monsterToSkillupsEmbed(m)
         if skillups_embed:
             emoji_to_embed[self.skillups_emoji] = skillups_embed
+
+        emoji_to_embed[self.other_info_emoji] = other_info_embed
 
         return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed)
 
@@ -741,6 +747,48 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
         multiplier_text = createMultiplierText(hp, atk, rcv, resist)
         ls_header += " [ {} ]".format(multiplier_text)
     embed.add_field(name=ls_header, value=ls_row, inline=False)
+
+    return embed
+
+
+def monsterToOtherInfoEmbed(m: padguide2.PgMonster):
+    embed = monsterToBaseEmbed(m)
+    # Clear the thumbnail, takes up too much space
+    embed.set_thumbnail(url='')
+
+    stat_cols = ['', 'Max', 'M297', 'Inh', 'I297']
+    tbl = prettytable.PrettyTable(stat_cols)
+    tbl.hrules = prettytable.NONE
+    tbl.vrules = prettytable.NONE
+    tbl.align = "r"
+    hhp = m.hp + 99 * 10
+    hatk = m.atk + 99 * 5
+    hrcv = m.rcv + 99 * 3
+    tbl.add_row(['HP', m.hp, hhp, int(m.hp * .1), int(hhp * .1)])
+    tbl.add_row(['ATK', m.atk, hatk, int(m.atk * .05), int(hatk * .05)])
+    tbl.add_row(['RCV', m.rcv, hrcv, int(m.rcv * .15), int(hrcv * .15)])
+
+    body_text = box(tbl.get_string())
+
+    search_text = YT_SEARCH_TEMPLATE.format(m.name_jp)
+    body_text += "\nJP Name: [{}]({})".format(m.name_jp, search_text)
+
+    if m.history_us:
+        body_text += '\nHistory: {}'.format(m.history_us)
+
+    body_text += '\nSeries: {}'.format(m.series.name)
+    body_text += '\nSell MP: {:,}'.format(m.sell_mp)
+    if m.buy_mp > 0:
+        body_text += "  Buy MP: {:,}".format(m.buy_mp)
+
+    if m.exp < 1000000:
+        xp_text = '{:,}'.format(m.exp)
+    else:
+        xp_text = '{:.1f}'.format(m.exp / 1000000).rstrip('0').rstrip('.') + 'M'
+    body_text += '\nXP to Max: {}'.format(xp_text)
+    body_text += '  Max Level: {}'.format(m.max_level)
+
+    embed.description = body_text
 
     return embed
 
