@@ -1,5 +1,7 @@
 from collections import defaultdict
+import csv
 import difflib
+import io
 import os
 import re
 
@@ -46,6 +48,23 @@ class PadGlobal:
 
         global PADGLOBAL_COG
         PADGLOBAL_COG = self
+
+    @commands.command(pass_context=True)
+    @is_padglobal_admin()
+    async def debugiddump(self, ctx):
+        padinfo_cog = self.bot.get_cog('PadInfo')
+        mi = padinfo_cog.index_all
+
+        async def write_send(nn_map, file_name):
+            data_holder = io.StringIO()
+            writer = csv.writer(data_holder)
+            for nn, nm in nn_map.items():
+                writer.writerow([nn, nm.monster_no_na, nm.name_na])
+            bytes_data = io.BytesIO(data_holder.getvalue().encode())
+            await self.bot.send_file(ctx.message.channel, bytes_data, filename=file_name)
+
+        await write_send(mi.all_entries, 'all_entries.csv')
+        await write_send(mi.two_word_entries, 'two_word_entries.csv')
 
     @commands.command(pass_context=True)
     @is_padglobal_admin()
@@ -109,7 +128,7 @@ class PadGlobal:
             msg += "\n (is_low_priority, group_size, monster_no) : ({}, {}, {})".format(
                 m.is_low_priority, m.group_size, m.monster_no)
 
-            msg == "\n\nMatch selection sort parts:"
+            msg += "\n\nMatch selection sort parts:"
             msg += "\n (is_low_priority, rarity, monster_no_na) : ({}, {}, {})".format(
                 m.is_low_priority, m.rarity, m.monster_no_na)
 
