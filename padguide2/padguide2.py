@@ -903,9 +903,9 @@ class PgMonster(PgItem):
 
         if self.evo_from is None:
             def link(m: PgMonster, alt_evos: list):
+                alt_evos.append(m)
                 m.alt_evos = alt_evos
                 for em in m.evo_to:
-                    alt_evos.append(em)
                     link(em, alt_evos)
             link(self, [])
 
