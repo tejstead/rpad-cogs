@@ -101,6 +101,7 @@ class ChannelMod:
                     await self.check_inactive_channel(server_id, channel_id, timeout)
 
     async def channel_inactivity_monitor(self):
+        await self.bot.wait_until_ready()
         while self == self.bot.get_cog('ChannelMod'):
             try:
                 await self.check_inactive_channels()
