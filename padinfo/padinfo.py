@@ -581,7 +581,7 @@ def monsterToPantheonEmbed(m: padguide2.PgMonster):
 
 def monsterToSkillupsEmbed(m: padguide2.PgMonster):
     skillups_list = m.active_skill.monsters_with_active if m.active_skill else []
-    skillups_list = list(filter(lambda m: not m.rem_evo, skillups_list))
+    skillups_list = list(filter(lambda m: m.sell_mp < 3000, skillups_list))
     if len(skillups_list) + len(m.server_actives) == 0:
         return None
 
@@ -596,6 +596,12 @@ def monsterToSkillupsEmbed(m: padguide2.PgMonster):
 
     field_name = 'Skillups'
     field_data = ''
+
+    # Prevent huge skillup lists
+    if len(skillups_list) > 8:
+        field_data = '({} skillups omitted)'.format(len(skillups_list) - 8)
+        skillups_list = skillups_list[0:8]
+
     for monster in sorted(skillups_list, key=lambda x: x.monster_no_na):
         if monster.monster_no_na in skillups_to_skip:
             continue
