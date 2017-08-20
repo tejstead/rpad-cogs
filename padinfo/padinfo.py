@@ -282,17 +282,6 @@ class PadInfo:
         except Exception as ex:
             print('Menu failure', ex)
 
-    @commands.command(pass_context=True)
-    @checks.mod_or_permissions(manage_server=True)
-    async def debugid(self, ctx, *, query):
-        m, err, debug_info = self.findMonster(query)
-        if m is not None:
-            info, link = monsterToInfoText(m)
-            await self.bot.say(box(info))
-            await self.bot.say(box('Lookup type: ' + debug_info + '\nMonster info: ' + m.debug_info))
-        else:
-            await self.bot.say(self.makeFailureMsg(err))
-
     @commands.command(pass_context=True, aliases=['img'])
     async def pic(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)

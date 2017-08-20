@@ -47,6 +47,76 @@ class PadGlobal:
         global PADGLOBAL_COG
         PADGLOBAL_COG = self
 
+    @commands.command(pass_context=True)
+    @is_padglobal_admin()
+    async def debugid(self, ctx, *, query):
+        padinfo_cog = self.bot.get_cog('PadInfo')
+        m, err, debug_info = padinfo_cog._findMonster(query)
+        if m is not None:
+            msg = "{}. {}".format(m.monster_no_na, m.name_na)
+            msg += "\nLookup type: {}".format(debug_info)
+
+            def list_or_none(l):
+                if len(l) == 1:
+                    return '\n\t{}'.format(''.join(l))
+                elif len(l):
+                    return '\n\t' + '\n\t'.join(sorted(l))
+                else:
+                    return 'NONE'
+
+            msg += "\n\nNickname original components:"
+            msg += "\n monster_basename: {}".format(m.monster_basename)
+            msg += "\n group_computed_basename: {}".format(m.group_computed_basename)
+            msg += "\n extra_nicknames: {}".format(list_or_none(m.extra_nicknames))
+
+            msg += "\n\nNickname final components:"
+            msg += "\n basenames: {}".format(list_or_none(m.group_basenames))
+            msg += "\n prefixes: {}".format(list_or_none(m.prefixes))
+
+            msg += "\n\nAccepted nickname entries:"
+            accepted_nn = list(filter(lambda nn: m.monster_no == padinfo_cog.index_all.all_entries[nn].monster_no,
+                                      m.final_nicknames))
+            accepted_twnn = list(filter(lambda nn: m.monster_no == padinfo_cog.index_all.two_word_entries[nn].monster_no,
+                                        m.final_two_word_nicknames))
+
+            msg += "\n nicknames: {}".format(list_or_none(accepted_nn))
+            msg += "\n two_word_nicknames: {}".format(list_or_none(accepted_twnn))
+
+            msg += "\n\nOverwritten nickname entries:"
+            replaced_nn = list(filter(lambda nn: nn not in accepted_nn,
+                                      m.final_nicknames))
+
+            replaced_twnn = list(filter(lambda nn: nn not in accepted_twnn,
+                                        m.final_two_word_nicknames))
+
+            replaced_nn_info = map(lambda nn: (
+                nn, padinfo_cog.index_all.all_entries[nn]), replaced_nn)
+            replaced_twnn_info = map(
+                lambda nn: (nn, padinfo_cog.index_all.two_word_entries[nn]), replaced_twnn)
+
+            replaced_nn_text = list(map(lambda nn_info: '{} : {}. {}'.format(
+                nn_info[0], nn_info[1].monster_no_na, nn_info[1].name_na),
+                replaced_nn_info))
+
+            replaced_twnn_text = list(map(lambda nn_info: '{} : {}. {}'.format(
+                nn_info[0], nn_info[1].monster_no_na, nn_info[1].name_na),
+                replaced_twnn_info))
+
+            msg += "\n nicknames: {}".format(list_or_none(replaced_nn_text))
+            msg += "\n two_word_nicknames: {}".format(list_or_none(replaced_twnn_text))
+
+            msg += "\n\nNickname entry sort parts:"
+            msg += "\n (is_low_priority, group_size, monster_no) : ({}, {}, {})".format(
+                m.is_low_priority, m.group_size, m.monster_no)
+
+            msg == "\n\nMatch selection sort parts:"
+            msg += "\n (is_low_priority, rarity, monster_no_na) : ({}, {}, {})".format(
+                m.is_low_priority, m.rarity, m.monster_no_na)
+
+            await self.bot.say(box(msg))
+        else:
+            await self.bot.say(box('No match: ' + err))
+
     @commands.group(pass_context=True)
     @is_padglobal_admin()
     async def padglobal(self, context):
