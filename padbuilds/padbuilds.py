@@ -8,37 +8,37 @@ from .utils.chat_formatting import pagify, box
 from .utils.dataIO import dataIO
 
 
-class CustomCommands:
-    """Custom commands
+class PadBuilds:
+    """Custom PAD builds
 
     Creates commands used to display text"""
 
     def __init__(self, bot):
         self.bot = bot
-        self.file_path = "data/customcom/commands.json"
+        self.file_path = "data/padbuilds/commands.json"
         self.c_commands = dataIO.load_json(self.file_path)
 
-    @commands.group(aliases=["cc"], pass_context=True, no_pm=True)
-    async def customcom(self, ctx):
-        """Custom commands management"""
+    @commands.group(aliases=["build"], pass_context=True, no_pm=True)
+    async def builds(self, ctx):
+        """PAD Builds management"""
         if ctx.invoked_subcommand is None:
             await self.bot.send_cmd_help(ctx)
 
-    @customcom.command(name="add", pass_context=True)
+    @builds.command(name="add", pass_context=True)
     @checks.mod_or_permissions(administrator=True)
     async def cc_add(self, ctx, command: str, *, text):
-        """Adds a custom command
+        """Adds a PAD Build
 
         Example:
-        [p]customcom add yourcommand Text you want
-
-        CCs can be enhanced with arguments:
+        [p]builds add buildname Text you want
+        
+        Builds can be enhanced with arguments:
         https://twentysix26.github.io/Red-Docs/red_guide_command_args/
         """
         server = ctx.message.server
         command = command.lower()
         if command in self.bot.commands:
-            await self.bot.say("That command is already a standard command.")
+            await self.bot.say("That is already a standard command.")
             return
         if server.id not in self.c_commands:
             self.c_commands[server.id] = {}
@@ -47,19 +47,19 @@ class CustomCommands:
             cmdlist[command] = text
             self.c_commands[server.id] = cmdlist
             dataIO.save_json(self.file_path, self.c_commands)
-            await self.bot.say("Custom command successfully added.")
+            await self.bot.say("PAD Build successfully added.")
         else:
-            await self.bot.say("This command already exists. Use "
-                               "`{}customcom edit` to edit it."
+            await self.bot.say("This build already exists. Use "
+                               "`{}builds edit` to edit it."
                                "".format(ctx.prefix))
 
-    @customcom.command(name="edit", pass_context=True)
+    @builds.command(name="edit", pass_context=True)
     @checks.mod_or_permissions(administrator=True)
     async def cc_edit(self, ctx, command: str, *, text):
-        """Edits a custom command
+        """Edits a PAD Build
 
         Example:
-        [p]customcom edit yourcommand Text you want
+        [p]builds edit buildname Text you want
         """
         server = ctx.message.server
         command = command.lower()
@@ -69,23 +69,23 @@ class CustomCommands:
                 cmdlist[command] = text
                 self.c_commands[server.id] = cmdlist
                 dataIO.save_json(self.file_path, self.c_commands)
-                await self.bot.say("Custom command successfully edited.")
+                await self.bot.say("PAD Build successfully edited.")
             else:
-                await self.bot.say("That command doesn't exist. Use "
-                                   "`{}customcom add` to add it."
+                await self.bot.say("That build doesn't exist. Use "
+                                   "`{}builds add` to add it."
                                    "".format(ctx.prefix))
         else:
-            await self.bot.say("There are no custom commands in this server."
-                               " Use `{}customcom add` to start adding some."
+            await self.bot.say("There are no PAD Builds in this server."
+                               " Use `{}builds add` to start adding some."
                                "".format(ctx.prefix))
 
-    @customcom.command(name="delete", pass_context=True)
+    @builds.command(name="delete", pass_context=True)
     @checks.mod_or_permissions(administrator=True)
     async def cc_delete(self, ctx, command: str):
-        """Deletes a custom command
+        """Deletes a PAD Build
 
         Example:
-        [p]customcom delete yourcommand"""
+        [p]builds delete buildname"""
         server = ctx.message.server
         command = command.lower()
         if server.id in self.c_commands:
@@ -94,28 +94,28 @@ class CustomCommands:
                 cmdlist.pop(command, None)
                 self.c_commands[server.id] = cmdlist
                 dataIO.save_json(self.file_path, self.c_commands)
-                await self.bot.say("Custom command successfully deleted.")
+                await self.bot.say("PAD Build successfully deleted.")
             else:
                 await self.bot.say("That command doesn't exist.")
         else:
-            await self.bot.say("There are no custom commands in this server."
-                               " Use `{}customcom add` to start adding some."
+            await self.bot.say("There are no PAD Builds in this server."
+                               " Use `{}builds add` to start adding some."
                                "".format(ctx.prefix))
 
-    @customcom.command(name="list", pass_context=True)
+    @builds.command(name="list", pass_context=True)
     async def cc_list(self, ctx):
-        """Shows custom commands list"""
+        """Shows PAD Builds list"""
         server = ctx.message.server
         commands = self.c_commands.get(server.id, {})
 
         if not commands:
-            await self.bot.say("There are no custom commands in this server."
-                               " Use `{}customcom add` to start adding some."
+            await self.bot.say("There are no PAD Builds in this server."
+                               " Use `{}builds add` to start adding some."
                                "".format(ctx.prefix))
             return
 
         commands = ", ".join([ctx.prefix + c for c in sorted(commands)])
-        commands = "Custom commands:\n\n" + commands
+        commands = "PAD Builds:\n\n" + commands
 
         if len(commands) < 1500:
             await self.bot.say(box(commands))
@@ -184,13 +184,13 @@ class CustomCommands:
 
 
 def check_folders():
-    if not os.path.exists("data/customcom"):
-        print("Creating data/customcom folder...")
-        os.makedirs("data/customcom")
+    if not os.path.exists("data/padbuilds"):
+        print("Creating data/padbuilds folder...")
+        os.makedirs("data/padbuilds")
 
 
 def check_files():
-    f = "data/customcom/commands.json"
+    f = "data/padbuilds/commands.json"
     if not dataIO.is_valid_json(f):
         print("Creating empty commands.json...")
         dataIO.save_json(f, {})
@@ -199,4 +199,4 @@ def check_files():
 def setup(bot):
     check_folders()
     check_files()
-    bot.add_cog(CustomCommands(bot))
+    bot.add_cog(PadBuilds(bot))
