@@ -17,6 +17,7 @@ from enum import Enum
 from itertools import groupby
 from macpath import basename
 from operator import itemgetter
+import os
 import re
 import traceback
 
@@ -109,6 +110,11 @@ class PadGuide2(object):
                 traceback.print_exc()
                 raise ex
 
+    def reload_config_files(self):
+        os.remove(NICKNAME_FILE_PATTERN)
+        os.remove(BASENAME_FILE_PATTERN)
+        self.download_and_refresh_nicknames()
+
     def download_and_refresh_nicknames(self):
         self._download_files()
 
@@ -126,12 +132,6 @@ class PadGuide2(object):
 
         self.database = PgRawDatabase()
         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
-
-    def _load_overrides(self, file_path: str):
-        # Loads a two-column CSV into a dict, and cleans it a bit by ensuring the
-        # key is lowercase and the value is an integer.
-        data = self._csv_to_key_value_map(file_path)
-        return
 
     def _csv_to_tuples(self, file_path: str):
         # Loads a two-column CSV into a dict.
@@ -175,26 +175,6 @@ class PadGuide2(object):
         """PAD database management"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
-
-    @padguide2.command(pass_context=True)
-    @checks.is_owner()
-    async def query(self, ctx, query: str):
-        m, err, debug_info = self.index.find_monster(query)
-        if m is None:
-            await self.bot.say(box("no result"))
-        else:
-            msg = "{}. {}".format(m.monster_no_na, m.name_na)
-            msg += "\n group_basenames: {}".format(m.group_basenames)
-            msg += "\n prefixes: {}".format(m.prefixes)
-            msg += "\n is_low_priority: {}".format(m.is_low_priority)
-            msg += "\n group_size: {}".format(m.group_size)
-            msg += "\n rarity: {}".format(m.rarity)
-            msg += "\n monster_basename: {}".format(m.monster_basename)
-            msg += "\n group_computed_basename: {}".format(m.group_computed_basename)
-            msg += "\n extra_nicknames: {}".format(m.extra_nicknames)
-            msg += "\n final_nicknames: {}".format(m.final_nicknames)
-            msg += "\n final_two_word_nicknames: {}".format(m.final_two_word_nicknames)
-            await self.bot.say(box(msg))
 
 
 class PadGuide2Settings(CogSettings):

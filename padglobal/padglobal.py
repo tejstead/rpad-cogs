@@ -136,6 +136,16 @@ class PadGlobal:
         else:
             await self.bot.say(box('No match: ' + err))
 
+    @commands.command(pass_context=True)
+    @is_padglobal_admin()
+    async def forceindexreload(self, ctx):
+        await self.bot.say('starting reload')
+        padguide_cog = self.bot.get_cog('PadGuide2')
+        padguide_cog.reload_config_files()
+        padinfo_cog = self.bot.get_cog('PadInfo')
+        padinfo_cog.refresh_index()
+        await self.bot.say('finished reload')
+
     @commands.group(pass_context=True)
     @is_padglobal_admin()
     async def padglobal(self, context):
