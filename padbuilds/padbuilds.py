@@ -31,12 +31,12 @@ class PadBuilds:
 
         Example:
         [p]builds add buildname Text you want
-        
+
         Builds can be enhanced with arguments:
         https://twentysix26.github.io/Red-Docs/red_guide_command_args/
         """
         server = ctx.message.server
-        command = command.lower()
+        command = command.lower().replace(u'\u200b', '')
         if command in self.bot.commands:
             await self.bot.say("That is already a standard command.")
             return
@@ -62,7 +62,7 @@ class PadBuilds:
         [p]builds edit buildname Text you want
         """
         server = ctx.message.server
-        command = command.lower()
+        command = command.lower().replace(u'\u200b', '')
         if server.id in self.c_commands:
             cmdlist = self.c_commands[server.id]
             if command in cmdlist:
