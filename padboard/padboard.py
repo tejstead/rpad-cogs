@@ -143,7 +143,7 @@ class PadBoard:
 #             msg += '\n{}'.format(hsv_url)
         await self.bot.say(msg)
 
-    async def get_recent_image(self, ctx, user : discord.Member=None, message : discord.Message=None):
+    async def get_recent_image(self, ctx, user: discord.Member=None, message: discord.Message=None):
         user_id = user.id if user else ctx.message.author.id
 
         image_url = rpadutils.extract_image_url(message)
@@ -184,14 +184,17 @@ class PadBoard:
 
         return img_board, hsv_board
 
+
 def check_folder():
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
     if not os.path.exists(ORB_DATA_DIR):
         os.makedirs(ORB_DATA_DIR)
 
+
 def check_file():
     pass
+
 
 def setup(bot):
     check_folder()
