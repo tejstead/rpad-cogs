@@ -133,7 +133,11 @@ class PadBoard:
             return
 
         img_board, hsv_board = self.classify(image_data)
-        img_url = DAWNGLARE_BOARD_TEMPLATE.format(''.join([''.join(r) for r in img_board]))
+
+        board_text = ''.join([''.join(r) for r in img_board])
+        # Convert O (used by padvision code) to X (used by Puzzled for bombs)
+        board_text = board_text.replace('o', 'x')
+        img_url = DAWNGLARE_BOARD_TEMPLATE.format(board_text)
         # Disabling HSV board for now. It's basically always worse
 #         hsv_url = DAWNGLARE_BOARD_TEMPLATE.format(''.join([''.join(r) for r in hsv_board]))
 
@@ -163,13 +167,6 @@ class PadBoard:
             return None
 
         return image_data
-
-    async def get_dawnglare_pattern(self, image_data):
-        img_board, hsv_board = self.classify(image_data)
-        if img_board != hsv_board:
-            await self.bot.say(inline("I'm uncertain about this board, check the output carefully"))
-        # consider returning the hsv_board instead? not sure which is better
-        return ''.join([''.join(r) for r in img_board])
 
     def classify(self, image_data):
         nparr = np.fromstring(image_data, np.uint8)
