@@ -89,9 +89,9 @@ class ChannelMod:
                 await self.bot.edit_channel(channel, name=new_name)
 
         except Exception as ex:
-            print('failed to check inactivity channel')
+            print('failed to check inactivity channel: ' + str(ex))
             traceback.print_exc()
-            self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
+#             self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
 
     async def check_inactive_channels(self):
         for server_id in self.settings.servers().keys():
