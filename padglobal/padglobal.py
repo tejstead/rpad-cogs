@@ -132,7 +132,8 @@ class PadGlobal:
             msg += "\n (is_low_priority, rarity, monster_no_na) : ({}, {}, {})".format(
                 m.is_low_priority, m.rarity, m.monster_no_na)
 
-            await self.bot.say(box(msg))
+            for page in pagify(msg):
+                await self.bot.say(box(page))
         else:
             await self.bot.say(box('No match: ' + err))
 
