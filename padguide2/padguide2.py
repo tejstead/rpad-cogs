@@ -112,14 +112,15 @@ class PadGuide2(object):
     def download_and_refresh_nicknames(self):
         self._download_files()
 
-        nickname_overrides = self._csv_to_key_value_map(NICKNAME_FILE_PATTERN)
-        basename_overrides = self._csv_to_key_value_map(BASENAME_FILE_PATTERN)
+        nickname_overrides = self._csv_to_tuples(NICKNAME_FILE_PATTERN)
+        basename_overrides = self._csv_to_tuples(BASENAME_FILE_PATTERN)
 
-        self.nickname_overrides = {k.lower(): int(v)
-                                   for k, v in nickname_overrides.items() if v.isdigit()}
+        self.nickname_overrides = {x[0].lower(): int(x[1])
+                                   for x in nickname_overrides if x[1].isdigit()}
 
         self.basename_overrides = defaultdict(set)
-        for k, v in basename_overrides.items():
+        for x in basename_overrides:
+            k, v = x
             if k.isdigit():
                 self.basename_overrides[int(k)].add(v.lower())
 
@@ -132,9 +133,9 @@ class PadGuide2(object):
         data = self._csv_to_key_value_map(file_path)
         return
 
-    def _csv_to_key_value_map(self, file_path: str):
+    def _csv_to_tuples(self, file_path: str):
         # Loads a two-column CSV into a dict.
-        results = {}
+        results = []
         with open(file_path, encoding='utf-8') as f:
             file_reader = csv.reader(f, delimiter=',')
             for row in file_reader:
@@ -1984,7 +1985,7 @@ class NamedMonsterGroup(object):
         failed_type = m.type1.lower() in lp_types
         failed_ss = any([x in name for x in lp_substrings])
         failed_rarity = m.rarity < lp_min_rarity
-        failed_chibi = name == m.name_na
+        failed_chibi = name == m.name_na and m.name_na != m.name_jp
         return failed_type or failed_ss or failed_rarity or failed_chibi
 
     def _is_low_priority_group(self, mg: MonsterGroup):
