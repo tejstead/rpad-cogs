@@ -147,7 +147,7 @@ class PadGuide2(object):
                 if not (len(key) and len(value)):
                     continue
 
-                results[key] = value
+                results.append([key, value])
         return results
 
     def _download_files(self):
