@@ -890,7 +890,7 @@ class PgMonster(PgItem):
             self.is_inheritable = False
         else:
             has_awakenings = len(self.awakenings) > 0
-            self.is_inheritable = has_awakenings and self.rarity >= 5 and self.sell_mp > 3000
+            self.is_inheritable = has_awakenings and self.rarity >= 5 and self.sell_mp >= 3000
 
         if self.evo_from is None:
             def link(m: PgMonster, alt_evos: list):
