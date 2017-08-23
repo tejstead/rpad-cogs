@@ -310,6 +310,14 @@ class PadInfo:
             await self.bot.say(inline('Too many inputs. Try wrapping your queries in quotes.'))
             return
 
+        # Handle a very specific failure case, user typing something like "uuvo ragdra"
+        if ' ' not in left_query and right_query is not None and ' ' not in right_query and bad is None:
+            combined_query = left_query + ' ' + right_query
+            nm, err, debug_info = self._findMonster(combined_query)
+            if nm and left_query in nm.prefixes:
+                left_query = combined_query
+                right_query = None
+
         left_m, left_err, _ = self.findMonster(left_query)
         if right_query:
             right_m, right_err, _ = self.findMonster(right_query)
