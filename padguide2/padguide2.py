@@ -2001,6 +2001,10 @@ class NamedMonster(object):
         self.group_computed_basename = monster_group.computed_basename
         self.extra_nicknames = extra_nicknames
 
+        # Compute any extra prefixes
+        if self.monster_basename in ('ana', 'ace'):
+            self.prefixes.add(self.monster_basename)
+
         # Compute extra basenames by checking for two-word basenames and using the second half
         self.two_word_basenames = set()
         for basename in self.group_basenames:
