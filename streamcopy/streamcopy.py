@@ -47,7 +47,7 @@ class StreamCopy:
 
     @streamcopy.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def setStreamerRole(self, ctx, *, role_name : str):
+    async def setStreamerRole(self, ctx, *, role_name: str):
         try:
             role = get_role(ctx.message.server.roles, role_name)
         except:
@@ -65,13 +65,13 @@ class StreamCopy:
 
     @streamcopy.command(name="adduser", pass_context=True)
     @checks.is_owner()
-    async def addUser(self, ctx, user : discord.User, priority : int):
+    async def addUser(self, ctx, user: discord.User, priority: int):
         self.settings.addUser(user.id, priority)
         await self.bot.say(inline('Done'))
 
     @streamcopy.command(name="rmuser", pass_context=True)
     @checks.is_owner()
-    async def rmUser(self, ctx, user : discord.User):
+    async def rmUser(self, ctx, user: discord.User):
         self.settings.rmUser(user.id)
         await self.bot.say(inline('Done'))
 
@@ -114,7 +114,7 @@ class StreamCopy:
         except ex:
             print("Stream checking failed", ex)
 
-    async def ensure_user_streaming_role(self, server, streamer_role_id : discord.Role, user : discord.Member):
+    async def ensure_user_streaming_role(self, server, streamer_role_id: discord.Role, user: discord.Member):
         user_is_playing = self.is_playing(user)
         try:
             streamer_role = get_role_from_id(self.bot, server, streamer_role_id)
@@ -145,18 +145,18 @@ class StreamCopy:
 
     def find_stream(self):
         user_ids = self.settings.users().keys()
-        members = {x.id: x for x in self.bot.get_all_members() if x.id in user_ids and self.is_playing(x)}
+        members = {x.id: x for x in self.bot.get_all_members(
+        ) if x.id in user_ids and self.is_playing(x)}
         games = [x.game for x in members.values()]
         random.shuffle(games)
         return games[0] if len(games) else None
 
-    def is_playing(self, member : discord.Member):
+    def is_playing(self, member: discord.Member):
         return member and member.game and member.game.type == 1 and member.game.url
 
-    async def copy_playing(self, game : discord.Game):
+    async def copy_playing(self, game: discord.Game):
         new_game = discord.Game(name=game.name, url=game.url, type=game.type)
         await self.bot.change_presence(game=new_game)
-
 
 
 def setup(bot):
@@ -165,11 +165,12 @@ def setup(bot):
     bot.loop.create_task(n.refresh_stream())
     bot.add_cog(n)
 
+
 class StreamCopySettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'users' : {},
-          'servers': {}
+            'users': {},
+            'servers': {}
         }
         return config
 
