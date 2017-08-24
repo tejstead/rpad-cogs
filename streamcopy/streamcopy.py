@@ -111,7 +111,7 @@ class StreamCopy:
                 return
 
             await self.do_refresh()
-        except ex:
+        except Exception as ex:
             print("Stream checking failed", ex)
 
     async def ensure_user_streaming_role(self, server, streamer_role_id: discord.Role, user: discord.Member):
