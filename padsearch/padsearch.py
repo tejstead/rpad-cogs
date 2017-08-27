@@ -11,6 +11,34 @@ from __main__ import user_allowed, send_cmd_help
 from .utils import checks
 from .utils.chat_formatting import box, inline
 
+HELP_MSG = """
+^search <specification string>
+
+Colors can be any of:
+  fire water wood light dark
+  heart jammer poison mortal
+
+Options which take multiple colors should be comma-separated.
+
+Single instance filters
+* cd(n)       : Min cd <= n
+* haste(n)    : Skill cds reduced by n
+* shuffle     : Board shuffle (aka refresh)
+* unlock      : Orb unlock
+
+Multiple instance filters 
+* active(str)     : Active skill name/description
+* board(colors,)  : Board change to a comma-sep list of colors
+* column(color)   : Creates a column of a color
+* leader(str)     : Leader skill description
+* name(str)       : Monster name 
+* row(color)      : Creates a row of a color
+* type(str)       : Monster type
+
+Coming soon: 
+* convert(c1, c2) : Convert from color 1 to color 2
+"""
+
 
 TYPES = [
     "attacker",
@@ -328,35 +356,8 @@ class PadSearch:
 
     @commands.command(pass_context=True)
     async def helpsearch(self, ctx):
-        """Help info for the search command
-
-        ^search <specification string>
-
-        Colors can be any of:
-          fire water wood light dark
-          heart jammer poison mortal
-
-        Options which take multiple colors should be comma-separated.
-
-        Single instance filters
-        * cd(n)       : Min cd <= n
-        * haste(n)    : Skill cds reduced by n
-        * shuffle     : Board shuffle (aka refresh)
-        * unlock      : Orb unlock
-
-        Multiple instance filters 
-        * active(str)     : Active skill name/description
-        * board(colors,)  : Board change to a comma-sep list of colors
-        * column(color)   : Creates a column of a color
-        * leader(str)     : Leader skill description
-        * name(str)       : Monster name 
-        * row(color)      : Creates a row of a color
-        * type(str)       : Monster type
-
-        Coming soon: 
-        * convert(c1, c2) : Convert from color 1 to color 2
-        """
-        await send_cmd_help(ctx)
+        """Help info for the search command."""
+        await self.bot.whisper(box(HELP_MSG))
 
     @commands.command(pass_context=True)
     async def search(self, ctx, *, filter_spec: str):
