@@ -104,10 +104,10 @@ class ChannelMod:
         await self.bot.wait_until_ready()
         while self == self.bot.get_cog('ChannelMod'):
             try:
+                await asyncio.sleep(20)
                 await self.check_inactive_channels()
             except:
                 traceback.print_exc()
-            await asyncio.sleep(20)
 
 
 def setup(bot):
