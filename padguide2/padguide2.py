@@ -900,6 +900,144 @@ class PgMonster(PgItem):
                     link(em, alt_evos)
             link(self, [])
 
+        self.search = MonsterSearchHelper(self)
+
+
+class MonsterSearchHelper(object):
+    def __init__(self, m: PgMonster):
+
+        self.name = '{} {}'.format(m.name_na, m.name_jp).lower()
+        self.leader = m.leader_skill.desc.lower() if m.leader_skill else ''
+        self.active_name = m.active_skill.name.lower() if m.active_skill else ''
+        self.active_desc = m.active_skill.desc.lower() if m.active_skill else ''
+        self.active = '{} {}'.format(self.active_name, self.active_desc)
+        self.active_min = m.active_skill.turn_min if m.active_skill else None
+        self.active_max = m.active_skill.turn_max if m.active_skill else None
+
+        self.types = [t.lower() for t in [m.type1, m.type2, m.type3] if t]
+
+        def replace_colors(text: str):
+            return text.replace('red', 'fire').replace('blue', 'water').replace('green', 'wood')
+        self.leader = replace_colors(self.leader)
+        self.active = replace_colors(self.active)
+        self.active_name = replace_colors(self.active_name)
+        self.active_desc = replace_colors(self.active_desc)
+
+        self.board_change = []
+        self.orb_convert = defaultdict(list)
+        self.row_convert = []
+        self.column_convert = []
+
+        def color_txt_to_list(txt):
+            txt = txt.replace(',', ' ')
+            txt = txt.replace('&', ' ')
+            txt = txt.replace('and', ' ')
+            txt = txt.replace('+', ' ')
+            txt = txt.replace('att.', ' ')
+            txt = txt.replace('colors', ' ')
+            txt = txt.replace('orbs', ' ')
+            txt = txt.replace('orb', ' ')
+            txt = txt.replace('critical poison', 'mortal')
+            txt = txt.replace('jammers', 'jammer')
+            txt = txt.replace('5', 'fire water wood light dark')
+            txt = txt.replace('fr', 'fire')
+            txt = txt.replace('wt', 'water')
+            txt = txt.replace('wd', 'wood')
+            txt = txt.replace('lt', 'light')
+            txt = txt.replace('dk', 'dark')
+            txt = txt.strip()
+            return txt.split()
+
+        def strip_prev_clause(txt: str, sep: str):
+            prev_clause_start_idx = txt.find(sep)
+            if prev_clause_start_idx >= 0:
+                prev_clause_start_idx += len(sep)
+                txt = txt[prev_clause_start_idx:]
+            return txt
+
+        def strip_next_clause(txt: str, sep: str):
+            next_clause_start_idx = txt.find(sep)
+            if next_clause_start_idx >= 0:
+                txt = txt[:next_clause_start_idx]
+            return txt
+
+        active_desc = self.active_desc
+        active_desc = active_desc.replace(' rows ', ' row ')
+        active_desc = active_desc.replace(' columns ', ' column ')
+        active_desc = active_desc.replace(' into ', ' to ')
+        active_desc = active_desc.replace('changes orbs to', 'all orbs to')
+
+        board_change_txt = 'all orbs to'
+        if board_change_txt in active_desc:
+            txt = strip_prev_clause(active_desc, board_change_txt)
+            txt = strip_next_clause(txt, 'orbs')
+            txt = strip_next_clause(txt, ';')
+            self.board_change = color_txt_to_list(txt)
+
+        txt = active_desc
+        row_to_txt = 'row to'
+        while row_to_txt in txt:
+            txt = strip_prev_clause(txt, row_to_txt)
+            self.row_convert.append(txt.split()[0].strip())
+
+        txt = active_desc
+        column_to_txt = 'column to'
+        while column_to_txt in txt:
+            txt = strip_prev_clause(txt, column_to_txt)
+            self.column_convert.append(txt.split()[0].strip())
+
+        convert_done = self.board_change or self.row_convert or self.column_convert
+
+        change_txt = 'change'
+        if not convert_done and change_txt in active_desc and 'orb' in active_desc:
+            txt = strip_prev_clause(active_desc, change_txt)
+            txt = txt.lstrip('s ')
+            # This fucks up triple orb changes like DQXQ
+            txt = strip_next_clause(txt, ';')
+            txt = strip_next_clause(txt, '+')
+            txt = strip_next_clause(txt, '(')
+            txt = strip_next_clause(txt, '.')
+
+            # fix an inconsistency where they use 'and' in place of ,
+            # to split orb converts
+            txt = txt.replace('orbs and ', ', ')
+
+            # fix an inconsistency where they use '&' in place of ,
+            # to split orb converts
+            for t in ['fire', 'water', 'wood', 'light', 'dark', 'jammer', 'poison', 'heal']:
+                txt = txt.replace('to {} & '.format(t), 'to {}, '.format(t))
+                txt = txt.replace('to {} and '.format(t), 'to {}, '.format(t))
+
+            parts = []
+            while ' to ' in txt:
+                to_idx = txt.find(' to ')
+                second_part_idx = txt.find(',', to_idx)
+                if second_part_idx < 0:
+                    break
+                parts.append(txt[:second_part_idx])
+                txt = txt[second_part_idx:].strip()
+
+            if ' to ' in txt:
+                parts.append(txt)
+
+            for part in parts:
+                part = part.replace('&', ' ')
+                part = part.replace(',', ' ')
+                part = part.replace('and', ' ')
+                part = part.replace('orbs', ' ')
+
+                sub_parts = part.split('to')
+                source_orbs = color_txt_to_list(sub_parts[0])
+                dest_orbs = color_txt_to_list(sub_parts[1])
+
+                if len(dest_orbs) > 1:
+                    print('error on skill:', self.active_desc, ' -> ', part)
+                    print(parts)
+
+                for so in source_orbs:
+                    for do in dest_orbs:
+                        self.orb_convert[so].append(do)
+
 
 class MonsterGroup(object):
     """Computes shared values across a tree of monsters and injects them."""
