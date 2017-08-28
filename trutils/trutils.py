@@ -199,90 +199,6 @@ class TrUtils:
     def __init__(self, bot):
         self.bot = bot
         self.settings = TrUtilsSettings("trutils")
-        self.colors = [
-            discord.Color.blue(),
-            discord.Color.dark_blue(),
-            discord.Color.dark_gold(),
-            discord.Color.dark_green(),
-            discord.Color.dark_grey(),
-            discord.Color.dark_magenta(),
-            discord.Color.dark_orange(),
-            discord.Color.dark_purple(),
-            discord.Color.dark_red(),
-            discord.Color.dark_teal(),
-            discord.Color.darker_grey(),
-            discord.Color.default(),
-            discord.Color.gold(),
-            discord.Color.green(),
-            discord.Color.light_grey(),
-            discord.Color.lighter_grey(),
-            discord.Color.magenta(),
-            discord.Color.orange(),
-            discord.Color.purple(),
-            discord.Color.red(),
-            discord.Color.teal(),
-        ]
-
-    def registerTasks(self, event_loop):
-        print("registering tasks")
-        self.rainbow_task = event_loop.create_task(self.refresh_rainbow())
-
-    def __unload(self):
-        print("unloading trutils")
-        self.rainbow_task.cancel()
-
-    async def refresh_rainbow(self):
-        while "TrUtils" in self.bot.cogs:
-            try:
-                await asyncio.sleep(10)
-            except Exception as e:
-                print("refresh rainbow loop caught exception " + str(e))
-                raise e
-
-            try:
-                await self.doRefreshRainbow()
-            except Exception as e:
-                traceback.print_exc()
-                print("caught exception while refreshing rainbow " + str(e))
-
-        print("done refresh_rainbow")
-
-    async def doRefreshRainbow(self):
-        servers = self.settings.servers()
-        for server_id, server_data in servers.items():
-            server = get_server_from_id(self.bot, server_id)
-            rainbow_ids = self.settings.rainbow(server_id)
-            for role_id in rainbow_ids:
-                role = get_role_from_id(self.bot, server, role_id)
-                color = random.choice(self.colors)
-                try:
-                    await self.bot.edit_role(server, role, color=color)
-                except Exception as e:
-                    traceback.print_exc()
-                    print("caught exception while updating role, disabling: " + str(e))
-                    self.settings.clearRainbow(server_id, role_id)
-
-    async def on_ready(self):
-        """ready"""
-        print("started trutils")
-
-    async def check_for_nickname_change(self, before, after):
-        try:
-            server = after.server
-            saved_nick = self.settings.getNickname(server.id, after.id)
-            if saved_nick is None:
-                return
-
-            if not len(saved_nick):
-                saved_nick = None
-
-            if before.nick != after.nick:
-                if after.nick != saved_nick:
-                    print("caught bad nickname change {} {}".format(after.nick, saved_nick))
-                    await self.bot.change_nickname(after, saved_nick)
-        except Exception as e:
-            traceback.print_exc()
-            print('failed to check for nickname change' + str(e))
 
     @commands.command(pass_context=True)
     async def revertname(self, ctx):
@@ -292,8 +208,27 @@ class TrUtils:
 
     @commands.command(pass_context=True)
     @checks.mod_or_permissions(manage_server=True)
+    async def editmsg(self, ctx, channel: discord.Channel, msg_id: int, *, new_msg: str):
+        """Given a channel and an ID for a message printed in that channel, replaces it."""
+        try:
+            msg = await self.bot.get_message(channel, str(msg_id))
+        except discord.NotFound:
+            await self.bot.say(inline('Cannot find that message, check the channel and message id'))
+            return
+        except discord.NotFound:
+            await self.bot.say(inline('No permissions to do that'))
+            return
+        if msg.author.id != self.bot.user.id:
+            await self.bot.say(inline('Can only edit messages I own'))
+            return
+
+        await self.bot.edit_message(msg, new_msg)
+        await self.bot.say(inline('done'))
+
+    @commands.command(pass_context=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def dumpchannel(self, ctx, channel: discord.Channel, msg_id: int=None):
-        """Given a channel and an ID for a message printed in that current channel, dumps it 
+        """Given a channel and an ID for a message printed in that channel, dumps it 
         boxed with formatting escaped and some issues cleaned up"""
         await self._dump(ctx, channel, msg_id)
 
@@ -321,32 +256,6 @@ class TrUtils:
         content = msg.clean_content.strip()
         content = box(content.replace('`', u'\u200b`'))
         await self.bot.say(content)
-
-    @commands.command(name="dontchangemyname", pass_context=True, no_pm=True)
-    @checks.is_owner()
-    async def dontchangemyname(self, ctx, nickname):
-        self.settings.setNickname(ctx.message.server.id, ctx.message.author.id, nickname)
-        await self.bot.say('`done`')
-
-    @commands.command(name="cleardontchangemyname", pass_context=True, no_pm=True)
-    @checks.is_owner()
-    async def cleardontchangemyname(self, ctx):
-        self.settings.clearNickname(ctx.message.server.id, ctx.message.author.id)
-        await self.bot.say('`done`')
-
-    @commands.command(name="rainbow", pass_context=True, no_pm=True)
-    @checks.is_owner()
-    async def rainbow(self, ctx, role_name):
-        role = get_role(ctx.message.server.roles, role_name)
-        self.settings.setRainbow(ctx.message.server.id, role.id)
-        await self.bot.say('`done`')
-
-    @commands.command(name="clearrainbow", pass_context=True, no_pm=True)
-    @checks.is_owner()
-    async def clearrainbow(self, ctx, role_name):
-        role = get_role(ctx.message.server.roles, role_name)
-        self.settings.clearRainbow(ctx.message.server.id, role.id)
-        await self.bot.say('`done`')
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
@@ -499,14 +408,12 @@ class TrUtils:
             "This is an instance of [the Red Discord bot]({}), "
             "use the 'info' command for more info. "
             "The various PAD related cogs were created by tactical_retreat. "
-            "This bot was created for the [PAD subreddit discord]({}) but "
+            "This bot was created for the [PAD Community Server Discord]({}) but "
             "is available for other servers on request."
             "".format(red_repo, rpad_invite))
 
         baby_miru_url = "http://www.pixiv.net/member_illust.php?illust_id=57613867&mode=medium"
         baby_miru_author = "BOW @ Pixiv"
-        cute_miru_url = "https://www.dropbox.com/s/0wlfx3g4mk8c8bg/Screenshot%202016-12-03%2018.39.37.png?dl=0"
-        cute_miru_author = "Pancaaake18 @ the MantasticPAD server on discord"
         cute_miru_url = "https://www.dropbox.com/s/0wlfx3g4mk8c8bg/Screenshot%202016-12-03%2018.39.37.png?dl=0"
         cute_miru_author = "Pancaaake18 on discord"
         bot_miru_url = "https://puu.sh/urTm8/c3bdf993bd.png"
@@ -623,8 +530,6 @@ class TrUtils:
 def setup(bot):
     print('trutils bot setup')
     n = TrUtils(bot)
-    n.registerTasks(asyncio.get_event_loop())
-    bot.add_listener(n.check_for_nickname_change, "on_member_update")
     bot.add_listener(n.on_imgcopy_message, "on_message")
     bot.add_listener(n.on_imgcopy_edit_message, "on_message_edit")
     bot.add_listener(n.on_imgblacklist_message, "on_message")
@@ -648,39 +553,6 @@ class TrUtilsSettings(CogSettings):
         if server_id not in servers:
             servers[server_id] = {}
         return servers[server_id]
-
-    def setNickname(self, server_id, user_id, nickname):
-        server = self.getServer(server_id)
-        server[user_id] = nickname
-        self.save_settings()
-
-    def getNickname(self, server_id, user_id):
-        server = self.getServer(server_id)
-        return server.get(user_id)
-
-    def clearNickname(self, server_id, user_id):
-        server = self.getServer(server_id)
-        if user_id in server:
-            server.pop(user_id)
-        self.save_settings()
-
-    def rainbow(self, server_id):
-        server = self.getServer(server_id)
-        if 'rainbow' not in server:
-            server['rainbow'] = []
-        return server['rainbow']
-
-    def setRainbow(self, server_id, role_id):
-        rainbow = self.rainbow(server_id)
-        if role_id not in rainbow:
-            rainbow.append(role_id)
-            self.save_settings()
-
-    def clearRainbow(self, server_id, role_id):
-        rainbow = self.rainbow(server_id)
-        if role_id in rainbow:
-            rainbow.remove(role_id)
-            self.save_settings()
 
     def imagecopy(self, server_id):
         server = self.getServer(server_id)
