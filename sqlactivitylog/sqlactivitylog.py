@@ -165,7 +165,7 @@ LIMIT :row_count
 
 USER_REPORT_QUERY = '''
 SELECT channel_id, count(*) AS total_messages
-FROM messages INDEXED BY idx_messages_server_id_channel_id_user_id_timestamp
+FROM messages INDEXED BY idx_messages_server_id_user_id_timestamp
 WHERE server_id = :server_id
   AND user_id = :user_id
   AND timestamp between :start_timestamp and :end_timestamp
