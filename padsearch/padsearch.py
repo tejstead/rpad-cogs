@@ -22,7 +22,9 @@ Options which take multiple colors should be comma-separated.
 
 Single instance filters
 * cd(n)       : Min cd <= n
+* farmable    : Obtainable outside REM
 * haste(n)    : Skill cds reduced by n
+* inheritable : Can be inherited
 * shuffle     : Board shuffle (aka refresh)
 * unlock      : Orb unlock
 
@@ -129,7 +131,9 @@ class PadSearchLexer(object):
         'BOARD',
         'CD',
         'COLUMN',
+        'FARMABLE',
         'HASTE',
+        'INHERITABLE',
         'LEADER',
         'NAME',
         'ROW',
@@ -162,10 +166,18 @@ class PadSearchLexer(object):
         t.value = replace_colors(t.value)
         return t
 
+    def t_FARMABLE(self, t):
+        r'farmable(\(\))?'
+        return t
+
     def t_HASTE(self, t):
         r'haste\(\d\)'
         t.value = clean_name(t.value, 'haste')
         t.value = int(t.value)
+        return t
+
+    def t_INHERITABLE(self, t):
+        r'inheritable(\(\))?'
         return t
 
     def t_LEADER(self, t):
@@ -213,7 +225,9 @@ class SearchConfig(object):
 
     def __init__(self, lexer):
         self.cd = None
+        self.farmable = None
         self.haste = None
+        self.inheritable = None
         self.shuffle = None
         self.unlock = None
 
@@ -229,7 +243,9 @@ class SearchConfig(object):
             type = tok.type
             value = tok.value
             self.cd = self.setIfType('CD', type, self.cd, value)
+            self.farmable = self.setIfType('FARMABLE', type, self.farmable, value)
             self.haste = self.setIfType('HASTE', type, self.haste, value)
+            self.inheritable = self.setIfType('INHERITABLE', type, self.inheritable, value)
             self.shuffle = self.setIfType('SHUFFLE', type, self.shuffle, value)
             self.unlock = self.setIfType('UNLOCK', type, self.unlock, value)
 
@@ -256,9 +272,15 @@ class SearchConfig(object):
         if self.cd:
             self.filters.append(lambda m: m.search.active_min and m.search.active_min <= self.cd)
 
+        if self.farmable:
+            self.filters.append(lambda m: m.farmable_evo)
+
         if self.haste:
             text = 'charge by {}'.format(self.haste)
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
+
+        if self.inheritable:
+            self.filters.append(lambda m: m.is_inheritable)
 
         if self.shuffle:
             text = 'switch orbs'
