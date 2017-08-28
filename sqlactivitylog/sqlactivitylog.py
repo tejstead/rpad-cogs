@@ -163,6 +163,17 @@ ORDER BY 2 DESC
 LIMIT :row_count
 '''
 
+USER_REPORT_QUERY = '''
+SELECT channel_id, count(*) AS total_messages
+FROM messages INDEXED BY idx_messages_server_id_channel_id_user_id_timestamp
+WHERE server_id = :server_id
+  AND user_id = :user_id
+  AND timestamp between :start_timestamp and :end_timestamp
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT :row_count
+'''
+
 
 class SqlActivityLogger(object):
     """Log activity seen by bot"""
@@ -415,6 +426,34 @@ class SqlActivityLogger(object):
         column_data = []
 
         await self.queryAndPrint(server, CHANNEL_REPORT_QUERY, values, column_data)
+
+    @exlog.command(pass_context=True, no_pm=True)
+    async def userreport(self, ctx, user: discord.User, start_date: str, end_date: str, count=10):
+        """exlog userreport #general_chat 2017-01-01 2017-01-10
+
+        Prints a report on channel activity in the specified time period for a user.
+        Be careful how you specify your dates, must match the YYYY-MM-DD format
+        described above.
+        Start date is inclusive, end date is exclusive.
+        """
+        count = min(count, 30)
+        start_date = datetime.strptime(start_date, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date, "%Y-%m-%d")
+
+        start_date = start_date.replace(tzinfo=pytz.utc)
+        end_date = end_date.replace(tzinfo=pytz.utc)
+
+        server = ctx.message.server
+        values = {
+            'server_id': server.id,
+            'user_id': user.id,
+            'start_timestamp': start_date,
+            'end_timestamp': end_date,
+            'row_count': count,
+        }
+        column_data = []
+
+        await self.queryAndPrint(server, USER_REPORT_QUERY, values, column_data)
 
     async def queryAndPrint(self, server, query, values, column_data, max_rows=MAX_LOGS * 2):
         before_time = timeit.default_timer()
