@@ -238,6 +238,15 @@ class PgRawDatabase(object):
         self.monster_no_na_to_monster_no = {
             m.monster_no_na: m.monster_no for m in self._monster_map.values()}
 
+        # Skill rotation map
+        self._server_to_rotating_skillups = {
+            'NA': [],
+            'JP': [],
+        }
+        for m in self._monster_map.values():
+            for server in m.server_actives:
+                self._server_to_rotating_skillups[server].append(m)
+
     def _load(self, itemtype):
         if self._skip_load:
             return {}
@@ -270,6 +279,10 @@ class PgRawDatabase(object):
     def all_egg_instances(self):
         """Exported for access to the full egg machine list."""
         return list(self._egg_instance_map.values())
+
+    def rotating_skillups(self, server: str):
+        """Gets monsters used as rotating skillups for the specified server"""
+        return list(self._server_to_rotating_skillups[server])
 
     def getAttributeEnum(self, ta_seq: int):
         attr = self._ensure_loaded(self._attribute_map.get(ta_seq))
@@ -830,12 +843,10 @@ class PgMonster(PgItem):
 
         self.alt_evos = []  # PgMonster
 
-        self.server_actives = {}  # str -> ?
-        self.server_skillups = {}  # str -> ?
-
-
-#         self.monster_ids_with_skill = monster_ids_with_skill
-#         self.monsters_with_skill = list()
+        # List of PgSkillRotationDated
+        self.rotating_skillups = []
+        self.server_actives = {}  # str(NA, JP) -> PgSkill
+        self.future_skillup_rotation = {}
 
     def key(self):
         return self.monster_no
@@ -901,6 +912,21 @@ class PgMonster(PgItem):
             link(self, [])
 
         self.search = MonsterSearchHelper(self)
+
+        # Compute server skill rotations
+        for server, server_tz in {'JP': rpadutils.JP_TZ_OBJ, 'NA': rpadutils.NA_TZ_OBJ}.items():
+            server_now = datetime.now().replace(tzinfo=server_tz).date()
+            server_skillups = list(filter(lambda s: s.skill_rotation.server == server,
+                                          self.rotating_skillups))
+            future_skillup = list(filter(lambda s: server_now < s.rotation_date, server_skillups))
+            if future_skillup:
+                self.future_skillup_rotation[server] = future_skillup[0]
+
+            past_skillups = list(filter(lambda s: server_now >= s.rotation_date, server_skillups))
+            if past_skillups:
+                active_skillup = max(past_skillups, key=lambda s: s.rotation_date)
+                self.server_actives[server] = active_skillup.skill
+                active_skillup.skill.server_skillups[server] = active_skillup.skill_rotation.monster
 
 
 class MonsterSearchHelper(object):
@@ -1169,9 +1195,12 @@ class PgSkill(PgItem):
         self.turn_min = int(item['TURN_MIN'])
         self.turn_max = int(item['TURN_MAX'])
 
-        self.monsters_with_active = []
-        self.monsters_with_leader = []
-        self.monsters_with_awakening = []
+        self.monsters_with_active = []  # PgMonster
+        self.monsters_with_leader = []  # PgMonster
+        self.monsters_with_awakening = []  # PgMonster
+
+        # str (NA, JP) -> PgMonster
+        self.server_skillups = {}
 
     def key(self):
         return self.ts_seq
@@ -1275,15 +1304,15 @@ class PgSkillRotation(PgItem):
         super().__init__()
         self.tsr_seq = int(item['TSR_SEQ'])  # unique id
         self.monster_no = int(item['MONSTER_NO'])
-        self.server = item['SERVER']  # JP, NA, KR
-        self.status = item['STATUS']
-        # TODO: what does status do?
+        self.server = normalizeServer(item['SERVER'])  # JP, NA, KR
+        # Status seems to be rarely '2'
+        self.status = int(item['STATUS'])
 
     def key(self):
         return self.tsr_seq
 
     def deleted(self):
-        return self.server == 'KR'  # We don't do KR
+        return self.server == 'KR' or self.status != 0  # We don't do KR
 
     def load(self, database: PgRawDatabase):
         self.monster = database.getMonster(self.monster_no)
@@ -1321,16 +1350,8 @@ class PgSkillRotationDated(PgItem):
         self.skill = database.getSkill(self.ts_seq)
         self.skill_rotation = database.getSkillRotation(self.tsr_seq)
 
-
-class PgMergedRotation:
-    def __init__(self, rotation, dated_rotation):
-        self.monster_id = rotation.monster_id
-        self.server = rotation.server
-        self.rotation_date = dated_rotation.rotation_date
-        self.active_id = dated_rotation.active_id
-
-        self.resolved_monster = None  # The monster that does the skillup
-        self.resolved_active = None  # The skill for this server
+        if self.skill_rotation:
+            self.skill_rotation.monster.rotating_skillups.append(self)
 
 
 # typeList.jsp
@@ -2175,77 +2196,6 @@ class NamedMonster(object):
             for prefix in self.prefixes:
                 self.final_two_word_nicknames.add(prefix + basename)
                 self.final_two_word_nicknames.add(prefix + ' ' + basename)
-
-
-# Code that still needs to be added somewhere
-
-#         skill_rotation = padguide.loadJsonToItem('skillRotationList.jsp', padguide.PgSkillRotation)
-#         dated_skill_rotation = padguide.loadJsonToItem(
-#             'skillRotationListList.jsp', padguide.PgDatedSkillRotation)
-
-#         id_to_skill_rotation = {sr.tsr_seq: sr for sr in skill_rotation}
-#         merged_rotation = [padguide.PgMergedRotation(
-#             id_to_skill_rotation[dsr.tsr_seq], dsr) for dsr in dated_skill_rotation]
-
-#         skill_id_to_monsters = defaultdict(list)
-#         for m in self.full_monster_list:
-#             if m.active_skill:
-#                 skill_id_to_monsters[m.active_skill.skill_id].append(m)
-
-#         self.computeCurrentRotations(merged_rotation, 'US', NA_TZ_OBJ,
-#                                      monster_id_to_monster, skill_map, skill_id_to_monsters)
-#         self.computeCurrentRotations(merged_rotation, 'JP', JP_TZ_OBJ,
-#                                      monster_id_to_monster, skill_map, skill_id_to_monsters)
-
-#     def computeCurrentRotations(self, merged_rotation, server, server_tz, monster_id_to_monster, skill_map, skill_id_to_monsters):
-#         server_now = datetime.now().replace(tzinfo=server_tz).date()
-#         active_rotation = [mr for mr in merged_rotation if mr.server ==
-#                            server and mr.rotation_date <= server_now]
-#         server = normalizeServer(server)
-#
-#         monsters_to_rotations = defaultdict(list)
-#         for ar in active_rotation:
-#             monsters_to_rotations[ar.monster_id].append(ar)
-#
-#         cur_rotations = list()
-#         for _, rotations in monsters_to_rotations.items():
-#             cur_rotations.append(max(rotations, key=lambda x: x.rotation_date))
-#
-#         for mr in cur_rotations:
-#             mr.resolved_monster = monster_id_to_monster[mr.monster_id]
-#             mr.resolved_active = skill_map[mr.active_id]
-#
-#             mr.resolved_monster.server_actives[server] = mr.resolved_active
-#             monsters_with_skill = skill_id_to_monsters[mr.resolved_active.skill_id]
-#             for m in monsters_with_skill:
-#                 if m.monster_id != mr.resolved_monster.monster_id:
-#                     m.server_skillups[server] = mr.resolved_monster
-#
-#         return cur_rotations
-
-#     def computeMonsterDropInfoCombined(self,
-#                                        dungeon_monster_drop_list,  # unused
-#                                        dungeon_monster_list,
-#                                        dungeon_list):
-#         """Stuff for computing monster drops"""
-#
-#         # TODO: consider merging in dungeon_monster_drop_list info
-#         dungeon_id_to_dungeon = {x.seq: x for x in dungeon_list}
-#
-#         monster_id_to_drop_info = defaultdict(list)
-#         for dungeon_monster in dungeon_monster_list:
-#             monster_id = dungeon_monster.drop_monster_id
-#             dungeon_seq = dungeon_monster.dungeon_seq
-#
-#             if dungeon_seq not in dungeon_id_to_dungeon:
-#                 # In case downloaded files are out of sync, skip
-#                 continue
-#             dungeon = dungeon_id_to_dungeon[dungeon_seq]
-#
-#             info = padguide.PgMonsterDropInfoCombined(monster_id, None, dungeon_monster, dungeon)
-#             monster_id_to_drop_info[monster_id].append(info)
-#
-#         return monster_id_to_drop_info
 
 
 def compute_killers(*types):
