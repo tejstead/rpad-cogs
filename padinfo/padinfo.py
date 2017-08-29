@@ -171,6 +171,19 @@ class PadInfo:
         print("started padinfo")
 
     @commands.command(pass_context=True)
+    async def skillrotation(self, ctx, server: str='NA'):
+        server = normalizeServer(server)
+        if server not in ['NA', 'JP']:
+            await self.bot.say(inline('Supported servers are NA, JP'))
+            return
+
+        pg_cog = self.bot.get_cog('PadGuide2')
+        monsters = pg_cog.database.rotating_skillups(server)
+
+        for page in pagify(monsters_to_rotation_list(monsters, server, self.index_all)):
+            await self.bot.say(box(page))
+
+    @commands.command(pass_context=True)
     async def jpname(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
@@ -191,15 +204,6 @@ class PadInfo:
         m, err, debug_info = self.findMonster(query, na_only=na_only)
         if m is not None:
             await self._do_idmenu(ctx, m, self.id_emoji)
-        else:
-            await self.bot.say(self.makeFailureMsg(err))
-
-    @commands.command(name="idz", pass_context=True)
-    async def _doidz(self, ctx, *, query):
-        m, err, debug_info = self.findMonster(query)
-        if m is not None:
-            info, link = monsterToInfoText(m)
-            await self.bot.say(box(info) + '\n<' + link + '>')
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
@@ -414,53 +418,6 @@ class PadInfoSettings(CogSettings):
         self.save_settings()
 
 
-def monsterToInfoText(m: padguide2.PgMonster):
-    header = monsterToHeader(m)
-
-    if m.roma_subname:
-        header += ' [{}]'.format(m.roma_subname)
-
-    if not m.on_na:
-        header += ' (JP only)'
-
-    info_row = m.attr1
-    if m.attr2:
-        info_row += '/' + m.attr2
-
-    info_row += '  |  ' + m.type1
-    if m.type2:
-        info_row += '/' + m.type2
-    if m.type3:
-        info_row += '/' + m.type3
-
-    info_row += '  |  Rarity:' + str(m.rarity)
-    info_row += '  |  Cost:' + str(m.cost)
-
-    killers = compute_killers(m.type1, m.type2, m.type3)
-    if killers:
-        info_row += '  |  Avail. Killers: ' + '/'.join(killers)
-
-    stats_row = 'Lv. {}  HP {}  ATK {}  RCV {}  Weighted {}'.format(
-        m.max_level, m.hp, m.atk, m.rcv, m.weighted_stats)
-
-    awakenings_row = _map_awakenings_text(m)
-
-    ls_row = 'LS: ' + (m.leader_text or 'None/Missing')
-
-    active_row = 'AS: '
-    if m.active_skill:
-        active_row += '({}->{}): {}'.format(m.active_skill.turn_max,
-                                            m.active_skill.turn_min, m.active_skill.desc)
-    else:
-        active_row += 'None/Missing'
-
-    info_chunk = '{}\n{}\n{}\n{}\n{}\n{}'.format(
-        header, info_row, stats_row, awakenings_row, ls_row, active_row)
-    link_row = get_pdx_url(m)
-
-    return info_chunk, link_row
-
-
 def monsterToHeader(m: padguide2.PgMonster, link=False):
     msg = 'No. {} {}'.format(m.monster_no_na, m.name_na)
     return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
@@ -579,13 +536,15 @@ def monsterToPantheonEmbed(m: padguide2.PgMonster):
 def monsterToSkillupsEmbed(m: padguide2.PgMonster):
     skillups_list = m.active_skill.monsters_with_active if m.active_skill else []
     skillups_list = list(filter(lambda m: m.sell_mp < 3000, skillups_list))
-    if len(skillups_list) + len(m.server_actives) == 0:
+    server_skillups = m.active_skill.server_skillups if m.active_skill else []
+
+    if len(skillups_list) + len(server_skillups) == 0:
         return None
 
     embed = monsterToBaseEmbed(m)
 
-    skillups_to_skip = list()
-    for server, skillup in m.server_skillups.items():
+    skillups_to_skip = []
+    for server, skillup in server_skillups.items():
         skillup_header = 'Skillup in ' + server
         skillup_body = monsterToHeader(skillup, link=True)
         embed.add_field(name=skillup_header, value=skillup_body)
@@ -728,9 +687,7 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
 
     embed.description = '{}\n{}'.format(awakenings_row, killers_row)
 
-    # TODO: enable this later
-#     if len(m.server_actives) >= 2:
-    if False:
+    if len(m.server_actives) >= 2:
         for server, active in m.server_actives.items():
             active_header = '({} Server) Active Skill ({} -> {})'.format(server,
                                                                          active.turn_max, active.turn_min)
@@ -796,6 +753,57 @@ def monsterToOtherInfoEmbed(m: padguide2.PgMonster):
     embed.description = body_text
 
     return embed
+
+
+def monsters_to_rotation_list(monster_list, server: str, index_all: padguide2.MonsterIndex):
+    # Shorten some of the longer names
+    name_remap = {
+        'Extreme King Metal Tamadra': 'Fat Tama',
+        'Extreme King Metal Dragon': 'EKMD',
+        'Ancient Green Sacred Mask': 'Green Mask',
+        'Ancient Blue Sacred Mask': 'Blue Mask',
+    }
+    ignore_monsters = [
+        'Ancient Draggie Knight',
+    ]
+
+    monster_list.sort(key=lambda m: m.monster_no, reverse=True)
+    next_rotation_date = None
+    for m in monster_list:
+        if server in m.future_skillup_rotation:
+            next_rotation_date = m.future_skillup_rotation[server].rotation_date_str
+            break
+
+    cols = ['Skillup', 'Current']
+    if next_rotation_date:
+        cols.append(next_rotation_date)
+    tbl = prettytable.PrettyTable(cols)
+    tbl.hrules = prettytable.HEADER
+    tbl.vrules = prettytable.NONE
+    tbl.align = "l"
+
+    def cell_name(m: padguide2.PgMonster):
+        nm = index_all.monster_no_to_named_monster[m.monster_no]
+        name = nm.group_computed_basename.title()
+        return name_remap.get(name, name)
+
+    for m in monster_list:
+        skill = m.server_actives[server]
+        sm = max(skill.monsters_with_active, key=lambda x: x.monster_no)
+        skillup_name = cell_name(m)
+        if skillup_name in ignore_monsters:
+            continue
+        row = [skillup_name, cell_name(sm)]
+        if next_rotation_date:
+            if server in m.future_skillup_rotation:
+                next_skill = m.future_skillup_rotation[server].skill
+                nm = max(next_skill.monsters_with_active, key=lambda x: x.monster_no)
+                row.append(cell_name(nm))
+            else:
+                row.append('')
+        tbl.add_row(row)
+
+    return tbl.get_string()
 
 
 AWAKENING_NAME_MAP_RPAD = {
