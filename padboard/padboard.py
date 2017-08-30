@@ -33,7 +33,7 @@ PIXEL_DATA_DIR = os.path.join(DATA_DIR, 'pixel_data')
 PIXEL_FILE = 'hsv_pixels_to_orb.pdict'
 PIXEL_FILE_PATH = os.path.join(PIXEL_DATA_DIR, PIXEL_FILE)
 
-DAWNGLARE_BOARD_TEMPLATE = "https://storage.googleapis.com/mirubot/websites/padsim/index.html?patt={}"
+DAWNGLARE_BOARD_TEMPLATE = "https://candyninja001.github.io/Puzzled/?patt={}"
 
 
 class PadBoard:
