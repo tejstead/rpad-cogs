@@ -1933,12 +1933,12 @@ class MonsterIndex(object):
         prefixes.update(attr1_short_prefixes)
         prefixes.update(attr1_long_prefixes)
 
-        if m.attr2 is not None:
-            attr2_short_prefixes = self.attr_short_prefix_map[m.attr2]
-            for a1 in attr1_short_prefixes:
-                for a2 in attr2_short_prefixes:
-                    prefixes.add(a1 + a2)
-                    prefixes.add(a1 + '/' + a2)
+        # If no 2nd attribute, use x so we can look those monsters up easier
+        attr2_short_prefixes = self.attr_short_prefix_map.get(m.attr2, ['x'])
+        for a1 in attr1_short_prefixes:
+            for a2 in attr2_short_prefixes:
+                prefixes.add(a1 + a2)
+                prefixes.add(a1 + '/' + a2)
 
         # TODO: add prefixes based on type
 
