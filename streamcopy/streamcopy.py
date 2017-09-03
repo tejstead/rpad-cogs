@@ -6,6 +6,7 @@ import os
 import random
 import re
 from time import time
+import traceback
 
 import discord
 from discord.ext import commands
