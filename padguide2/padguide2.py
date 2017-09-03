@@ -51,12 +51,15 @@ class PadGuide2(object):
         self.settings = PadGuide2Settings("padguide2")
 
         self._general_types = [
-            # PadInfo
             PgAttribute,
             PgAwakening,
             PgDungeon,
             PgDungeonMonsterDrop,
             PgDungeonMonster,
+            PgEggInstance,
+            PgEggMonster,
+            PgEggName,
+            PgEvent,
             PgEvolution,
             PgEvolutionMaterial,
             PgMonster,
@@ -64,15 +67,12 @@ class PadGuide2(object):
             PgMonsterInfo,
             PgMonsterPrice,
             PgSeries,
+            PgScheduledEvent,
             PgSkillLeaderData,
             PgSkill,
             PgSkillRotation,
             PgSkillRotationDated,
             PgType,
-            # PadRem
-            PgEggInstance,
-            PgEggMonster,
-            PgEggName,
         ]
 
         # A string -> int mapping, nicknames to monster_id_na
@@ -201,6 +201,7 @@ class PgRawDatabase(object):
         self._dungeon_map = self._load(PgDungeon)
         self._dungeon_monster_drop_map = self._load(PgDungeonMonsterDrop)
         self._dungeon_monster_map = self._load(PgDungeonMonster)
+        self._event_map = self._load(PgEvent)
         self._evolution_map = self._load(PgEvolution)
         self._evolution_material_map = self._load(PgEvolutionMaterial)
         self._monster_map = self._load(PgMonster)
@@ -208,6 +209,7 @@ class PgRawDatabase(object):
         self._monster_info_map = self._load(PgMonsterInfo)
         self._monster_price_map = self._load(PgMonsterPrice)
         self._series_map = self._load(PgSeries)
+        self._scheduled_event_map = self._load(PgScheduledEvent)
         self._skill_leader_data_map = self._load(PgSkillLeaderData)
         self._skill_map = self._load(PgSkill)
         self._skill_rotation_map = self._load(PgSkillRotation)
@@ -280,6 +282,10 @@ class PgRawDatabase(object):
         """Exported for access to the full egg machine list."""
         return list(self._egg_instance_map.values())
 
+    def all_scheduled_events(self):
+        """Exported for access to event list."""
+        return list(self._scheduled_event_map.values())
+
     def rotating_skillups(self, server: str):
         """Gets monsters used as rotating skillups for the specified server"""
         return list(self._server_to_rotating_skillups[server])
@@ -299,6 +305,9 @@ class PgRawDatabase(object):
 
     def getDungeonMonster(self, tdm_seq: int):
         return self._ensure_loaded(self._dungeon_monster_map.get(tdm_seq))
+
+    def getEvent(self, event_seq: int):
+        return self._ensure_loaded(self._event_map.get(event_seq))
 
     def getEvolution(self, tv_seq: int):
         return self._ensure_loaded(self._evolution_map.get(tv_seq))
@@ -320,6 +329,9 @@ class PgRawDatabase(object):
 
     def getSeries(self, tsr_seq: int):
         return self._ensure_loaded(self._series_map.get(tsr_seq))
+
+    def getScheduledEvent(self, schedule_seq: int):
+        return self._ensure_loaded(self._scheduled_event_map.get(schedule_seq))
 
     def getSkill(self, ts_seq: int):
         return self._ensure_loaded(self._skill_map.get(ts_seq))
@@ -491,9 +503,10 @@ class PgDungeon(PgItem):
     def __init__(self, item):
         super().__init__()
         self.dungeon_seq = int(item['DUNGEON_SEQ'])
-        self.type = DungeonType(int(item['DUNGEON_TYPE']))
+        self.dungeon_type = int(item['DUNGEON_TYPE'])
         self.name = item['NAME_US']
-#         self.tdt_seq = int(item['TDT_SEQ']) # What is this used for?
+        # TODO: load tdt type
+        self.tdt_seq = int_or_none(item['TDT_SEQ'])
         self.show_yn = item["SHOW_YN"]
 
     def key(self):
@@ -1541,22 +1554,9 @@ class PgEggName(PgItem):
             self.egg_instance.egg_name_us = self
 
 
-# def makeBlankEggName(egg_id):
-#     return PgEggName({
-#         'NAME': '',
-#         'LANGUAGE': 'US',
-#         'DEL_YN': 'N',
-#         'TETN_SEQ': '',
-#         'TET_SEQ': egg_id
-#     })
-
-
 # ================================================================================
 # PadEvents items below
 # ================================================================================
-
-
-TIME_FMT = """%a %b %d %H:%M:%S %Y"""
 
 
 class EventType(Enum):
@@ -1568,264 +1568,108 @@ class EventType(Enum):
     EventTypeEtc = -100
 
 
-class DungeonType(Enum):
-    Unknown = -1
-    Normal = 0
-    CoinDailyOther = 1
-    Technical = 2
-    Etc = 3
-
-
-class TdtType(Enum):
-    Normal = 0
-    SpecialOther = 1
-    Technical = 2
-    Weekly = 2
-    Descended = 3
-
-
-def fmtTime(dt):
-    return dt.strftime("%Y-%m-%d %H:%M")
-
-
-def fmtTimeShort(dt):
-    return dt.strftime("%H:%M")
-
-
-def fmtHrsMins(seconds):
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    return '{:2}h {:2}m'.format(int(hours), int(minutes))
-
-
-def fmtDaysHrsMinsShort(sec):
-    days = sec // 86400
-    sec -= 86400 * days
-    hours = sec // 3600
-    sec -= 3600 * hours
-    minutes = sec // 60
-
-    if days > 0:
-        return '{:2}d {:2}h'.format(int(days), int(hours))
-    elif hours > 0:
-        return '{:2}h {:2}m'.format(int(hours), int(minutes))
-    else:
-        return '{:2}m'.format(int(minutes))
-
-
 def normalizeServer(server):
     server = server.upper()
     return 'NA' if server == 'US' else server
 
 
-def isEventWanted(event):
-    name = event.nameAndModifier().lower()
-    if 'castle of satan' in name:
-        # eliminate things like : TAMADRA Invades in [Castle of Satan][Castle of Satan in the Abyss]
-        return False
+# {
+#     "CLOSE_DATE": "2017-09-01",
+#     "CLOSE_HOUR": "19",
+#     "CLOSE_MINUTE": "59",
+#     "CLOSE_WEEKDAY": "0",
+#     "DUNGEON_SEQ": "31",
+#     "EVENT_SEQ": "25",
+#     "EVENT_TYPE": "-100",
+#     "OPEN_DATE": "2017-09-01",
+#     "OPEN_HOUR": "08",
+#     "OPEN_MINUTE": "00",
+#     "OPEN_WEEKDAY": "0",
+#     "SCHEDULE_SEQ": "235217",
+#     "SERVER": "US",
+#     "SERVER_OPEN_DATE": "2017-09-01",
+#     "SERVER_OPEN_HOUR": "1",
+#     "TEAM_DATA": "0",
+#     "TSTAMP": "1504233623450",
+#     "URL": ""
+# },
+class PgScheduledEvent(PgItem):
+    @staticmethod
+    def file_name():
+        return 'scheduleList.jsp'
 
-    return True
+    def __init__(self, item):
+        super().__init__()
+        self.schedule_seq = int(item['SCHEDULE_SEQ'])
 
+        self.close_date_str = item['CLOSE_DATE']
+        self.close_hr_str = item['CLOSE_HOUR']
+        self.close_min_str = item['CLOSE_MINUTE']
+        self.close_weekday = int(item['CLOSE_WEEKDAY'])
 
-def cleanDungeonNames(name):
-    if 'tamadra invades in some tech' in name.lower():
-        return 'Latents invades some Techs & 20x +Eggs'
-    if '1.5x Bonus Pal Point in multiplay' in name:
-        name = '[Descends] 1.5x Pal Points in multiplay'
-    name = name.replace('No Continues', 'No Cont')
-    name = name.replace('No Continue', 'No Cont')
-    name = name.replace('Some Limited Time Dungeons', 'Some Guerrillas')
-    name = name.replace('are added in', 'in')
-    name = name.replace('!', '')
-    name = name.replace('Dragon Infestation', 'Dragons')
-    name = name.replace(' Infestation', 's')
-    name = name.replace('Daily Descended Dungeon', 'Daily Descends')
-    name = name.replace('Chance for ', '')
-    name = name.replace('Jewel of the Spirit', 'Spirit Jewel')
-    name = name.replace(' & ', '/')
-    name = name.replace(' / ', '/')
-    name = name.replace('PAD Radar', 'PADR')
-    name = name.replace('in normal dungeons', 'in normals')
-    name = name.replace('Selected ', 'Some ')
-    name = name.replace('Enhanced ', 'Enh ')
-    name = name.replace('All Att. Req.', 'All Att.')
-    name = name.replace('Extreme King Metal Dragon', 'Extreme KMD')
-    name = name.replace('Golden Mound-Tricolor [Fr/Wt/Wd Only]', 'Golden Mound')
-    name = name.replace('Gods-Awakening Materials Descended', "Awoken Mats")
-    name = name.replace('Orb move time 4 sec', '4s move time')
-    name = name.replace('Awakening Materials Descended', 'Awkn Mats')
-    name = name.replace("Star Treasure Thieves' Den", 'STTD')
-    name = name.replace('Ruins of the Star Vault', 'Star Vault')
-    return name
+        self.dungeon_seq = int(item['DUNGEON_SEQ'])
+        self.event_seq = int(item['EVENT_SEQ'])
+        self.event_type = int(item['EVENT_TYPE'])
 
+        self.open_date_str = item['OPEN_DATE']
+        self.open_hr_str = item['OPEN_HOUR']
+        self.open_min_str = item['OPEN_MINUTE']
+        self.open_weekday = int(item['OPEN_WEEKDAY'])
 
-class PgEventList(PgItem):
-    def __init__(self, event_list):
-        self.event_list = event_list
+        self.server = normalizeServer(item['SERVER'])
 
-    def withFunc(self, func, exclude=False):
-        if exclude:
-            return PgEventList(list(itertools.filterfalse(func, self.event_list)))
-        else:
-            return PgEventList(list(filter(func, self.event_list)))
+        self.server_open_date_str = item['SERVER_OPEN_DATE']
+        self.server_open_hr_str = item['SERVER_OPEN_HOUR']
 
-    def withServer(self, server):
-        return self.withFunc(lambda e: e.server == normalizeServer(server))
+        self.team_data = int_or_none(item['TEAM_DATA'])
+        self.url = item['URL']
 
-    def withType(self, event_type):
-        return self.withFunc(lambda e: e.event_type == event_type)
+        self.group = chr(ord('a') + self.team_data).upper() if self.team_data is not None else None
 
-    def withDungeonType(self, dungeon_type, exclude=False):
-        return self.withFunc(lambda e: e.dungeon_type == dungeon_type, exclude)
+        open_time_str = '{} {}:{}'.format(
+            self.open_date_str, self.open_hr_str, self.open_min_str)
+        close_time_str = '{} {}:{}'.format(
+            self.close_date_str, self.close_hr_str, self.close_min_str)
 
-    def withNameContains(self, name, exclude=False):
-        return self.withFunc(lambda e: name.lower() in e.dungeon_name.lower(), exclude)
+        tz = pytz.UTC
+        self.open_datetime = datetime.strptime(open_time_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+        self.close_datetime = datetime.strptime(close_time_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
 
-    def excludeUnwantedEvents(self):
-        return self.withFunc(isEventWanted)
+    def key(self):
+        return self.schedule_seq
 
-    def items(self):
-        return self.event_list
+    def deleted(self):
+        return self.server == 'KR'
 
-    def startedOnly(self):
-        return self.withFunc(lambda e: e.isStarted())
-
-    def pendingOnly(self):
-        return self.withFunc(lambda e: e.isPending())
-
-    def activeOnly(self):
-        return self.withFunc(lambda e: e.isActive())
-
-    def availableOnly(self):
-        return self.withFunc(lambda e: e.isAvailable())
-
-    def itemsByOpenTime(self, reverse=False):
-        return list(sorted(self.event_list, key=(lambda e: (e.open_datetime, e.dungeon_name)), reverse=reverse))
-
-    def itemsByCloseTime(self, reverse=False):
-        return list(sorted(self.event_list, key=(lambda e: (e.close_datetime, e.dungeon_name)), reverse=reverse))
+    def load(self, database: PgRawDatabase):
+        self.dungeon = database.getDungeon(self.dungeon_seq)
+        self.event = database.getEvent(self.event_seq) if self.event_seq != '0' else None
+        print(self.event.name if self.event else 'missing')
+#         print(self.server, self.team_data, self.dungeon.name, self.event_seq)
 
 
+# {
+#     "EVENT_NAME_JP": "\u30b3\u30a4\u30f3 1.5\u500d!",
+#     "EVENT_NAME_KR": "\ucf54\uc778 1.5\ubc30!",
+#     "EVENT_NAME_US": "Coin x 1.5!",
+#     "EVENT_SEQ": "3",
+#     "TSTAMP": "1370174967128"
+# },
 class PgEvent(PgItem):
     @staticmethod
     def file_name():
-        return 'attributeList.jsp'
-
-    def __init__(self, item, ignore_bad=False):
-        if item is None and ignore_bad:
-            return
-        self.server = normalizeServer(item['SERVER'])
-        self.dungeon_code = item['DUNGEON_SEQ']
-        self.dungeon_name = 'Unknown(' + self.dungeon_code + ')'
-        self.dungeon_type = DungeonType.Unknown
-        self.event_type = EventType(int(item['EVENT_TYPE']))
-        self.event_seq = item['EVENT_SEQ']
-        self.event_modifier = ''
-        self.uid = item['SCHEDULE_SEQ']
-
-        team_data = item['TEAM_DATA']
-        self.group = ''
-        if self.event_type in (EventType.EventTypeGuerrilla, EventType.EventTypeGuerrillaNew) and team_data != '':
-            self.group = chr(ord('a') + int(team_data)).upper()
-
-        tz = pytz.UTC
-        open_time_str = item['OPEN_DATE'] + " " + item['OPEN_HOUR'] + ":" + item['OPEN_MINUTE']
-        close_time_strstr = item['CLOSE_DATE'] + " " + \
-            item['CLOSE_HOUR'] + ":" + item['CLOSE_MINUTE']
-
-        self.open_datetime = datetime.strptime(open_time_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
-        self.close_datetime = datetime.strptime(
-            close_time_strstr, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
-
-    def updateDungeonName(self, dungeon_seq_map):
-        if self.dungeon_code in dungeon_seq_map:
-            dungeon = dungeon_seq_map[self.dungeon_code]
-            self.dungeon_name = dungeon.name
-            self.dungeon_type = dungeon.type
-
-    def updateEventModifier(self, event_modifier_map):
-        if self.event_seq in event_modifier_map:
-            self.event_modifier = event_modifier_map[self.event_seq].name
-
-    def isForNormal(self):
-        return self.dungeon_type == '0'
-
-    def nameAndModifier(self):
-        output = self.name()
-        if self.event_modifier != '':
-            output += ', ' + self.event_modifier.replace('!', '').replace(' ', '')
-        return output
-
-    def name(self):
-        output = cleanDungeonNames(self.dungeon_name)
-        return output
-
-    def tostr(self):
-        return fmtTime(self.open_datetime) + "," + fmtTime(self.close_datetime) + "," + self.group + "," + self.dungeon_code + "," + self.event_type + "," + self.event_seq
-
-    def startPst(self):
-        tz = pytz.timezone('US/Pacific')
-        return self.open_datetime.astimezone(tz)
-
-    def startEst(self):
-        tz = pytz.timezone('US/Eastern')
-        return self.open_datetime.astimezone(tz)
-
-    def isStarted(self):
-        now = datetime.now(pytz.utc)
-        delta_open = self.open_datetime - now
-        return delta_open.total_seconds() <= 0
-
-    def isFinished(self):
-        now = datetime.now(pytz.utc)
-        delta_close = self.close_datetime - now
-        return delta_close.total_seconds() <= 0
-
-    def isActive(self):
-        return self.isStarted() and not self.isFinished()
-
-    def isPending(self):
-        return not self.isStarted()
-
-    def isAvailable(self):
-        return not self.isFinished()
-
-    def startFromNow(self):
-        now = datetime.now(pytz.utc)
-        delta = self.open_datetime - now
-        return fmtHrsMins(delta.total_seconds())
-
-    def endFromNow(self):
-        now = datetime.now(pytz.utc)
-        delta = self.close_datetime - now
-        return fmtHrsMins(delta.total_seconds())
-
-    def endFromNowFullMin(self):
-        now = datetime.now(pytz.utc)
-        delta = self.close_datetime - now
-        return fmtDaysHrsMinsShort(delta.total_seconds())
-
-    def toGuerrillaStr(self):
-        return fmtTimeShort(self.startPst())
-
-    def toDateStr(self):
-        return self.server + "," + self.group + "," + fmtTime(self.startPst()) + "," + fmtTime(self.startEst()) + "," + self.startFromNow()
-
-    def toPartialEvent(self, pe):
-        if self.isStarted():
-            return self.group + " " + self.endFromNow() + "   " + self.nameAndModifier()
-        else:
-            return self.group + " " + fmtTimeShort(self.startPst()) + " " + fmtTimeShort(self.startEst()) + " " + self.startFromNow() + " " + self.nameAndModifier()
-
-
-class PgEventType(PgItem):
-    @staticmethod
-    def file_name():
-        return 'attributeList.jsp'
+        return 'eventList.jsp'
 
     def __init__(self, item):
-        self.seq = item['EVENT_SEQ']
+        super().__init__()
+        self.event_seq = int(item['EVENT_SEQ'])
         self.name = item['EVENT_NAME_US']
+
+    def key(self):
+        return self.event_seq
+
+    def load(self, database: PgRawDatabase):
+        pass
 
 
 def make_roma_subname(name_jp):
