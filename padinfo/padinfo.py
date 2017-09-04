@@ -774,7 +774,7 @@ def monsters_to_rotation_list(monster_list, server: str, index_all: padguide2.Mo
             next_rotation_date = m.future_skillup_rotation[server].rotation_date_str
             break
 
-    cols = ['Skillup', 'Current']
+    cols = [server + ' Skillup', 'Current']
     if next_rotation_date:
         cols.append(next_rotation_date)
     tbl = prettytable.PrettyTable(cols)
