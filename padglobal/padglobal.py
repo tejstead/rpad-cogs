@@ -177,9 +177,11 @@ class PadGlobal:
 
         if not self.c_commands:
             self.c_commands = {}
+
+        op = 'EDITED' if command in self.c_commands else 'ADDED'
         self.c_commands[command] = text
         dataIO.save_json(self.file_path, self.c_commands)
-        await self.bot.say("PAD command successfully added/edited.")
+        await self.bot.say("PAD command successfully {}.".format(op))
 
     @padglobal.command(pass_context=True)
     async def delete(self, ctx, command: str):
