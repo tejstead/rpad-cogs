@@ -21,7 +21,7 @@ import pytz
 
 from __main__ import user_allowed, send_cmd_help
 
-from . import padguide
+from . import padguide2
 from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
@@ -30,45 +30,8 @@ from .utils.dataIO import fileIO
 from .utils.twitter_stream import *
 
 
-SUPPORTED_SERVERS = ["NA", "KR", "JP", "FAKE"]
-
-
-def dl_events():
-    # two hours expiry
-    expiry_secs = 2 * 60 * 60
-    # pull last two weeks of events
-    time_ms = int(round(time.time() * 1000)) - 14 * 24 * 60 * 60 * 1000
-    resp = makeCachedPadguideRequest(time_ms, "scheduleList.jsp", expiry_secs)
-    events = list()
-    for item in resp["items"]:
-        events.append(padguide.PgEvent(item))
-    return events
-
-
-def dl_event_type_map():
-    # eight hours expiry
-    expiry_secs = 8 * 60 * 60
-    # pull for all-time
-    time_ms = 0
-    resp = makeCachedPadguideRequest(time_ms, "eventList.jsp", expiry_secs)
-    etype_map = dict()
-    for item in resp["items"]:
-        etype = padguide.PgEventType(item)
-        etype_map[etype.seq] = etype
-    return etype_map
-
-
-def dl_dungeon_map():
-    # eight hours expiry
-    expiry_secs = 8 * 60 * 60
-    # pull for all-time
-    time_ms = 0
-    resp = makeCachedPadguideRequest(time_ms, "dungeonList.jsp", expiry_secs)
-    dungeons_map = dict()
-    for item in resp["items"]:
-        dungeon = padguide.PgDungeon(item)
-        dungeons_map[dungeon.seq] = dungeon
-    return dungeons_map
+SUPPORTED_SERVERS = ["NA", "JP", "FAKE"]
+#SUPPORTED_SERVERS = ["NA", "JP", "FAKE"]
 
 
 class PadEvents:
@@ -77,65 +40,52 @@ class PadEvents:
 
         self.settings = PadEventSettings("padevents")
 
-        # Load all dungeon data
-        self.dungeons_map = dl_dungeon_map()
-        self.event_type_map = dl_event_type_map()
-
         # Load event data
         self.events = list()
         self.started_events = set()
 
         self.fake_uid = -999
 
-    def __unload(self):
-        print("unloading padevents")
-        self.reload_events_task.cancel()
-        self.check_started_task.cancel()
+    async def reload_padevents(self):
+        await self.bot.wait_until_ready()
+        # Sleep 10s to let padguide finish loading
+        await asyncio.sleep(1)
+        while self == self.bot.get_cog('PadEvents'):
+            try:
+                self.refresh_data()
+            except Exception as ex:
+                print("reload padevents loop caught exception " + str(ex))
+                traceback.print_exc()
 
-    def registerTasks(self, event_loop):
-        print("registering tasks")
-        self.reload_events_task = event_loop.create_task(self.reload_events())
-        self.check_started_task = event_loop.create_task(self.check_started())
+            await asyncio.sleep(60 * 60 * 1)
 
-    def loadEvents(self):
-        self.events = dl_events()
-        self.started_events = set()
+    def refresh_data(self):
+        database = self.bot.get_cog('PadGuide2').database
+        scheduled_events = database.all_scheduled_events()
 
-        for e in self.events:
-            e.updateDungeonName(self.dungeons_map)
-            e.updateEventModifier(self.event_type_map)
-            if e.isStarted():
-                self.started_events.add(e.uid)
+        new_events = [Event(se) for se in scheduled_events]
+        new_started_events = set([ev.key for ev in new_events if ev.is_started()])
 
-        print(str(len(self.started_events)) + " events already started")
-        print(str(len(self.events) - len(self.started_events)) + " events pending")
-
-    async def on_ready(self):
-        """ready"""
-        print("started padevents")
-
-    @commands.group(pass_context=True, no_pm=True)
-    async def padevents(self, ctx):
-        """PAD event tracking"""
-        if ctx.invoked_subcommand is None:
-            await send_cmd_help(ctx)
+        self.events = new_events
+        self.started_events = new_started_events
+        print('done refreshing padevents')
 
     async def check_started(self):
-        print("starting check_started")
-        while "PadEvents" in self.bot.cogs:
+        await self.bot.wait_until_ready()
+        while self == self.bot.get_cog('PadEvents'):
             try:
-                events = filter(lambda e: e.isStarted()
-                                and not e.uid in self.started_events, self.events)
+                events = filter(lambda e: e.is_started()
+                                and not e.key in self.started_events, self.events)
 
                 daily_refresh_servers = set()
                 for e in events:
-                    self.started_events.add(e.uid)
-                    if e.event_type in [padguide.EventType.EventTypeGuerrilla, padguide.EventType.EventTypeGuerrillaNew]:
+                    self.started_events.add(e.key)
+                    if e.event_type in [EventType.Guerrilla, EventType.GuerrillaNew]:
                         for gr in list(self.settings.listGuerrillaReg()):
                             if e.server == gr['server']:
                                 try:
                                     message = box("Server " + e.server + ", group " +
-                                                  e.group + " : " + e.nameAndModifier())
+                                                  e.group + " : " + e.name_and_modifier)
                                     channel = self.bot.get_channel(gr['channel_id'])
 
                                     try:
@@ -143,7 +93,7 @@ class PadEvents:
                                         role = get_role(channel.server.roles, role_name)
                                         if role and role.mentionable:
                                             message = "{} `: {} is starting`".format(
-                                                role.mention, e.nameAndModifier())
+                                                role.mention, e.name_and_modifier)
                                     except:
                                         pass  # do nothing if role is missing
 
@@ -185,35 +135,16 @@ class PadEvents:
                 raise ex
         print("done check_started")
 
-    async def reload_events(self):
-        print("event reloader")
-        while "PadEvents" in self.bot.cogs:
-            do_short = False
-            try:
-                self.loadEvents()
-            except Exception as e:
-                traceback.print_exc()
-                do_short = True
-                print("caught exception while loading events " + str(e))
-
-            try:
-                if do_short:
-                    await asyncio.sleep(60)
-                else:
-                    await asyncio.sleep(60 * 60 * 4)
-            except Exception as e:
-                print("reload event loop caught exception " + str(e))
-                raise e
-
-        print("done reload_events")
+    @commands.group(pass_context=True, no_pm=True)
+    async def padevents(self, ctx):
+        """PAD event tracking"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
 
     @padevents.command(name="testevent", pass_context=True, no_pm=True)
     @checks.is_owner()
     async def _testevent(self, ctx, server):
-        print(SUPPORTED_SERVERS)
-        print(server)
         server = normalizeServer(server)
-        print(server)
         if server not in SUPPORTED_SERVERS:
             await self.bot.say("Unsupported server, pick one of NA, KR, JP")
             return
@@ -222,10 +153,10 @@ class PadEvents:
         te.server = server
 
         te.dungeon_code = 1
-        te.event_type = padguide.EventType.EventTypeGuerrilla
+        te.event_type = EventType.Guerrilla
         te.event_seq = 0
         self.fake_uid = self.fake_uid - 1
-        te.uid = self.fake_uid
+        te.key = self.fake_uid
         te.group = 'F'
 
         te.open_datetime = datetime.now(pytz.utc)
@@ -329,11 +260,10 @@ class PadEvents:
             return
 
         msg = self.makeActiveText(server)
-#         await self.pageOutput(msg, format_type=inline)
         await self.pageOutput(msg)
 
     def makeActiveText(self, server):
-        server_events = padguide.PgEventList(self.events).withServer(server)
+        server_events = EventList(self.events).withServer(server)
         active_events = server_events.activeOnly()
         pending_events = server_events.pendingOnly()
         available_events = server_events.availableOnly()
@@ -341,14 +271,14 @@ class PadEvents:
         msg = "Listing all events for " + server
 
         special_events = active_events.withType(
-            padguide.EventType.EventTypeSpecial).itemsByCloseTime()
+            EventType.Special).itemsByCloseTime()
         if len(special_events) > 0:
             msg += "\n\n" + self.makeActiveOutput('Special Events', special_events)
 
-        all_etc_events = active_events.withType(padguide.EventType.EventTypeEtc)
+        all_etc_events = active_events.withType(EventType.Etc)
 
         etc_events = all_etc_events.withDungeonType(
-            padguide.DungeonType.Etc).excludeUnwantedEvents().itemsByCloseTime()
+            DungeonType.Etc).excludeUnwantedEvents().itemsByCloseTime()
         if len(etc_events) > 0:
             msg += "\n\n" + self.makeActiveOutput('Etc Events', etc_events)
 
@@ -357,33 +287,33 @@ class PadEvents:
 #             msg += "\n\n" + self.makeActiveOutput('Technical Events', tech_events)
 
         active_guerrilla_events = active_events.withType(
-            padguide.EventType.EventTypeGuerrilla).items()
+            EventType.Guerrilla).items()
         if len(active_guerrilla_events) > 0:
             msg += "\n\n" + \
                 self.makeActiveGuerrillaOutput('Active Guerrillas', active_guerrilla_events)
 
-        guerrilla_events = pending_events.withType(padguide.EventType.EventTypeGuerrilla).items()
+        guerrilla_events = pending_events.withType(EventType.Guerrilla).items()
         if len(guerrilla_events) > 0:
             msg += "\n\n" + self.makeFullGuerrillaOutput('Guerrilla Events', guerrilla_events)
 
-        week_events = available_events.withType(padguide.EventType.EventTypeWeek).items()
+        week_events = available_events.withType(EventType.Week).items()
         if len(week_events):
             msg += "\n\n" + "Found " + str(len(week_events)) + " unexpected week events!"
 
         special_week_events = available_events.withType(
-            padguide.EventType.EventTypeSpecialWeek).items()
+            EventType.SpecialWeek).items()
         if len(special_week_events):
             msg += "\n\n" + "Found " + str(len(special_week_events)) + \
                 " unexpected special week events!"
 
         active_guerrilla_new_events = active_events.withType(
-            padguide.EventType.EventTypeGuerrillaNew).items()
+            EventType.GuerrillaNew).items()
         if len(active_guerrilla_new_events) > 0:
             msg += "\n\n" + \
                 self.makeActiveGuerrillaOutput('Active New Guerrillas', active_guerrilla_new_events)
 
         guerrilla_new_events = pending_events.withType(
-            padguide.EventType.EventTypeGuerrillaNew).items()
+            EventType.GuerrillaNew).items()
         if len(guerrilla_new_events) > 0:
             msg += "\n\n" + \
                 self.makeFullGuerrillaOutput('New Guerrilla Events',
@@ -414,7 +344,7 @@ class PadEvents:
         tbl.align[table_name] = "l"
         tbl.align["Time"] = "r"
         for e in event_list:
-            tbl.add_row([e.endFromNowFullMin().strip(), e.nameAndModifier()])
+            tbl.add_row([e.endFromNowFullMin().strip(), e.name_and_modifier])
         return tbl.get_string()
 
     def makeActiveGuerrillaOutput(self, table_name, event_list):
@@ -424,13 +354,13 @@ class PadEvents:
         tbl.align[table_name] = "l"
         tbl.align["Time"] = "r"
         for e in event_list:
-            tbl.add_row([e.nameAndModifier(), e.group, e.endFromNowFullMin().strip()])
+            tbl.add_row([e.name_and_modifier, e.group, e.endFromNowFullMin().strip()])
         return tbl.get_string()
 
     def makeFullGuerrillaOutput(self, table_name, event_list, new_guerrilla=False):
         events_by_name = defaultdict(list)
         for e in event_list:
-            events_by_name[e.name()].append(e)
+            events_by_name[e.name_and_modifier].append(e)
 
         rows = list()
         grps = ["A", "B", "C"] if new_guerrilla else ["A", "B", "C", "D", "E"]
@@ -488,9 +418,9 @@ class PadEvents:
             await self.bot.say("Unsupported server, pick one of NA, KR, JP")
             return
 
-        events = padguide.PgEventList(self.events)
+        events = EventList(self.events)
         events = events.withServer(server)
-        events = events.withType(padguide.EventType.EventTypeGuerrilla)
+        events = events.withType(EventType.Guerrilla)
 
         active_events = events.activeOnly().itemsByOpenTime(reverse=True)
         pending_events = events.pendingOnly().itemsByOpenTime(reverse=True)
@@ -501,6 +431,10 @@ class PadEvents:
         active_events = list(group_to_active_event.values())
         pending_events = list(group_to_pending_event.values())
 
+        json.JSONEncoder.default = lambda self, obj: (
+            obj.isoformat() if isinstance(obj, datetime) else None)
+        for e in pending_events:
+            print(json.dumps(e.__dict__))
         active_events.sort(key=lambda e: e.group)
         pending_events.sort(key=lambda e: e.group)
 
@@ -524,11 +458,10 @@ class PadEvents:
 
 
 def setup(bot):
-    print('padevent bot setup')
     n = PadEvents(bot)
-    n.registerTasks(asyncio.get_event_loop())
     bot.add_cog(n)
-    print('done adding padevent bot')
+    bot.loop.create_task(n.reload_padevents())
+    bot.loop.create_task(n.check_started())
 
 
 def makeChannelReg(channel_id, server):
@@ -576,3 +509,227 @@ class PadEventSettings(CogSettings):
         if self.checkDailyReg(channel_id, server):
             self.listDailyReg().remove(makeChannelReg(channel_id, server))
             self.save_settings()
+
+
+class Event:
+    def __init__(self, scheduled_event: padguide2.PgScheduledEvent):
+        self.key = scheduled_event.key()
+        self.server = scheduled_event.server
+        self.open_datetime = scheduled_event.open_datetime
+        self.close_datetime = scheduled_event.close_datetime
+        self.group = scheduled_event.group
+        self.dungeon_name = scheduled_event.dungeon.name
+        self.event_name = scheduled_event.event.name if scheduled_event.event else ''
+
+        self.clean_dungeon_name = cleanDungeonNames(self.dungeon_name)
+        self.clean_event_name = self.event_name.replace('!', '').replace(' ', '')
+
+        self.name_and_modifier = self.clean_dungeon_name
+        if self.clean_event_name != '':
+            self.name_and_modifier += ', ' + self.clean_event_name
+            print('updating name', self.name_and_modifier)
+
+        self.event_type = EventType(scheduled_event.event_type)
+        self.dungeon_type = DungeonType(scheduled_event.dungeon.dungeon_type)
+
+    def start_from_now_sec(self):
+        now = datetime.now(pytz.utc)
+        return (self.open_datetime - now).total_seconds()
+
+    def end_from_now_sec(self):
+        now = datetime.now(pytz.utc)
+        return (self.close_datetime - now).total_seconds()
+
+    def is_started(self):
+        """True if past the open time for the event."""
+        return self.start_from_now_sec() <= 0
+
+    def is_finished(self):
+        """True if past the close time for the event."""
+        return self.end_from_now_sec() <= 0
+
+    def is_active(self):
+        """True if between open and close time for the event."""
+        return self.is_started() and not self.is_finished()
+
+    def is_pending(self):
+        """True if event has not started."""
+        return not self.is_started()
+
+    def is_available(self):
+        """True if event has not finished."""
+        return not self.is_finished()
+
+    def tostr(self):
+        return fmtTime(self.open_datetime) + "," + fmtTime(self.close_datetime) + "," + self.group + "," + self.dungeon_code + "," + self.event_type + "," + self.event_seq
+
+    def startPst(self):
+        tz = pytz.timezone('US/Pacific')
+        return self.open_datetime.astimezone(tz)
+
+    def startEst(self):
+        tz = pytz.timezone('US/Eastern')
+        return self.open_datetime.astimezone(tz)
+
+    def startFromNow(self):
+        return fmtHrsMins(self.start_from_now_sec())
+
+    def endFromNow(self):
+        return fmtHrsMins(self.end_from_now_sec())
+
+    def endFromNowFullMin(self):
+        return fmtDaysHrsMinsShort(self.end_from_now_sec())
+
+    def toGuerrillaStr(self):
+        return fmtTimeShort(self.startPst())
+
+    def toDateStr(self):
+        return self.server + "," + self.group + "," + fmtTime(self.startPst()) + "," + fmtTime(self.startEst()) + "," + self.startFromNow()
+
+    def toPartialEvent(self, pe):
+        if self.is_started():
+            return self.group + " " + self.endFromNow() + "   " + self.name_and_modifier
+        else:
+            return self.group + " " + fmtTimeShort(self.startPst()) + " " + fmtTimeShort(self.startEst()) + " " + self.startFromNow() + " " + self.name_and_modifier
+
+
+class EventList:
+    def __init__(self, event_list):
+        self.event_list = event_list
+
+    def withFunc(self, func, exclude=False):
+        if exclude:
+            return EventList(list(itertools.filterfalse(func, self.event_list)))
+        else:
+            return EventList(list(filter(func, self.event_list)))
+
+    def withServer(self, server):
+        return self.withFunc(lambda e: e.server == normalizeServer(server))
+
+    def withType(self, event_type):
+        return self.withFunc(lambda e: e.event_type == event_type)
+
+    def withDungeonType(self, dungeon_type, exclude=False):
+        return self.withFunc(lambda e: e.dungeon_type == dungeon_type, exclude)
+
+    def withNameContains(self, name, exclude=False):
+        return self.withFunc(lambda e: name.lower() in e.dungeon_name.lower(), exclude)
+
+    def excludeUnwantedEvents(self):
+        return self.withFunc(isEventWanted)
+
+    def items(self):
+        return self.event_list
+
+    def startedOnly(self):
+        return self.withFunc(lambda e: e.is_started())
+
+    def pendingOnly(self):
+        return self.withFunc(lambda e: e.is_pending())
+
+    def activeOnly(self):
+        return self.withFunc(lambda e: e.is_active())
+
+    def availableOnly(self):
+        return self.withFunc(lambda e: e.is_available())
+
+    def itemsByOpenTime(self, reverse=False):
+        return list(sorted(self.event_list, key=(lambda e: (e.open_datetime, e.dungeon_name)), reverse=reverse))
+
+    def itemsByCloseTime(self, reverse=False):
+        return list(sorted(self.event_list, key=(lambda e: (e.close_datetime, e.dungeon_name)), reverse=reverse))
+
+
+# TIME_FMT = """%a %b %d %H:%M:%S %Y"""
+
+
+class EventType(Enum):
+    Week = 0
+    Special = 1
+    SpecialWeek = 2
+    Guerrilla = 3
+    GuerrillaNew = 4
+    Etc = -100
+
+
+class DungeonType(Enum):
+    Unknown = -1
+    Normal = 0
+    CoinDailyOther = 1
+    Technical = 2
+    Etc = 3
+
+
+def fmtTime(dt):
+    return dt.strftime("%Y-%m-%d %H:%M")
+
+
+def fmtTimeShort(dt):
+    return dt.strftime("%H:%M")
+
+
+def fmtHrsMins(seconds):
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    return '{:2}h {:2}m'.format(int(hours), int(minutes))
+
+
+def fmtDaysHrsMinsShort(sec):
+    days = sec // 86400
+    sec -= 86400 * days
+    hours = sec // 3600
+    sec -= 3600 * hours
+    minutes = sec // 60
+
+    if days > 0:
+        return '{:2}d {:2}h'.format(int(days), int(hours))
+    elif hours > 0:
+        return '{:2}h {:2}m'.format(int(hours), int(minutes))
+    else:
+        return '{:2}m'.format(int(minutes))
+
+
+def normalizeServer(server):
+    server = server.upper()
+    return 'NA' if server == 'US' else server
+
+
+def isEventWanted(event):
+    name = event.name_and_modifier.lower()
+    if 'castle of satan' in name:
+        # eliminate things like : TAMADRA Invades in [Castle of Satan][Castle of Satan in the Abyss]
+        return False
+
+    return True
+
+
+def cleanDungeonNames(name):
+    if 'tamadra invades in some tech' in name.lower():
+        return 'Latents invades some Techs & 20x +Eggs'
+    if '1.5x Bonus Pal Point in multiplay' in name:
+        name = '[Descends] 1.5x Pal Points in multiplay'
+    name = name.replace('No Continues', 'No Cont')
+    name = name.replace('No Continue', 'No Cont')
+    name = name.replace('Some Limited Time Dungeons', 'Some Guerrillas')
+    name = name.replace('are added in', 'in')
+    name = name.replace('!', '')
+    name = name.replace('Dragon Infestation', 'Dragons')
+    name = name.replace(' Infestation', 's')
+    name = name.replace('Daily Descended Dungeon', 'Daily Descends')
+    name = name.replace('Chance for ', '')
+    name = name.replace('Jewel of the Spirit', 'Spirit Jewel')
+    name = name.replace(' & ', '/')
+    name = name.replace(' / ', '/')
+    name = name.replace('PAD Radar', 'PADR')
+    name = name.replace('in normal dungeons', 'in normals')
+    name = name.replace('Selected ', 'Some ')
+    name = name.replace('Enhanced ', 'Enh ')
+    name = name.replace('All Att. Req.', 'All Att.')
+    name = name.replace('Extreme King Metal Dragon', 'Extreme KMD')
+    name = name.replace('Golden Mound-Tricolor [Fr/Wt/Wd Only]', 'Golden Mound')
+    name = name.replace('Gods-Awakening Materials Descended', "Awoken Mats")
+    name = name.replace('Orb move time 4 sec', '4s move time')
+    name = name.replace('Awakening Materials Descended', 'Awkn Mats')
+    name = name.replace("Star Treasure Thieves' Den", 'STTD')
+    name = name.replace('Ruins of the Star Vault', 'Star Vault')
+    return name
