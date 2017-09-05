@@ -18,12 +18,13 @@ import prettytable
 
 from __main__ import send_cmd_help
 from __main__ import settings
-from .rpadutils import *
 
+from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
-from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
+
 
 LOGS_PER_CHANNEL_USER = 5
 
@@ -161,7 +162,7 @@ class AutoMod2:
 
     @automod2.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def imagelimit(self, ctx, limit : int):
+    async def imagelimit(self, ctx, limit: int):
         """Prevents users from spamming images in a channel.
 
         If a user attempts to link/attach more than <limit> images in the active channel
@@ -174,7 +175,6 @@ class AutoMod2:
             await self.bot.say(inline('Limit cleared'))
         else:
             await self.bot.say(inline('I will delete excess images in this channel'))
-
 
     async def mod_message_images(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
@@ -253,7 +253,8 @@ class AutoMod2:
                     return
                 failed_whitelists.append(name)
 
-            msg = msg_template.format(message.channel.name, ','.join(failed_whitelists), msg_content)
+            msg = msg_template.format(message.channel.name,
+                                      ','.join(failed_whitelists), msg_content)
             await self.deleteAndReport(message, msg)
 
     async def deleteAndReport(self, delete_msg, outgoing_msg):
@@ -261,7 +262,8 @@ class AutoMod2:
             await self.bot.delete_message(delete_msg)
             await self.bot.send_message(delete_msg.author, outgoing_msg)
         except Exception as e:
-            print('Failure while deleting message from {}, tried to send : {}'.format(delete_msg.author.name, outgoing_msg))
+            print('Failure while deleting message from {}, tried to send : {}'.format(
+                delete_msg.author.name, outgoing_msg))
             print(str(e))
 
     def patternsToTableText(self, patterns):
@@ -331,7 +333,7 @@ def setup(bot):
 class AutoMod2Settings(CogSettings):
     def make_default_settings(self):
         config = {
-          'configs' : {}
+            'configs': {}
         }
         return config
 
@@ -343,8 +345,8 @@ class AutoMod2Settings(CogSettings):
         server_id = ctx.message.server.id
         if server_id not in configs:
             configs[server_id] = {
-              'patterns': {},
-              'channels': {},
+                'patterns': {},
+                'channels': {},
             }
         return configs[server_id]
 

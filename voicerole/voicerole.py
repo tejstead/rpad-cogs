@@ -8,13 +8,14 @@ from __main__ import user_allowed, send_cmd_help
 from cogs.utils.dataIO import dataIO
 
 from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.cog_settings import *
 
 
 class VoiceRole:
     """Gives a custom to anyone who enters a voice channel. THIS ROLE MUST EXIST AND THE BOT MUST HAVE THE RIGHTS TO CHANGE ROLES FOR IT TO WORK!"""
+
     def __init__(self, bot):
         self.bot = bot
         self.settings = VoiceRoleSettings("voicerole")
@@ -57,7 +58,7 @@ class VoiceRole:
             await send_cmd_help(ctx)
 
     @voicerole.command(pass_context=True, no_pm=True)
-    async def set(self, ctx, channel : discord.Channel, role : discord.Role):
+    async def set(self, ctx, channel: discord.Channel, role: discord.Role):
         """Associate a channel with a role.
 
         To reference a voice channel, use this syntax:
@@ -75,7 +76,7 @@ class VoiceRole:
         await self.bot.say('done')
 
     @voicerole.command(pass_context=True, no_pm=True)
-    async def clear(self, ctx, channel : discord.Channel):
+    async def clear(self, ctx, channel: discord.Channel):
         """Clear the role associated with a channel"""
         self.settings.rmChannelRole(ctx.message.server.id, channel.id)
         await self.bot.say('done')
@@ -88,15 +89,17 @@ class VoiceRole:
             msg += '\n\t{} : {}'.format(channel_id, role_id)
         await self.bot.say(box(msg))
 
+
 def setup(bot):
     n = VoiceRole(bot)
     bot.add_listener(n._on_voice_state_update, 'on_voice_state_update')
     bot.add_cog(n)
 
+
 class VoiceRoleSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'servers' : {}
+            'servers': {}
         }
         return config
 
@@ -126,4 +129,3 @@ class VoiceRoleSettings(CogSettings):
         if channel_id in channel_roles:
             channel_roles.pop(channel_id)
             self.save_settings()
-

@@ -9,8 +9,8 @@ from googleapiclient.discovery import build
 from __main__ import user_allowed, send_cmd_help
 
 from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
-from .utils.cog_settings import *
 from .utils.dataIO import dataIO
 
 
@@ -33,7 +33,7 @@ class Translate:
         if (message.channel.is_private
             or not self.service
             or message.channel.id not in self.settings.autoTranslateJp()
-            or not containsJp(message.clean_content)):
+                or not containsJp(message.clean_content)):
             return
 
         for p in self.bot.settings.get_prefixes(message.server):
@@ -51,7 +51,6 @@ class Translate:
         """Translation utilities."""
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
-
 
     @commands.command(pass_context=True, aliases=['jaus', 'jpen', 'jpus'])
     async def jaen(self, ctx, *, query):
@@ -80,7 +79,6 @@ class Translate:
             self.settings.addAutoTranslateJp(channel.id)
             await self.bot.say(inline('Added {} to Japanese auto translate'.format(channel.name)))
 
-
     @translate.command(pass_context=True)
     @checks.is_owner()
     async def setkey(self, ctx, api_key):
@@ -98,7 +96,7 @@ def setup(bot):
 class TranslateSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'google_api_key' : ''
+            'google_api_key': ''
         }
         return config
 
