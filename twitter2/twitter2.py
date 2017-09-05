@@ -188,12 +188,8 @@ Returns False if the user does not exist, True otherwise."""
 
         entities = data.get('entities')
         if entities:
-            print("got entities")
-            safe_print2(entities)
             media = entities.get('media')
             if media and len(media) > 0:
-                print("media")
-                msg += "\nImages:"
                 for media_item in media:
                     msg += "\n" + media_item.get("media_url_https")
 
