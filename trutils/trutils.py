@@ -22,7 +22,6 @@ from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
-from .utils.twitter_stream import *
 
 
 GETMIRU_HELP = """

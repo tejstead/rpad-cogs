@@ -25,7 +25,6 @@ from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
-from .utils.twitter_stream import *
 
 
 # from copy import deepcopy
@@ -33,7 +32,9 @@ def normalizeServer(server):
     server = server.upper().strip()
     return 'NA' if server == 'US' else server
 
+
 SUPPORTED_SERVERS = ["NA", "KR", "JP", "EU"]
+
 
 def validateAndCleanId(id):
     id = id.replace('-', '').replace(' ', '').replace(',', '').replace('.', '').strip()
@@ -42,12 +43,15 @@ def validateAndCleanId(id):
     else:
         return None
 
+
 def formatNameLine(server, pad_name, pad_id):
     group = computeOldGroup(pad_id)
     return "[{}]: '{}' : {} (Group {})".format(server, pad_name, formatId(pad_id), group)
 
+
 def formatId(id):
     return id[0:3] + "," + id[3:6] + "," + id[6:9]
+
 
 def computeOldGroup(str_id):
     old_id_digit = str_id[2]
@@ -57,6 +61,7 @@ def computeOldGroup(str_id):
 #     int_id = int(str_id)
 #     return (int_id % 3)
 
+
 class Profile:
     def __init__(self, bot):
         self.bot = bot
@@ -65,7 +70,6 @@ class Profile:
     async def on_ready(self):
         """ready"""
         print("started profile")
-
 
     @commands.command(name="idme", pass_context=True)
     async def idMe(self, ctx, server=None):
@@ -94,7 +98,8 @@ class Profile:
         if profile_msg is None:
             return
 
-        warning = inline("{} asked me to send you this message. Report any harassment to the mods.".format(ctx.message.author.name))
+        warning = inline("{} asked me to send you this message. Report any harassment to the mods.".format(
+            ctx.message.author.name))
         msg = warning + "\n" + profile_msg
         await self.bot.send_message(user, msg)
         await self.bot.whisper(inline("Sent your profile to " + user.name))
@@ -112,7 +117,6 @@ class Profile:
             return
 
         await self.bot.whisper(profile_msg)
-
 
     async def getServer(self, user_id, server=None):
         if server is None:
@@ -346,6 +350,7 @@ class Profile:
                 print("page output failed " + str(e))
                 print("tried to print: " + page)
 
+
 def setup(bot):
     print('profile bot setup')
     n = Profile(bot)
@@ -356,8 +361,8 @@ def setup(bot):
 class ProfileSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'default_servers': {},
-          'user_profiles': {},
+            'default_servers': {},
+            'user_profiles': {},
         }
         return config
 
@@ -400,7 +405,6 @@ class ProfileSettings(CogSettings):
     def setName(self, user, server, name):
         self.getProfile(user, server)['name'] = name
         self.save_settings()
-
 
     def getName(self, user, server):
         return self.getProfile(user, server).get('name', 'name not set')

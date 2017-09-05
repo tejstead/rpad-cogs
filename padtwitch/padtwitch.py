@@ -20,7 +20,6 @@ from .utils import checks
 from .utils.chat_formatting import *
 from .utils.cog_settings import *
 from .utils.dataIO import fileIO
-from .utils.twitter_stream import *
 
 
 if os.name != 'nt':
@@ -31,13 +30,13 @@ class PadTwitch:
     def __init__(self, bot):
         self.bot = bot
         self.settings = PadTwitchSettings("padtwitch")
-        
+
         user_name = self.settings.getUserName()
         oauth_code = self.settings.getOauthCode()
-        
+
         self.stream = None
         self.stream_thread = None
-        
+
         if user_name and oauth_code:
             self.stream = TwitchChatStream(username=user_name, oauth=oauth_code, verbose=False)
 
@@ -87,7 +86,7 @@ class PadTwitch:
         if self.stream is None:
             print('Not connecting stream, set up username/oauth first')
             return
-        
+
         self.stream.connect()
 
         for channel in self.settings.channels().values():
@@ -95,7 +94,7 @@ class PadTwitch:
                 channel_name = channel['name']
                 print('Connecting to twitch channel: {}'.format(channel_name))
                 self.stream.join_channel(channel_name)
-        
+
         while True:
             received = self.stream.twitch_receive_messages()
             if received:
@@ -123,7 +122,6 @@ class PadTwitch:
                 self.stream.send_chat_message(channel, command_response)
                 return
 
-
     def lookup_monster(self, query):
         padinfo = self.bot.get_cog('PadInfo')
         if not padinfo:
@@ -135,7 +133,8 @@ class PadTwitch:
         return '{}. {}'.format(m.monster_id_na, m.name_na)
 
     def post_as(self, channel, username, m):
-        as_text = '(CD{}) {}'.format(m.active_skill.turn_min, m.active_skill.desc) if m.active_skill else 'None/Missing'
+        as_text = '(CD{}) {}'.format(m.active_skill.turn_min,
+                                     m.active_skill.desc) if m.active_skill else 'None/Missing'
         return '{} : {}'.format(self._get_header(m), as_text)
 
     def post_info(self, channel, username, m):
@@ -146,7 +145,8 @@ class PadTwitch:
         return '{} | {} | {} | {}'.format(name, types, stats, awakenings)
 
     def post_ls(self, channel, username, m):
-        ls_text = "[{}] {}".format(m.multiplier_text, m.leader_text) if m.leader_text else 'None/Missing'
+        ls_text = "[{}] {}".format(
+            m.multiplier_text, m.leader_text) if m.leader_text else 'None/Missing'
         return '{} : {}'.format(self._get_header(m), ls_text)
 
     def whisper_help(self, channel, username, m):
@@ -183,17 +183,17 @@ class PadTwitch:
             await send_cmd_help(ctx)
 
     @padtwitch.command(pass_context=True)
-    async def setUserName(self, ctx, user_name : str):
+    async def setUserName(self, ctx, user_name: str):
         self.settings.setUserName(user_name)
         await self.bot.say(inline('done, reload the cog'))
 
     @padtwitch.command(pass_context=True)
-    async def setOauthCode(self, ctx, oauth_code : str):
+    async def setOauthCode(self, ctx, oauth_code: str):
         self.settings.setOauthCode(oauth_code)
         await self.bot.say(inline('done, reload the cog'))
 
     @padtwitch.command(pass_context=True)
-    async def setEnabled(self, ctx, twitch_channel : str, enabled : bool):
+    async def setEnabled(self, ctx, twitch_channel: str, enabled: bool):
         self.settings.setChannelEnabled(twitch_channel, enabled)
         await self.bot.say(inline('done, reload the cog'))
 
@@ -213,7 +213,7 @@ class PadTwitch:
         msg += '\nChannels:'
         for channel, cs in self.settings.channels().items():
             msg += '\n\t({}) {}'.format('+' if cs['enabled'] else '-', cs['name'])
-            
+
         await self.bot.say(box(msg))
 
 
@@ -221,6 +221,7 @@ def setup(bot):
     n = PadTwitch(bot)
     asyncio.get_event_loop().create_task(n.on_connect())
     bot.add_cog(n)
+
 
 class PadTwitchSettings(CogSettings):
     def make_default_settings(self):
@@ -258,20 +259,21 @@ class PadTwitchSettings(CogSettings):
             }
         return channels[channel_name]
 
-    def setChannelEnabled(self, channel_name : str, enabled : bool):
+    def setChannelEnabled(self, channel_name: str, enabled: bool):
         self.getChannel(channel_name)['enabled'] = enabled
         self.save_settings()
 
-    def getCustomCommands(self, channel_name : str):
+    def getCustomCommands(self, channel_name: str):
         return self.getChannel(channel_name)['custom_commands']
 
-    def addCustomCommand(self, channel_name: str, cmd_name : str, cmd_value : str):
+    def addCustomCommand(self, channel_name: str, cmd_name: str, cmd_value: str):
         self.getCustomCommands(channel_name)[cmd_name] = cmd_value
         self.save_settings()
 
-    def rmCustomCommand(self, channel_name: str, cmd_name : str):
+    def rmCustomCommand(self, channel_name: str, cmd_name: str):
         self.getCustomCommands(channel_name).pop(cmd_name)
         self.save_settings()
+
 
 """
 Adapted from:
@@ -281,6 +283,7 @@ This file contains the python code used to interface with the Twitch
 chat. Twitch chat is IRC-based, so it is basically an IRC-bot, but with
 special features for Twitch, such as congestion control built in.
 """
+
 
 class TwitchChatStream(object):
     """
@@ -379,10 +382,8 @@ class TwitchChatStream(object):
         Connect to Twitch
         """
 
-
         if self.s:
             self.disconnect()
-
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s = s
@@ -441,16 +442,16 @@ class TwitchChatStream(object):
                 finally:
                     self.last_sent_time = time.time()
 
-    def _send_now(self, message : str):
+    def _send_now(self, message: str):
         if not message:
             return
 
         self._maybe_print('twitch out now: ' + message)
-        
+
         if self.s is None:
             print('Error: socket was None but tried to send a message')
             return
-        
+
         self.s.send(message.encode())
 
     def _send(self, message):
@@ -526,8 +527,9 @@ class TwitchChatStream(object):
                                       data)[0]
             }
             if msg['channel'].startswith('#'):
-               msg['channel'] = msg['channel'][1:]
-            self._maybe_print('got msg: #{} @{} -- {}'.format(msg['channel'], msg['username'], msg['message']))
+                msg['channel'] = msg['channel'][1:]
+            self._maybe_print(
+                'got msg: #{} @{} -- {}'.format(msg['channel'], msg['username'], msg['message']))
             return msg
         elif len(data):
             self._maybe_print('other data: {}'.format(data))
@@ -576,7 +578,7 @@ class TwitchChatStream(object):
                 rec = [r for r in rec if r]  # remove Nones
                 result.extend(rec)
                 self._maybe_print("result length {} {}".format(len(result), result))
-    
-    def _maybe_print(self, msg : str):
+
+    def _maybe_print(self, msg: str):
         if self.verbose and msg:
             print(msg)
