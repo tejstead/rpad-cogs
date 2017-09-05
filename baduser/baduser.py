@@ -19,9 +19,9 @@ from __main__ import settings
 
 from . import rpadutils
 from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
 

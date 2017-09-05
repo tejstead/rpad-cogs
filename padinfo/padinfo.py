@@ -33,9 +33,9 @@ from __main__ import user_allowed, send_cmd_help
 
 from . import padguide2
 from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.cog_settings import *
 from .utils.dataIO import dataIO
 
 

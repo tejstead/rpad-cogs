@@ -9,8 +9,8 @@ from discord.ext import commands
 from __main__ import user_allowed, send_cmd_help
 
 from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
-from .utils.cog_settings import *
 from .utils.dataIO import dataIO
 
 
@@ -30,7 +30,7 @@ class Stickers:
             await send_cmd_help(context)
 
     @sticker.command(pass_context=True)
-    async def add(self, ctx, command : str, *, text):
+    async def add(self, ctx, command: str, *, text):
         """Adds a sticker
 
         Example:
@@ -53,7 +53,7 @@ class Stickers:
         await self.bot.say("Sticker successfully added.")
 
     @sticker.command(pass_context=True)
-    async def delete(self, ctx, command : str):
+    async def delete(self, ctx, command: str):
         """Deletes a sticker
 
         Example:
@@ -154,16 +154,19 @@ class Stickers:
                 return p
         return False
 
+
 def check_folders():
     if not os.path.exists("data/stickers"):
         print("Creating data/stickers folder...")
         os.makedirs("data/stickers")
+
 
 def check_files():
     f = "data/stickers/commands.json"
     if not dataIO.is_valid_json(f):
         print("Creating empty commands.json...")
         dataIO.save_json(f, {})
+
 
 def setup(bot):
     check_folders()
@@ -176,7 +179,7 @@ def setup(bot):
 class StickersSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'admins' : []
+            'admins': []
         }
         return config
 

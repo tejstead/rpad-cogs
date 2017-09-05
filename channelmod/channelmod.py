@@ -10,7 +10,7 @@ from discord.ext import commands
 from cogs.utils import checks
 from cogs.utils.chat_formatting import inline, box
 
-from .utils.cog_settings import *
+from .rpadutils import CogSettings
 
 
 log = logging.getLogger("red.admin")

@@ -18,9 +18,9 @@ from __main__ import user_allowed, send_cmd_help
 from google.cloud import vision
 
 from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 
 

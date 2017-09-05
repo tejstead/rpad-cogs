@@ -15,8 +15,8 @@ from __main__ import send_cmd_help
 from __main__ import settings
 
 from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
-from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
 

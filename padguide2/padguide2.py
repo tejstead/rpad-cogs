@@ -27,9 +27,9 @@ import pytz
 import romkan
 
 from . import rpadutils
+from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import box, inline
-from .utils.cog_settings import CogSettings
 from .utils.dataIO import dataIO
 
 
