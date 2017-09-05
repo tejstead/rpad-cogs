@@ -25,7 +25,6 @@ import discord
 from discord.ext import commands
 import pytz
 import romkan
-import unidecode
 
 from . import rpadutils
 from .utils import checks
@@ -1644,8 +1643,6 @@ class PgScheduledEvent(PgItem):
     def load(self, database: PgRawDatabase):
         self.dungeon = database.getDungeon(self.dungeon_seq)
         self.event = database.getEvent(self.event_seq) if self.event_seq != '0' else None
-        print(self.event.name if self.event else 'missing')
-#         print(self.server, self.team_data, self.dungeon.name, self.event_seq)
 
 
 # {
@@ -1677,9 +1674,6 @@ def make_roma_subname(name_jp):
     adjusted_subname = ''
     for part in subname.split('・'):
         roma_part = romkan.to_roma(part)
-        # TODO: never finished this up
-        roma_part_undiecode = unidecode.unidecode(part)
-
         if part != roma_part and not rpadutils.containsJp(roma_part):
             adjusted_subname += ' ' + roma_part.strip('-')
     return adjusted_subname.strip()
