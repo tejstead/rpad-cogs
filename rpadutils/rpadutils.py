@@ -156,30 +156,12 @@ def readJsonFile(file_path):
         return json.load(f)
 
 
-def makeCachedPadguideRequest(time_ms, endpoint, expiry_secs):
-    file_path = cache_folder + '/' + endpoint
-    if shouldDownload(file_path, expiry_secs):
-        resp = makePadguideTsRequest(time_ms, endpoint)
-        writeJsonFile(file_path, resp)
-    return readJsonFile(file_path)
-
-
 def checkPadguideCacheFile(cache_file, expiry_secs):
     """Cache_file and expiry secs are used to determine if we should make the request."""
     if shouldDownload(cache_file, expiry_secs):
         Path(cache_file).touch()
         return True
     return False
-
-
-def makeCachedPadguideRequest2(endpoint, result_file):
-    """Make a request to the PadGuide API.
-
-    The endpoint is the JSP file name on the PadGuide API.
-    The result_file is the place to store the resulting file."""
-    time_ms = 0  # Pull for all-time
-    resp = makePadguideTsRequest(time_ms, endpoint)
-    writeJsonFile(result_file, resp)
 
 
 async def async_cached_padguide_request(endpoint, result_file):
@@ -190,14 +172,6 @@ async def async_cached_padguide_request(endpoint, result_file):
     time_ms = 0  # Pull for all-time
     resp = await async_padguide_ts_request(time_ms, endpoint)
     writeJsonFile(result_file, resp)
-
-
-def rmCachedPadguideRequest(endpoint):
-    file_path = cache_folder + '/' + endpoint
-    try:
-        os.remove(file_path)
-    except:
-        pass
 
 
 def writePlainFile(file_path, text_data):
@@ -214,14 +188,6 @@ def makePlainRequest(file_url):
     response = urllib.request.urlopen(file_url)
     data = response.read()  # a `bytes` object
     return data.decode('utf-8')
-
-
-def makeCachedPlainRequest(file_name, file_url, expiry_secs):
-    file_path = cache_folder + '/' + file_name
-    if shouldDownload(file_path, expiry_secs):
-        resp = makePlainRequest(file_url)
-        writePlainFile(file_path, resp)
-    return readPlainFile(file_path)
 
 
 def makeCachedPlainRequest2(file_path, file_url, expiry_secs):
