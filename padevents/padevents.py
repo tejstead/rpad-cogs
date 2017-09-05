@@ -107,7 +107,7 @@ class PadEvents:
                                           ' sending ' + message)
 
                     else:
-                        if not e.isForNormal():
+                        if not e.dungeon_type in [DungeonType.Normal]:
                             daily_refresh_servers.add(e.server)
 
                 for server in daily_refresh_servers:
