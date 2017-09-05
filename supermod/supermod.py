@@ -15,9 +15,9 @@ from __main__ import send_cmd_help
 from __main__ import settings
 
 from .rpadutils import *
+from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.cog_settings import *
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
 
@@ -121,6 +121,7 @@ THINKING_DISABLED = "{} {} {}".format(THINKING, SPACER, DISABLED)
 CHANNEL_ENABLED = "{} " + SPACER + " " + ENABLED
 CHANNEL_DISABLED = "{} " + SPACER + " " + DISABLED
 
+
 def char_to_emoji(c):
     c = c.lower()
     if c < 'a' or c > 'z':
@@ -129,6 +130,7 @@ def char_to_emoji(c):
     base = 127462
     adjustment = ord(c) - ord('a')
     return chr(base + adjustment) + ' '
+
 
 def replace_regional_indicator(s):
     s = s.replace('regional_indicator_', '')
@@ -140,6 +142,7 @@ def replace_regional_indicator(s):
         else:
             result += chunk
     return result
+
 
 REFRESH_STARTED = replace_regional_indicator(REFRESH_STARTED)
 REFRESH_REMOVED_QUIET = replace_regional_indicator(REFRESH_REMOVED_QUIET)
@@ -203,6 +206,7 @@ DEFAULT_SUPERMOD_COUNT = 5
 
 SUPERMOD_COG = None
 
+
 def is_supermod_check(ctx):
     server = ctx.message.server
     author = ctx.message.author
@@ -212,8 +216,10 @@ def is_supermod_check(ctx):
     else:
         return supermod_role in author.roles
 
+
 def is_supermod():
     return commands.check(is_supermod_check)
+
 
 class SuperMod:
     def __init__(self, bot):
@@ -258,10 +264,10 @@ class SuperMod:
         else:
             return None
 
-    def check_supermod(self, member : discord.Member, supermod_role : discord.Role):
+    def check_supermod(self, member: discord.Member, supermod_role: discord.Role):
         return supermod_role in member.roles if supermod_role else False
 
-    async def add_supermod(self, member : discord.Member, supermod_role : discord.Role):
+    async def add_supermod(self, member: discord.Member, supermod_role: discord.Role):
         if supermod_role and not self.check_supermod(member, supermod_role):
             try:
                 await self.bot.add_roles(member, supermod_role)
@@ -270,14 +276,14 @@ class SuperMod:
                 print('Failed to supermod', member.name)
                 print(e)
 
-    async def remove_supermod(self, member : discord.Member, supermod_role : discord.Role):
+    async def remove_supermod(self, member: discord.Member, supermod_role: discord.Role):
         if supermod_role and self.check_supermod(member, supermod_role):
             try:
                 await self.bot.remove_roles(member, supermod_role)
             except Exception as e:
                 print("failed to remove supermod", member.name, e)
 
-    def get_current_supermods(self, server : discord.Server, supermod_role : discord.Role):
+    def get_current_supermods(self, server: discord.Server, supermod_role: discord.Role):
         if supermod_role is None:
             return []
         return [member for member in server.members if self.check_supermod(member, supermod_role)]
@@ -336,7 +342,8 @@ class SuperMod:
             blacklisted_supermods = self.settings.blacklistUsers(server_id)
             ignored_supermods = self.settings.ignoreUsers()
 
-            users_spoken = filter(lambda user_id: user_id not in blacklisted_supermods and user_id not in ignored_supermods, users_spoken)
+            users_spoken = filter(
+                lambda user_id: user_id not in blacklisted_supermods and user_id not in ignored_supermods, users_spoken)
             users_spoken = list(users_spoken)
 
             supermod_count = self.settings.getSupermodCount(server_id)
@@ -442,7 +449,6 @@ class SuperMod:
         if not bad_msg and not contains_native_thinking_emoji:
             return
 
-
         user_id = message.author.id
         if user_id not in self.server_id_to_last_no_thinking[server_id]:
             self.server_id_to_last_no_thinking[server_id][user_id] = datetime.now()
@@ -457,7 +463,6 @@ class SuperMod:
 
         await self.bot.delete_message(message)
 
-
     @commands.group(pass_context=True)
     async def supermod(self, context):
         """Automagical selection of moderators for your server."""
@@ -466,7 +471,7 @@ class SuperMod:
 
     @supermod.command(pass_context=True)
     @checks.is_owner()
-    async def setRefreshTime(self, ctx, refresh_time_sec : int):
+    async def setRefreshTime(self, ctx, refresh_time_sec: int):
         """Set the global refresh period for SuperMod, in seconds (global)."""
         self.settings.setRefreshTimeSec(refresh_time_sec)
         await self.bot.say(DONE)
@@ -502,28 +507,28 @@ class SuperMod:
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addPermanentSupermod(self, ctx, user : discord.Member):
+    async def addPermanentSupermod(self, ctx, user: discord.Member):
         """Ensures a user is always selected as SuperMod."""
         self.settings.addPermanentSupermod(ctx.message.server.id, user.id)
         await self.bot.say(DONE)
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def rmPermanentSupermod(self, ctx, user : discord.Member):
+    async def rmPermanentSupermod(self, ctx, user: discord.Member):
         """Removes a user from the always SuperMod list."""
         self.settings.rmPermanentSupermod(ctx.message.server.id, user.id)
         await self.bot.say(DONE)
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def setSupermodCount(self, ctx, count : int):
+    async def setSupermodCount(self, ctx, count: int):
         """Set the number of automatically selected SuperMods on this server."""
         self.settings.setSupermodCount(ctx.message.server.id, count)
         await self.bot.say(DONE)
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def setModLogChannel(self, ctx, channel : discord.Channel):
+    async def setModLogChannel(self, ctx, channel: discord.Channel):
         """Sets the channel used for printing moderation logs."""
         self.settings.setModlogChannel(ctx.message.server.id, channel.id)
         await self.bot.say(DONE)
@@ -537,7 +542,7 @@ class SuperMod:
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def setSupermodRole(self, ctx, role_name : str):
+    async def setSupermodRole(self, ctx, role_name: str):
         """Sets the role that designates a user as SuperMod (make sure to hoist it)."""
         role = get_role(ctx.message.server.roles, role_name)
         self.settings.setSupermodRole(ctx.message.server.id, role.id)
@@ -552,7 +557,7 @@ class SuperMod:
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addDiscussionChannel(self, ctx, channel : discord.Channel):
+    async def addDiscussionChannel(self, ctx, channel: discord.Channel):
         """Marks a channel as containing discussion.
 
         Discussion channels are automatically monitored for activity. Users active in these
@@ -567,7 +572,7 @@ class SuperMod:
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def rmDiscussionChannel(self, ctx, channel : discord.Channel):
+    async def rmDiscussionChannel(self, ctx, channel: discord.Channel):
         """Clears the discussion status from a channel."""
         self.settings.rmDiscussionChannel(ctx.message.server.id, channel.id)
         msg = CHANNEL_DISABLED.format(self.text_to_emoji(channel.name))
@@ -575,7 +580,7 @@ class SuperMod:
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addBlacklistedUser(self, ctx, member : discord.Member):
+    async def addBlacklistedUser(self, ctx, member: discord.Member):
         """Removes SuperMod status from a user (if they have it) and ensures they won't be selected."""
         self.settings.addBlacklistUser(ctx.message.server.id, member.id)
         await self.do_modlog(ctx.message.server.id, inline('{} was naughty, no SuperMod fun time for them'.format(member.name)))
@@ -583,7 +588,7 @@ class SuperMod:
 
     @supermod.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def rmBlacklistedUser(self, ctx, member : discord.Member):
+    async def rmBlacklistedUser(self, ctx, member: discord.Member):
         """Re-enable SuperMod selection for a user."""
         self.settings.rmBlacklistUser(ctx.message.server.id, member.id)
         await self.do_modlog(ctx.message.server.id, inline('{} was forgiven, they can SuperMod again}'.format(member.name)))
@@ -608,7 +613,6 @@ class SuperMod:
         blacklisted_supermods = self.settings.blacklistUsers(server_id)
         ignored_supermods = self.settings.ignoreUsers()
         quiet_users = self.server_id_to_quiet_user_ids[server_id]
-
 
         supermod_role_output = supermod_role.name if supermod_role else 'Not configured'
 
@@ -656,7 +660,7 @@ class SuperMod:
 
     @supermod.command(pass_context=True, no_pm=True)
     @is_supermod()
-    async def rename(self, ctx, member : discord.Member, *, new_name : str=None):
+    async def rename(self, ctx, member: discord.Member, *, new_name: str=None):
         """You're a SuperMod! Set the nickname on a user."""
         if not self.should_process_user_message(ctx.message):
             return
@@ -685,7 +689,7 @@ class SuperMod:
 
     @supermod.command(pass_context=True, no_pm=True)
     @is_supermod()
-    async def quiet(self, ctx, member : discord.Member):
+    async def quiet(self, ctx, member: discord.Member):
         """You're a SuperMod! Put someone in time-out."""
         if not self.should_process_user_message(ctx.message):
             return
@@ -770,6 +774,7 @@ class SuperMod:
         self.settings.rmIgnoreUser(author.id)
         await self.bot.say(USER_CLEARED_IGNORE.format(author.name))
 
+
 def setup(bot):
     n = SuperMod(bot)
     bot.loop.create_task(n.refresh_supermod())
@@ -777,11 +782,12 @@ def setup(bot):
     bot.add_listener(n.no_thinking, "on_message")
     bot.add_cog(n)
 
+
 class SuperModSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'refresh_time_sec' : 10 * 60,
-          'servers' : {},
+            'refresh_time_sec': 10 * 60,
+            'servers': {},
         }
         return config
 
