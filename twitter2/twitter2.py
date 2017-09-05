@@ -16,10 +16,9 @@ from __main__ import user_allowed, send_cmd_help
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.dataIO import fileIO
-from .utils.twitter_stream import *
-
 
 TIME_FMT = """%a %b %d %H:%M:%S %Y"""
+
 
 class TwitterCog2:
     def __init__(self, bot):
@@ -27,7 +26,8 @@ class TwitterCog2:
         self.config = fileIO("data/twitter2/config.json", "load")
 
         config = self.config
-        self.twitter_config = (config['akey'], config['asecret'], config['otoken'], config['osecret'])
+        self.twitter_config = (config['akey'], config['asecret'],
+                               config['otoken'], config['osecret'])
         print(self.twitter_config)
 
 #         self.channels = list() # channels to push updates to
@@ -98,7 +98,6 @@ and starts following a user if one was set upon construction."""
             await self.bot.say(inline("New account, restarting twitter connection"))
             await self.refollow()
 
-
     @twitter2.command(name="rmchannel", pass_context=True, no_pm=True)
     async def _rmchannel(self, ctx, twitter_user):
         twitter_user = twitter_user.lower()
@@ -120,14 +119,13 @@ and starts following a user if one was set upon construction."""
         self.save_config()
 
     @twitter2.command(name="resend", pass_context=True, no_pm=True)
-    async def _resend(self, ctx, idx : int=1):
+    async def _resend(self, ctx, idx: int=1):
         last_tweet = self.stream.last(idx)
         if last_tweet:
             print('Resending tweet idx ' + str(idx))
             await self.tweetAsync(last_tweet)
         else:
             await self.bot.say('No tweet to send')
-
 
     def checkTwitterUser(self, tuser):
         return self.stream.get_user(tuser) is not None
@@ -164,13 +162,12 @@ Returns False if the user does not exist, True otherwise."""
     def tweet(self, data):
         self.bot.loop.call_soon(asyncio.async, self.tweetAsync(data))
 
-
     @twitter2.command(name="testmsg", pass_context=True, no_pm=True)
     async def _testmsg(self, ctx, twitter_user):
         data = {
-            'text' : 'test msg',
-            'id_str' : 'idstring',
-            'user' : {'screen_name' : twitter_user}
+            'text': 'test msg',
+            'id_str': 'idstring',
+            'user': {'screen_name': twitter_user}
         }
         await self.bot.say("Sending test msg: " + str(data))
         await self.tweetAsync(data)
@@ -215,7 +212,6 @@ Returns False if the user does not exist, True otherwise."""
             await self.bot.send_message(discord.Object(chan_id), message)
         return True
 
-
     def info(self, channel=None):
         """Send the clients some misc info. Only shows channels on the same server
 as the given channel. If channel is None, show active channels from all servers."""
@@ -233,7 +229,6 @@ as the given channel. If channel is None, show active channels from all servers.
 #                 cstr += "#" + c.name + ", "
         if cstr:
             cstr = cstr[:-2]  # strip extra comma
-
 
         return ("**TwitterBot**\n" +
                 "Currently following: " + ",".join(self.channel_ids.keys()) + "\n" +
@@ -255,11 +250,11 @@ def check_folder():
 
 def check_file():
     config = {
-      'akey' : '',
-      'asecret' : '',
-      'otoken' : '',
-      'osecret' : '',
-      'channels' : [],
+        'akey': '',
+        'asecret': '',
+        'otoken': '',
+        'osecret': '',
+        'channels': [],
     }
 
     f = "data/twitter2/config.json"
@@ -277,6 +272,7 @@ def setup(bot):
     loop.create_task(n.connect())
     bot.add_cog(n)
     print('done adding twitter2 bot')
+
 
 def safe_print2(thing):
     if thing:
