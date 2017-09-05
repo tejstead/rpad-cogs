@@ -21,6 +21,7 @@ from .utils.settings import Settings
 
 LOGS_PER_USER = 10
 
+
 class BadUser:
     def __init__(self, bot):
         self.bot = bot
@@ -118,31 +119,32 @@ class BadUser:
 
     @baduser.command(name="strikes", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def strikes(self, ctx, user : discord.Member):
+    async def strikes(self, ctx, user: discord.Member):
         """Print the strike count for a user."""
         strikes = self.settings.countUserStrikes(ctx.message.server.id, user.id)
         await self.bot.say(box('User {} has {} strikes'.format(user.name, strikes)))
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addstrike(self, ctx, user : discord.Member, *, strike_text : str):
+    async def addstrike(self, ctx, user: discord.Member, *, strike_text: str):
         """Manually add a strike to a user."""
         timestamp = str(ctx.message.timestamp)[:-7]
-        msg = 'Manually added by {} ({}): {}'.format(ctx.message.author.name, timestamp, strike_text)
+        msg = 'Manually added by {} ({}): {}'.format(
+            ctx.message.author.name, timestamp, strike_text)
         self.settings.updateBadUser(user.server.id, user.id, msg)
         strikes = self.settings.countUserStrikes(ctx.message.server.id, user.id)
         await self.bot.say(box('Done. User {} now has {} strikes'.format(user.name, strikes)))
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def clearstrikes(self, ctx, user : discord.Member):
+    async def clearstrikes(self, ctx, user: discord.Member):
         """Clear all strikes for a user."""
         self.settings.clearUserStrikes(ctx.message.server.id, user.id)
         await self.bot.say(box('Cleared strikes for {}'.format(user.name)))
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def printstrikes(self, ctx, user : discord.Member):
+    async def printstrikes(self, ctx, user: discord.Member):
         """Print all strikes for a user."""
         strikes = self.settings.getUserStrikes(ctx.message.server.id, user.id)
         if not strikes:
@@ -205,16 +207,16 @@ class BadUser:
             else:
                 otheruser_entries.append(tmp_msg)
 
-
         other_server_count = len(self.bot.servers) - 1
         other_ban_count = len([x for x, l in user_id_to_ban_server.items() if len(l)])
         other_baduser_count = len([x for x, l in user_id_to_baduser_server.items() if len(l)])
         msg = "Across {} other servers, {} users are banned and {} have baduser entries".format(
-                other_server_count, other_ban_count, other_baduser_count)
+            other_server_count, other_ban_count, other_baduser_count)
 
         msg += "\n\n{} baduser entries for this server".format(len(baduser_entries))
         msg += "\n" + "\n".join(baduser_entries)
-        msg += "\n\n{} entries for users with no record in this server".format(len(otheruser_entries))
+        msg += "\n\n{} entries for users with no record in this server".format(
+            len(otheruser_entries))
         msg += "\n" + "\n".join(otheruser_entries)
 
         if error_messages:
@@ -232,7 +234,8 @@ class BadUser:
         content = message.clean_content
         channel = message.channel
         timestamp = str(message.timestamp)[:-7]
-        log_msg = '[{}] {} ({}): {}/{}'.format(timestamp, author.name, author.id, channel.name, content)
+        log_msg = '[{}] {} ({}): {}/{}'.format(timestamp, author.name,
+                                               author.id, channel.name, content)
         self.logs[author.id].append(log_msg)
 
     async def mod_ban(self, member):
@@ -241,7 +244,8 @@ class BadUser:
     async def mod_user_left(self, member):
         strikes = self.settings.countUserStrikes(member.server.id, member.id)
         if strikes:
-            msg = 'FYI: A user with {} strikes just left the server: {}'.format(strikes, member.name)
+            msg = 'FYI: A user with {} strikes just left the server: {}'.format(
+                strikes, member.name)
             update_channel = self.settings.getChannel(member.server.id)
             if update_channel is not None:
                 channel_obj = discord.Object(update_channel)
@@ -250,7 +254,8 @@ class BadUser:
     async def mod_user_join(self, member):
         strikes = self.settings.countUserStrikes(member.server.id, member.id)
         if strikes:
-            msg = 'Hey @here a user with {} strikes just joined the server: {}'.format(strikes, member.name)
+            msg = 'Hey @here a user with {} strikes just joined the server: {}'.format(
+                strikes, member.name)
             update_channel = self.settings.getChannel(member.server.id)
             if update_channel is not None:
                 channel_obj = discord.Object(update_channel)
@@ -283,7 +288,7 @@ class BadUser:
     async def recordBadUser(self, member, role_name):
         latest_messages = self.logs.get(member.id, "")
         msg = 'Name={} Nick={} ID={} Joined={} Role={}\n'.format(
-           member.name, member.nick, member.id, member.joined_at, role_name)
+            member.name, member.nick, member.id, member.joined_at, role_name)
         msg += '\n'.join(latest_messages)
         self.settings.updateBadUser(member.server.id, member.id, msg)
         strikes = self.settings.countUserStrikes(member.server.id, member.id)
@@ -298,8 +303,8 @@ class BadUser:
 
             try:
                 dm_msg = ('You were assigned the punishment role "{}" in the server "{}".\n'
-                         'The Mods will contact you shortly regarding this.\n'
-                         'Attempting to clear this role yourself will result in punishment.').format(role_name, member.server.name)
+                          'The Mods will contact you shortly regarding this.\n'
+                          'Attempting to clear this role yourself will result in punishment.').format(role_name, member.server.name)
                 await self.bot.send_message(member, box(dm_msg))
                 await self.bot.send_message(channel_obj, 'User successfully notified')
             except Exception as e:
@@ -307,7 +312,7 @@ class BadUser:
 
     async def recordRoleChange(self, member, role_name, is_added):
         msg = 'Detected role {} : Name={} Nick={} ID={} Joined={} Role={}'.format(
-           "Added" if is_added else "Removed", member.name, member.nick, member.id, member.joined_at, role_name)
+            "Added" if is_added else "Removed", member.name, member.nick, member.id, member.joined_at, role_name)
 
         update_channel = self.settings.getChannel(member.server.id)
         if update_channel is not None:
@@ -334,7 +339,7 @@ def setup(bot):
 class BadUserSettings(CogSettings):
     def make_default_settings(self):
         config = {
-          'servers' : {}
+            'servers': {}
         }
         return config
 
