@@ -1,3 +1,8 @@
+"""
+Utilities for managing misbehaving users and facilitating administrator
+communication about role changes.
+"""
+
 from collections import defaultdict
 from collections import deque
 import copy
@@ -5,12 +10,14 @@ import os
 import re
 from time import time
 
+import aiohttp
 import discord
 from discord.ext import commands
 
 from __main__ import send_cmd_help
 from __main__ import settings
 
+from . import rpadutils
 from .rpadutils import *
 from .utils import checks
 from .utils.chat_formatting import *
@@ -160,6 +167,7 @@ class BadUser:
     async def report(self, ctx):
         """Displays a report of information on bad users for the server."""
         cur_server = ctx.message.server
+        global_banned_users = await self._load_banned_users()
 
         user_id_to_ban_server = defaultdict(list)
         user_id_to_baduser_server = defaultdict(list)
@@ -191,13 +199,18 @@ class BadUser:
             local_strikes = self.settings.getUserStrikes(cur_server.id, member.id)
             other_baduser_servers = user_id_to_baduser_server[member.id]
             other_banned_servers = user_id_to_ban_server[member.id]
+            is_globally_banned = member.id in global_banned_users
 
-            if not len(local_strikes) and not len(other_baduser_servers) and not len(other_banned_servers):
+            if not len(local_strikes) and not len(other_baduser_servers) and not len(other_banned_servers) and not is_globally_banned:
                 continue
 
             tmp_msg = "{} ({})".format(member.name, member.id)
-            tmp_msg += "\n\tbad user in {} other servers".format(len(other_baduser_servers))
-            tmp_msg += "\n\tbanned from {} other servers".format(len(other_banned_servers))
+            if other_baduser_servers:
+                tmp_msg += "\n\tbad user in {} other servers".format(len(other_baduser_servers))
+            if other_banned_servers:
+                tmp_msg += "\n\tbanned from {} other servers".format(len(other_banned_servers))
+            if is_globally_banned:
+                tmp_msg += "\n\tin global ban list!"
 
             if len(local_strikes):
                 tmp_msg += "\n\t{} strikes in this server".format(len(local_strikes))
@@ -225,6 +238,42 @@ class BadUser:
 
         for page in pagify(msg):
             await self.bot.say(box(page))
+
+    @baduser.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def checkbanlist(self, ctx):
+        bans = self._load_banned_users()
+        msg = 'Checking for banned users in {} servers'.format(len(self.bot.servers))
+        for cur_server in self.bot.servers:
+            msg += '\n\tChecking {}'.format(cur_server.name)
+            await self.bot.request_offline_members(cur_server)
+            for member in cur_server.members:
+                if member.id in bans:
+                    msg += '\n\t\tBanned user: {} ({})'.format(member.name, member.id)
+        await self.bot.say(box(msg))
+
+    async def _load_banned_users(self):
+        ban_file_path = 'data/baduser/global_ban_list.txt'
+        url = 'https://bans.discordlist.net/api'
+        expiry_secs = 60 * 60 * 24  # one day expiry
+        payload = {
+            "token": "1JemcZsNtk",
+        }
+
+        if rpadutils.should_download(ban_file_path, expiry_secs):
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, data=payload) as resp:
+                    ban_text = await resp.text()
+                    rpadutils.writePlainFile(ban_file_path, ban_text)
+        else:
+            ban_text = rpadutils.readPlainFile(ban_file_path)
+
+        bans = []
+        for ban in ban_text.split(','):
+            ban = ban.strip('[]"')
+            bans.append(ban)
+
+        return bans
 
     async def mod_message(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
