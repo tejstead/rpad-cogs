@@ -181,6 +181,16 @@ def makeCachedPadguideRequest2(endpoint, result_file):
     writeJsonFile(result_file, resp)
 
 
+async def async_cached_padguide_request(endpoint, result_file):
+    """Make a request to the PadGuide API.
+
+    The endpoint is the JSP file name on the PadGuide API.
+    The result_file is the place to store the resulting file."""
+    time_ms = 0  # Pull for all-time
+    resp = await async_padguide_ts_request(time_ms, endpoint)
+    writeJsonFile(result_file, resp)
+
+
 def rmCachedPadguideRequest(endpoint):
     file_path = cache_folder + '/' + endpoint
     try:

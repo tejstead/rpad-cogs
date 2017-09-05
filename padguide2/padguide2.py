@@ -95,7 +95,7 @@ class PadGuide2(object):
         while self == self.bot.get_cog('PadGuide2'):
             short_wait = False
             try:
-                self.download_and_refresh_nicknames()
+                await self.download_and_refresh_nicknames()
             except Exception as ex:
                 short_wait = True
                 print("padguide2 data download/refresh failed", ex)
@@ -109,13 +109,13 @@ class PadGuide2(object):
                 traceback.print_exc()
                 raise ex
 
-    def reload_config_files(self):
+    async def reload_config_files(self):
         os.remove(NICKNAME_FILE_PATTERN)
         os.remove(BASENAME_FILE_PATTERN)
-        self.download_and_refresh_nicknames()
+        await self.download_and_refresh_nicknames()
 
-    def download_and_refresh_nicknames(self):
-        self._download_files()
+    async def download_and_refresh_nicknames(self):
+        await self._download_files()
 
         nickname_overrides = self._csv_to_tuples(NICKNAME_FILE_PATTERN)
         basename_overrides = self._csv_to_tuples(BASENAME_FILE_PATTERN)
@@ -149,7 +149,7 @@ class PadGuide2(object):
                 results.append([key, value])
         return results
 
-    def _download_files(self):
+    async def _download_files(self):
         # Use a dummy file to proxy for the entire database being out of date
         # twelve hours expiry
         general_dummy_file = DUMMY_FILE_PATTERN.format('general')
@@ -161,7 +161,7 @@ class PadGuide2(object):
             endpoint = type.file_name()
             result_file = JSON_FILE_PATTERN.format(endpoint)
             if download_all or rpadutils.should_download(result_file, general_expiry_secs):
-                rpadutils.makeCachedPadguideRequest2(endpoint, result_file)
+                await rpadutils.async_cached_padguide_request(endpoint, result_file)
 
         overrides_expiry_secs = 1 * 60 * 60
         rpadutils.makeCachedPlainRequest2(
