@@ -431,10 +431,6 @@ class PadEvents:
         active_events = list(group_to_active_event.values())
         pending_events = list(group_to_pending_event.values())
 
-        json.JSONEncoder.default = lambda self, obj: (
-            obj.isoformat() if isinstance(obj, datetime) else None)
-        for e in pending_events:
-            print(json.dumps(e.__dict__))
         active_events.sort(key=lambda e: e.group)
         pending_events.sort(key=lambda e: e.group)
 
@@ -527,7 +523,6 @@ class Event:
         self.name_and_modifier = self.clean_dungeon_name
         if self.clean_event_name != '':
             self.name_and_modifier += ', ' + self.clean_event_name
-            print('updating name', self.name_and_modifier)
 
         self.event_type = EventType(scheduled_event.event_type)
         self.dungeon_type = DungeonType(scheduled_event.dungeon.dungeon_type)
