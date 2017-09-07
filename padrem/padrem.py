@@ -47,17 +47,10 @@ class PadRem:
 
         self.pgrem = PgRemWrapper(None, {}, skip_load=True)
 
-
-#     async def on_ready(self):
-#         """ready"""
-#         print("started padrem")
-#         self.pgrem.populateWithMonsters(
-#             EXPOSED_PAD_INFO.pginfo_all.full_monster_map, self.settings.getBoosts())
-
     async def reload_padrem(self):
         await self.bot.wait_until_ready()
         # Sleep 10s to let padguide finish loading
-        await asyncio.sleep(1)
+        await asyncio.sleep(10)
         while self == self.bot.get_cog('PadRem'):
             try:
                 self.refresh_data()
@@ -271,12 +264,16 @@ class PgRemWrapper:
         jp_gfe_rem_list = []
         na_gfe_rem_list = []
 
-        for m in database.getSeries(34).monsters:
-            if m.is_gfe and m.evo_from is None:
-                rm = RemMonster(m)
-                jp_gfe_rem_list.append(rm)
-                if m.on_na:
-                    na_gfe_rem_list.append(rm)
+        gfe_series = database.getSeries(34)
+        if gfe_series:
+            for m in gfe_series.monsters:
+                if m.is_gfe and m.evo_from is None:
+                    rm = RemMonster(m)
+                    jp_gfe_rem_list.append(rm)
+                    if m.on_na:
+                        na_gfe_rem_list.append(rm)
+        else:
+            print('PADREM: GFE Series not found')
 
         egg_instances = database.all_egg_instances()
         egg_instances.sort(key=lambda x: (
