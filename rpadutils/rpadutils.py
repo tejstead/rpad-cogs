@@ -19,6 +19,11 @@ class RpadUtils:
     def __init__(self, bot):
         self.bot = bot
 
+    async def on_command_error(self, error, ctx):
+        channel = ctx.message.channel
+        if isinstance(error, ReportableError):
+            await self.bot.send_message(channel, error.message)
+
 
 def setup(bot):
     print('rpadutils setup')
@@ -53,6 +58,14 @@ JP_REGEX = re.compile(JP_REGEX_STR)
 
 def containsJp(txt):
     return JP_REGEX.search(txt)
+
+
+class ReportableError(commands.CheckFailure):
+    """Throw when an exception should be reported to the user."""
+
+    def __init__(self, message):
+        self.message = message
+        super(ReportableError, self).__init__(message)
 
 
 class PermissionsError(CommandNotFound):
