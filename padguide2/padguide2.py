@@ -688,7 +688,7 @@ class PgEvolutionMaterial(PgItem):
         self.evolution = database.getEvolution(self.tv_seq)
         self.fodder_monster = database.getMonster(self.fodder_monster_no)
 
-        if self.evolution is None:
+        if self.evolution is None or self.evolution.to_monster is None:
             # Really rare and unusual bug
             return
 
