@@ -125,24 +125,28 @@ class AutoMod2:
     @automod2.command(name="addwhitelist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addWhitelist(self, ctx, *, name):
+        """Add the named pattern as a whitelist for this channel."""
         self.settings.addWhitelist(ctx, name)
         await self.bot.say(inline('Added whitelist config for: ' + name))
 
     @automod2.command(name="rmwhitelist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmWhitelist(self, ctx, *, name):
+        """Remove the named pattern as a whitelist for this channel."""
         self.settings.rmWhitelist(ctx, name)
         await self.bot.say(inline('Removed whitelist config for: ' + name))
 
     @automod2.command(name="addblacklist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addBlacklist(self, ctx, *, name):
+        """Add the named pattern as a blacklist for this channel."""
         self.settings.addBlacklist(ctx, name)
         await self.bot.say(inline('Added blacklist config for: ' + name))
 
     @automod2.command(name="rmblacklist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmBlacklist(self, ctx, *, name):
+        """Remove the named pattern as a blacklist for this channel."""
         self.settings.rmBlacklist(ctx, name)
         await self.bot.say(inline('Removed blacklist config for: ' + name))
 
