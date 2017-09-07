@@ -377,6 +377,25 @@ class TrUtils:
         self.settings.clearImageTypeBlacklist(ctx.message.server.id, channel.id, image_type)
         await self.bot.say('`done`')
 
+    @commands.command(pass_context=True)
+    @checks.is_owner()
+    async def loadallcogs(self, ctx):
+        cogs = ['RpadUtils', 'AutoMod2', 'ChannelMod', 'Donations', 'FancySay', 'Memes',
+                'PadBoard', 'Profile', 'Stickers', 'StreamCopy', 'Translate', 'VoiceRole',
+                'PadGuide2', 'PadEvents', 'PadGlobal', 'PadInfo', 'PadRem']
+
+        owner_cog = self.bot.get_cog('Owner')
+
+        for cog_name in cogs:
+            cog = self.bot.get_cog(cog_name)
+            if cog is None:
+                await self.bot.say('{} not loaded, trying to load it...'.format(cog_name))
+                try:
+                    owner_cog._load_cog('cogs.{}'.format(cog_name.lower()))
+                except Exception as e:
+                    await self.bot.say(box("Loading cog failed: {}: {}".format(e.__class__.__name__, str(e))))
+        await self.bot.say('Done!')
+
     @commands.command()
     async def getmiru(self):
         """Tells you how to get Miru into your server"""
