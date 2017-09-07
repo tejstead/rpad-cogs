@@ -389,7 +389,8 @@ class PgItem(object):
                 self.load(database)
             except Exception as ex:
                 self._loading_error = False
-                print('Error occurred while loading item')
+                print('Error occurred while loading item', ex)
+                print(type(self), 'key=', self.key())
                 traceback.print_exc()
 
         return self
