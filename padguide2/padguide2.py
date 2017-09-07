@@ -384,7 +384,13 @@ class PgItem(object):
         """Ensures that the dependencies have been loaded, or loads them."""
         if not self._loaded:
             self._loaded = True
-            self.load(database)
+            self._loading_error = False
+            try:
+                self.load(database)
+            except Exception as ex:
+                self._loading_error = False
+                print('Error occurred while loading item')
+                traceback.print_exc()
 
         return self
 
@@ -644,9 +650,11 @@ class PgEvolution(PgItem):
         self.from_monster = database.getMonster(self.from_monster_no)
         self.to_monster = database.getMonster(self.to_monster_no)
 
-        self.to_monster.cur_evo_type = self.evo_type
-        self.to_monster.evo_from = self.from_monster
-        self.from_monster.evo_to.append(self.to_monster)
+        if self.to_monster:
+            self.to_monster.cur_evo_type = self.evo_type
+            if self.from_monster:
+                self.to_monster.evo_from = self.from_monster
+                self.from_monster.evo_to.append(self.to_monster)
 
 
 # evoMaterialList.jsp
