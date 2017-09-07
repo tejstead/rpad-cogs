@@ -1725,7 +1725,7 @@ class MonsterIndex(object):
         for mg in monster_groups:
             group_basename_overrides = basename_overrides.get(mg.base_monster.monster_no_na, [])
             named_mg = NamedMonsterGroup(mg, group_basename_overrides)
-            for monster in named_mg.monsters:
+            for monster in mg.members:
                 if accept_filter and not accept_filter(monster):
                     continue
                 prefixes = self.compute_prefixes(monster)
@@ -1909,15 +1909,18 @@ class MonsterIndex(object):
 
 class NamedMonsterGroup(object):
     def __init__(self, monster_group: MonsterGroup, basename_overrides: list):
-        self.monster_group = monster_group
-        self.monsters = monster_group.members
-        self.group_size = len(self.monsters)
+        self.is_low_priority = (
+            self._is_low_priority_monster(monster_group.base_monster)
+            or self._is_low_priority_group(monster_group))
+
+        monsters = monster_group.members
+        self.group_size = len(monsters)
 
         self.monster_no_to_basename = {
-            m.monster_no: self._compute_monster_basename(m) for m in self.monsters
+            m.monster_no: self._compute_monster_basename(m) for m in monsters
         }
 
-        self.computed_basename = self._compute_group_basename()
+        self.computed_basename = self._compute_group_basename(monsters)
         self.computed_basenames = set([self.computed_basename])
         if '-' in self.computed_basename:
             self.computed_basenames.add(self.computed_basename.replace('-', ' '))
@@ -1941,17 +1944,13 @@ class NamedMonsterGroup(object):
 
         return basename.strip()
 
-    def _compute_group_basename(self):
+    def _compute_group_basename(self, monsters):
         def get_basename(x): return self.monster_no_to_basename[x.monster_no]
-        sorted_monsters = sorted(self.monsters, key=get_basename)
+        sorted_monsters = sorted(monsters, key=get_basename)
         grouped = [(c, len(list(cgen))) for c, cgen in groupby(sorted_monsters, get_basename)]
         # TODO: best_tuple selection could be better
         best_tuple = max(grouped, key=itemgetter(1))
         return best_tuple[0]
-
-    def is_low_priority(self):
-        return (self._is_low_priority_monster(self.monster_group.base_monster)
-                or self._is_low_priority_group(self.monster_group))
 
     def _is_low_priority_monster(self, m: PgMonster):
         lp_types = ['evolve', 'enhance', 'protected', 'awoken', 'vendor']
@@ -1985,7 +1984,7 @@ class NamedMonster(object):
         self.prefixes = prefixes
 
         # Data used to determine how to rank the nicknames
-        self.is_low_priority = monster_group.is_low_priority()
+        self.is_low_priority = monster_group.is_low_priority
         self.group_size = monster_group.group_size
         self.rarity = monster.rarity
 
