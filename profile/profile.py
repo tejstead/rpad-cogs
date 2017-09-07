@@ -77,9 +77,6 @@ class Profile:
 
         Prints out your profile to the current room. If you do not provide a server, your default is used
         """
-        if not await self.settings.checkUsage(ctx, 'idme'):
-            return
-
         profile_msg = await self.getIdMsg(ctx.message.author, server, False)
         if profile_msg is None:
             return
@@ -92,8 +89,6 @@ class Profile:
 
         Prints out your profile to specified user. If you do not provide a server, your default is used
         """
-        if not await self.settings.checkUsage(ctx, 'idto'):
-            return
         profile_msg = await self.getIdMsg(ctx.message.author, server)
         if profile_msg is None:
             return
@@ -110,8 +105,6 @@ class Profile:
 
         Prints out the profile of the specified user. If you do not provide a server, your default is used
         """
-        if not await self.settings.checkUsage(ctx, 'idto'):
-            return
         profile_msg = await self.getIdMsg(user, server)
         if profile_msg is None:
             return
@@ -149,32 +142,9 @@ class Profile:
 
     @commands.group(pass_context=True)
     async def profile(self, ctx):
-        """Manage profile storage
-
-        Whitelist/Blacklist groups are ['idme', 'idto', 'setup'].
-        """
+        """Manage profile storage"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
-
-    @profile.command(name="addwhitelist", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
-    async def addwhitelist(self, ctx, group):
-        await self.settings.addToWhitelist(ctx, group)
-
-    @profile.command(name="rmwhitelist", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
-    async def rmwhitelist(self, ctx, group):
-        await self.settings.removeFromWhitelist(ctx, group)
-
-    @profile.command(name="addblacklist", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
-    async def addblacklist(self, ctx, group):
-        await self.settings.addToBlacklist(ctx, group)
-
-    @profile.command(name="rmblacklist", pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_server=True)
-    async def rmblacklist(self, ctx, group):
-        await self.settings.removeFromBlacklist(ctx, group)
 
     @profile.command(name="server", pass_context=True)
     async def setServer(self, ctx, server):
@@ -183,8 +153,6 @@ class Profile:
         Sets your default server to one of the supported servers: [NA, EU, JP, KR].
         This server is used to default the idme command if you don't provide a server.
         """
-        if not await self.settings.checkUsage(ctx, 'setup'):
-            return
         server = normalizeServer(server)
         if server not in SUPPORTED_SERVERS:
             await self.bot.say(inline('Unsupported server: ' + server))
@@ -199,8 +167,6 @@ class Profile:
 
         Sets your ID for a server. ID must be 9 digits, can be space/comma/dash delimited.
         """
-        if not await self.settings.checkUsage(ctx, 'setup'):
-            return
         server = await self.getServer(ctx, server)
         if server is None:
             return None
@@ -220,8 +186,6 @@ class Profile:
 
         Sets your in game name for a server.
         """
-        if not await self.settings.checkUsage(ctx, 'setup'):
-            return
         server = await self.getServer(ctx, server)
         if server is None:
             return None
@@ -236,9 +200,6 @@ class Profile:
 
         Sets your profile text for the server, used by the idme command and search.
         """
-        if not await self.settings.checkUsage(ctx, 'setup'):
-            return
-
         server = await self.getServer(ctx, server)
         if server is None:
             return None
@@ -258,8 +219,6 @@ class Profile:
 
         Deletes your saved profile for a server, or if no server is provided then all profiles.
         """
-        if not await self.settings.checkUsage(ctx, 'setup'):
-            return
         user_id = ctx.message.author.id
         if server is None:
             self.settings.clearProfile(user_id)
@@ -277,9 +236,6 @@ class Profile:
         to find you via search or idfor. The only data users can access are things you have
         provided via profile commands.
         """
-        if not await self.settings.checkUsage(ctx, 'setup'):
-            return
-
         server = await self.getServer(ctx, server)
         if server is None:
             return None
@@ -298,8 +254,6 @@ class Profile:
 
         Scans all public profiles for the search text and PMs the results.
         """
-        if not await self.settings.checkUsage(ctx, 'setup'):
-            return
         server = await self.getServer(ctx, server)
         if server is None:
             return None

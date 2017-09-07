@@ -493,6 +493,7 @@ class CogSettings:
     def make_default_settings(self):
         return {}
 
+    # TODO: maybe centralize get_server / get_server_channel stuff since i do that everywhere
     def getServerSettings(self, server_id):
         if 'cmd_whitelist_blacklist' not in self.bot_settings:
             self.bot_settings['cmd_whitelist_blacklist'] = {}
@@ -502,83 +503,3 @@ class CogSettings:
             settings[server_id] = {}
 
         return settings[server_id]
-
-    def getServerGroupSettings(self, server_id, group):
-        settings = self.getServerSettings(server_id)
-        if group not in settings:
-            settings[group] = {
-                'whitelist': [],
-                'blacklist': [],
-            }
-        return settings[group]
-
-    async def addToWhitelist(self, ctx, group=None):
-        await self.adjustList(ctx, 'whitelist', True, group)
-
-    async def addToBlacklist(self, ctx, group=None):
-        await self.adjustList(ctx, 'blacklist', True, group)
-
-    async def removeFromWhitelist(self, ctx, group=None):
-        await self.adjustList(ctx, 'whitelist', False, group)
-
-    async def removeFromBlacklist(self, ctx, group=None):
-        await self.adjustList(ctx, 'blacklist', False, group)
-
-    async def adjustList(self, ctx, type, should_add, group=None):
-        group = self.normalizeGroup(group)
-
-        msg = ctx.message
-        if msg.server is None:
-            ctx.bot.say(inline("You can't use this in a PM"))
-            return
-
-        settings = self.getServerGroupSettings(msg.server.id, group)
-        channel_id = msg.channel.id
-
-        type_settings = settings[type]
-        if should_add and channel_id not in type_settings:
-            type_settings.append(channel_id)
-            self.save_settings()
-            await ctx.bot.say(inline("Done!"))
-        elif not should_add and channel_id in type_settings:
-            type_settings.remove(channel_id)
-            self.save_settings()
-            await ctx.bot.say(inline("Done!"))
-        else:
-            await ctx.bot.say(inline("Already done!"))
-
-    async def checkUsage(self, ctx, group=None):
-        group = normalizeGroup(group)
-
-        msg = ctx.message
-        if msg.server is None:
-            # its a pm, always let it through
-            return None
-
-        settings = self.getServerGroupSettings(msg.server.id, group)
-        channel_id = msg.channel.id
-
-        whitelist = settings['whitelist']
-        if len(whitelist) and channel_id not in whitelist:
-            channel_names = self.channelIdsToNames(ctx.bot, whitelist)
-            await ctx.bot.whisper(inline('You can only use that command in the following channels:\n{}'.format(channel_names)))
-            return False
-
-        blacklist = settings['blacklist']
-        if channel_id in blacklist:
-            channel_names = self.channelIdsToNames(ctx.bot, blacklist)
-            await ctx.bot.whisper(inline('You cannot use that command in the following channels:\n{}'.format(channel_names)))
-            return False
-
-        return True
-
-    def normalizeGroup(group):
-        if group is None:
-            group = '__other_cmds__'
-        return group.lower()
-
-    def channelIdsToNames(bot, channel_list):
-        output = list()
-        for id in channel_list:
-            output.append(bot.get_channel(id).name)
-        return "\n".join(output)
