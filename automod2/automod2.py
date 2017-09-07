@@ -19,6 +19,7 @@ import prettytable
 from __main__ import send_cmd_help
 from __main__ import settings
 
+from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
@@ -104,7 +105,11 @@ class AutoMod2:
 
     @automod2.command(name="addpattern", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addPattern(self, ctx, name, include_pattern, exclude_pattern=''):
+    async def addPattern(self, ctx, name, include_pattern, exclude_pattern='', error=None):
+        """Add a pattern for use in this server."""
+        if error is not None:
+            await self.bot.say(inline('Too many inputs detected, check your quotes'))
+            return
         re.compile(include_pattern)
         re.compile(exclude_pattern)
         self.settings.addPattern(ctx, name, include_pattern, exclude_pattern)
@@ -112,37 +117,39 @@ class AutoMod2:
 
     @automod2.command(name="rmpattern", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def rmPattern(self, ctx, name):
+    async def rmPattern(self, ctx, *, name):
+        """Remove a pattern from this server. Pattern must not be in use."""
         self.settings.rmPattern(ctx, name)
         await self.bot.say(inline('Removed pattern'))
 
     @automod2.command(name="addwhitelist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addWhitelist(self, ctx, name):
+    async def addWhitelist(self, ctx, *, name):
         self.settings.addWhitelist(ctx, name)
         await self.bot.say(inline('Added whitelist config for: ' + name))
 
     @automod2.command(name="rmwhitelist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def rmWhitelist(self, ctx, name):
+    async def rmWhitelist(self, ctx, *, name):
         self.settings.rmWhitelist(ctx, name)
         await self.bot.say(inline('Removed whitelist config for: ' + name))
 
     @automod2.command(name="addblacklist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addBlacklist(self, ctx, name):
+    async def addBlacklist(self, ctx, *, name):
         self.settings.addBlacklist(ctx, name)
         await self.bot.say(inline('Added blacklist config for: ' + name))
 
     @automod2.command(name="rmblacklist", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def rmBlacklist(self, ctx, name):
+    async def rmBlacklist(self, ctx, *, name):
         self.settings.rmBlacklist(ctx, name)
         await self.bot.say(inline('Removed blacklist config for: ' + name))
 
     @automod2.command(name="listrules", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def listRules(self, ctx):
+        """List the whitelist/blacklist configuration for the current channel."""
         whitelists, blacklists = self.settings.getRulesForChannel(ctx)
         output = 'AutoMod configs for this channel\n\n'
         output += 'Whitelists:\n'
@@ -155,6 +162,7 @@ class AutoMod2:
     @automod2.command(name="listpatterns", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def listPatterns(self, ctx):
+        """List the registered patterns."""
         patterns = self.settings.getPatterns(ctx)
         output = 'AutoMod patterns for this server\n\n'
         output += self.patternsToTableText(patterns.values())
@@ -287,7 +295,6 @@ def matchesPattern(pattern, txt):
             if check_method:
                 return check_method(txt)
     except:
-        print('Failed method pattern match:', pattern, txt)
         return False
 
     p = re.compile(pattern, re.IGNORECASE | re.MULTILINE | re.DOTALL)
@@ -403,14 +410,14 @@ class AutoMod2Settings(CogSettings):
 
     def rmPattern(self, ctx, name):
         if self.checkPatternUsed(ctx, name):
-            raise ValueError("that pattern is in use")
+            raise rpadutils.ReportableError("That pattern is in use")
         self.getPatterns(ctx).pop(name)
         self.save_settings()
 
     def addRule(self, ctx, name, list_type):
         patterns = self.getPatterns(ctx)
         if name not in patterns:
-            raise ValueError("couldn't find rule name")
+            raise rpadutils.ReportableError("Couldn't find rule name")
         self.getChannel(ctx)[list_type].append(name)
         self.save_settings()
 
