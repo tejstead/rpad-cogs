@@ -48,6 +48,7 @@ class PadGuide2(object):
     def __init__(self, bot):
         self.bot = bot
         self.settings = PadGuide2Settings("padguide2")
+        self.reload_task = None
 
         self._general_types = [
             PgAttribute,
@@ -89,6 +90,19 @@ class PadGuide2(object):
     def get_monster_by_no(self, monster_no: int):
         """Exported function that allows a client cog to get a full PgMonster by monster_no"""
         return self.database.getMonster(monster_no)
+
+    def register_tasks(self):
+        self.reload_task = self.bot.loop.create_task(self.reload_data_task())
+
+    def __unload(self):
+        # Manually nulling out database because the GC for cogs seems to be pretty shitty
+        self.database = None
+
+        # Interrupt the running refresh task
+        if isinstance(self.reload_task, asyncio.Future):
+            if not self.reload_task.cancelled():
+                self.reload_task.cancel()
+                self.reload_task = None
 
     async def reload_data_task(self):
         await self.bot.wait_until_ready()
@@ -186,7 +200,7 @@ class PadGuide2Settings(CogSettings):
 def setup(bot):
     n = PadGuide2(bot)
     bot.add_cog(n)
-    bot.loop.create_task(n.reload_data_task())
+    n.register_tasks()
 
 
 class PgRawDatabase(object):
