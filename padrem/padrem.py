@@ -284,7 +284,10 @@ class PgRemWrapper:
         for ei in egg_instances:
             rem_monsters = []
             for em in ei.egg_monsters:
-                rem_monsters.append(RemMonster(em.monster))
+                if em.monster is None:
+                    print('REM error: egg monster missing')
+                else:
+                    rem_monsters.append(RemMonster(em.monster))
 
             boost_rate = id_to_boost_map.get(ei.key())
 
