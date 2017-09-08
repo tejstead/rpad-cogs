@@ -98,12 +98,6 @@ class PadGuide2(object):
         # Manually nulling out database because the GC for cogs seems to be pretty shitty
         self.database = None
 
-        # Interrupt the running refresh task
-        if isinstance(self.reload_task, asyncio.Future):
-            if not self.reload_task.cancelled():
-                self.reload_task.cancel()
-                self.reload_task = None
-
     async def reload_data_task(self):
         await self.bot.wait_until_ready()
         while self == self.bot.get_cog('PadGuide2'):
