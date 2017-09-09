@@ -5,6 +5,7 @@ or blacklists to a channel.
 If a violation occurs, the message will be deleted and the user notified.
 """
 
+from _datetime import datetime
 from collections import defaultdict
 from collections import deque
 import copy
@@ -55,6 +56,8 @@ class AutoMod2:
 
         self.settings = AutoMod2Settings("automod2")
         self.channel_user_logs = defaultdict(lambda: deque(maxlen=LOGS_PER_CHANNEL_USER))
+
+        self.server_user_last = defaultdict(dict)
 
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -269,6 +272,92 @@ class AutoMod2:
                                       ','.join(failed_whitelists), msg_content)
             await self.deleteAndReport(message, msg)
 
+    @commands.group(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def watchdog(self, ctx):
+        """User monitoring tools."""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+
+            server_id = ctx.message.server.id
+            msg = 'Watchdog config:'
+            watchdog_channel_id = self.settings.getWatchdogChannel(server_id)
+            if watchdog_channel_id:
+                watchdog_channel = self.bot.get_channel(watchdog_channel_id)
+                if watchdog_channel:
+                    msg += '\nChannel: ' + watchdog_channel.name
+                else:
+                    msg += '\nChannel configured but not found'
+            else:
+                msg += '\nChannel not set'
+
+            for user_id, cooldown in self.settings.getWatchdogUsers(server_id).items():
+                member = ctx.message.server.get_member(user_id)
+                if cooldown and member:
+                    msg += '\nUser {} has cooldown {}'.format(member.name, cooldown)
+
+            await self.bot.say(box(msg))
+
+    @watchdog.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def user(self, ctx, user: discord.User, cooldown: int=None):
+        """Keep an eye on a user.
+
+        Whenever the user speaks in this server, a note will be printed to the watchdog
+        channel, subject to the specified cooldown. Set to 0 to clear.
+        """
+        server_id = ctx.message.server.id
+        if cooldown is None:
+            existing_cd = self.settings.getWatchdogUsers(server_id).get(user.id)
+            if existing_cd is None or existing_cd == 0:
+                await self.bot.say(inline('No watchdog for that user'))
+            else:
+                await self.bot.say(inline('Watchdog set with cooldown of {} seconds'.format(existing_cd)))
+        else:
+            self.settings.setWatchdogUser(ctx.message.server.id, user.id, cooldown)
+            if cooldown == 0:
+                await self.bot.say(inline('Watchdog cleared'))
+            else:
+                await self.bot.say(inline('Watchdog set'))
+
+    @watchdog.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def channel(self, ctx, channel: discord.Channel):
+        """Set the announcement channel."""
+        server_id = ctx.message.server.id
+        self.settings.setWatchdogChannel(server_id, channel.id)
+        await self.bot.say(inline('Watchdog channel set'))
+
+    async def mod_message_watchdog(self, message):
+        user_id = message.author.id
+        if user_id == self.bot.user.id or message.channel.is_private:
+            return
+
+        channel_id = message.channel.id
+        server_id = message.server.id
+
+        watchdog_channel_id = self.settings.getWatchdogChannel(server_id)
+        user_cooldown = self.settings.getWatchdogUsers(server_id).get(user_id, 0)
+
+        if watchdog_channel_id is None or user_cooldown == 0:
+            return
+
+        now = datetime.utcnow()
+        last_spoke_at = self.server_user_last[server_id].get(user_id)
+        self.server_user_last[server_id][user_id] = now
+
+        report = last_spoke_at is None or (now - last_spoke_at).total_seconds() > user_cooldown
+        if report:
+            try:
+                watchdog_channel = self.bot.get_channel(watchdog_channel_id)
+                msg = 'Watchdog: {} spoke in {}'.format(message.author.name, message.channel.name)
+                await self.bot.send_message(watchdog_channel, msg)
+            except Exception as ex:
+                print('failed to watchdog', str(ex))
+
+#         await asyncio.sleep(10)
+#         await self.bot.delete_message(alert_msg)
+
     async def deleteAndReport(self, delete_msg, outgoing_msg):
         try:
             await self.bot.delete_message(delete_msg)
@@ -337,6 +426,7 @@ def setup(bot):
     bot.add_listener(n.mod_message_images, "on_message")
     bot.add_listener(n.mod_message, "on_message")
     bot.add_listener(n.mod_message_edit, "on_message_edit")
+    bot.add_listener(n.mod_message_watchdog, "on_message")
     bot.add_cog(n)
     print('done adding automod2 bot')
 
@@ -351,9 +441,9 @@ class AutoMod2Settings(CogSettings):
     def serverConfigs(self):
         return self.bot_settings['configs']
 
-    def getServer(self, ctx):
+    def getServer(self, ctx, server_id=None):
         configs = self.serverConfigs()
-        server_id = ctx.message.server.id
+        server_id = server_id or ctx.message.server.id
         if server_id not in configs:
             configs[server_id] = {
                 'patterns': {},
@@ -448,4 +538,32 @@ class AutoMod2Settings(CogSettings):
     def setImageLimit(self, ctx, image_limit):
         channel = self.getChannel(ctx)
         channel['image_limit'] = image_limit
+        self.save_settings()
+
+    def getWatchdog(self, server_id):
+        server = self.getServer(None, server_id)
+        key = 'watchdog'
+        if key not in server:
+            server[key] = {}
+        return server[key]
+
+    def getWatchdogChannel(self, server_id):
+        watchdog = self.getWatchdog(server_id)
+        return watchdog.get('announce_channel')
+
+    def setWatchdogChannel(self, server_id, channel_id):
+        watchdog = self.getWatchdog(server_id)
+        watchdog['announce_channel'] = channel_id
+        self.save_settings()
+
+    def getWatchdogUsers(self, server_id):
+        watchdog = self.getWatchdog(server_id)
+        key = 'users'
+        if key not in watchdog:
+            watchdog[key] = {}
+        return watchdog[key]
+
+    def setWatchdogUser(self, server_id, user_id, timeout_secs):
+        watchdog_users = self.getWatchdogUsers(server_id)
+        watchdog_users[user_id] = timeout_secs
         self.save_settings()
