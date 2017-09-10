@@ -114,6 +114,15 @@ class PadGuide2(object):
 
     async def reload_data_task(self):
         await self.bot.wait_until_ready()
+
+        try:
+            # Try and load the PadGuide database the first time with existing files
+            self.database = PgRawDatabase()
+            self._is_ready.set()
+            print('Finished initial PadGuide2 load with existing database')
+        except:
+            print('Initial PadGuide2 database load failed, waiting for download')
+
         while self == self.bot.get_cog('PadGuide2'):
             short_wait = False
             try:
