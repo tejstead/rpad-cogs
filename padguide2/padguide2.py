@@ -15,7 +15,6 @@ from datetime import timedelta
 import difflib
 from enum import Enum
 from itertools import groupby
-from macpath import basename
 from operator import itemgetter
 import os
 import re
@@ -47,6 +46,8 @@ BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
 class PadGuide2(object):
     def __init__(self, bot):
         self.bot = bot
+        self._is_ready = asyncio.Event(loop=self.bot.loop)
+
         self.settings = PadGuide2Settings("padguide2")
         self.reload_task = None
 
@@ -86,6 +87,15 @@ class PadGuide2(object):
 
         self.database = PgRawDatabase(skip_load=True)
 
+    @asyncio.coroutine
+    def wait_until_ready(self):
+        """Wait until the PadGuide2 cog is ready.
+
+        Call this from other cogs to wait until PadGuide2 finishes refreshing its database
+        for the first time.
+        """
+        yield from self._is_ready.wait()
+
     def create_index(self, accept_filter=None):
         """Exported function that allows a client cog to create a monster index"""
         return MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, accept_filter=accept_filter)
@@ -100,6 +110,7 @@ class PadGuide2(object):
     def __unload(self):
         # Manually nulling out database because the GC for cogs seems to be pretty shitty
         self.database = None
+        self._is_ready.clear()
 
     async def reload_data_task(self):
         await self.bot.wait_until_ready()
@@ -107,6 +118,8 @@ class PadGuide2(object):
             short_wait = False
             try:
                 await self.download_and_refresh_nicknames()
+                print('Done refreshing PadGuide2, triggering ready')
+                self._is_ready.set()
             except Exception as ex:
                 short_wait = True
                 print("padguide2 data download/refresh failed", ex)

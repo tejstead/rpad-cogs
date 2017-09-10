@@ -149,26 +149,24 @@ class PadInfo:
         await self.bot.wait_until_ready()
         while self == self.bot.get_cog('PadInfo'):
             try:
-                self.refresh_index()
+                await self.refresh_index()
+                print('Done refreshing PadInfo')
             except Exception as ex:
                 print("reload padinfo loop caught exception " + str(ex))
                 traceback.print_exc()
 
             await asyncio.sleep(60 * 60 * 1)
 
-    def refresh_index(self):
+    async def refresh_index(self):
         """Refresh the monster indexes."""
         pg_cog = self.bot.get_cog('PadGuide2')
+        await pg_cog.wait_until_ready()
         self.index_all = pg_cog.create_index()
         self.index_na = pg_cog.create_index(lambda m: m.on_na)
 
     def get_monster_by_no(self, monster_no: int):
         pg_cog = self.bot.get_cog('PadGuide2')
         return pg_cog.get_monster_by_no(monster_no)
-
-    async def on_ready(self):
-        """ready"""
-        print("started padinfo")
 
     @commands.command(pass_context=True)
     async def skillrotation(self, ctx, server: str='NA'):

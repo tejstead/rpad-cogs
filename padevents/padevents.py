@@ -47,19 +47,20 @@ class PadEvents:
 
     async def reload_padevents(self):
         await self.bot.wait_until_ready()
-        # Sleep 10s to let padguide finish loading
-        await asyncio.sleep(1)
         while self == self.bot.get_cog('PadEvents'):
             try:
-                self.refresh_data()
+                await self.refresh_data()
+                print('Done refreshing PadEvents')
             except Exception as ex:
                 print("reload padevents loop caught exception " + str(ex))
                 traceback.print_exc()
 
             await asyncio.sleep(60 * 60 * 1)
 
-    def refresh_data(self):
-        database = self.bot.get_cog('PadGuide2').database
+    async def refresh_data(self):
+        pg_cog = self.bot.get_cog('PadGuide2')
+        await pg_cog.wait_until_ready()
+        database = pg_cog.database
         scheduled_events = database.all_scheduled_events()
 
         new_events = [Event(se) for se in scheduled_events]

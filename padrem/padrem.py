@@ -49,21 +49,21 @@ class PadRem:
 
     async def reload_padrem(self):
         await self.bot.wait_until_ready()
-        # Sleep 10s to let padguide finish loading
-        await asyncio.sleep(10)
         while self == self.bot.get_cog('PadRem'):
             try:
-                self.refresh_data()
+                await self.refresh_data()
+                print('Done refreshing PadRem')
             except Exception as ex:
                 print("reload padrem loop caught exception " + str(ex))
                 traceback.print_exc()
 
             await asyncio.sleep(60 * 60 * 1)
 
-    def refresh_data(self):
-        database = self.bot.get_cog('PadGuide2').database
+    async def refresh_data(self):
+        pg_cog = self.bot.get_cog('PadGuide2')
+        await pg_cog.wait_until_ready()
+        database = pg_cog.database
         self.pgrem = PgRemWrapper(database, self.settings.getBoosts())
-        print('done refreshing padrem')
 
     @commands.command(name="setboost", pass_context=True)
     @checks.is_owner()
