@@ -291,34 +291,43 @@ class AutoMod2:
             else:
                 msg += '\nChannel not set'
 
-            for user_id, cooldown in self.settings.getWatchdogUsers(server_id).items():
+            for user_id, user_settings in self.settings.getWatchdogUsers(server_id).items():
+                user_cooldown = user_settings['cooldown']
+                request_user_id = user_settings['request_user_id']
+                reason = user_settings['reason'] or 'no reason'
+
+                request_user = ctx.message.server.get_member(request_user_id)
+                request_user_txt = request_user.name if request_user else '???'
                 member = ctx.message.server.get_member(user_id)
                 if cooldown and member:
-                    msg += '\nUser {} has cooldown {}'.format(member.name, cooldown)
+                    msg += '\n{} has cooldown {}, requested by {} because [{}]'.format(
+                        member.name, user_cooldown, request_user_txt, reason)
 
             await self.bot.say(box(msg))
 
     @watchdog.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def user(self, ctx, user: discord.User, cooldown: int=None):
+    async def user(self, ctx, user: discord.User, cooldown: int=None, *, reason: str=''):
         """Keep an eye on a user.
 
         Whenever the user speaks in this server, a note will be printed to the watchdog
-        channel, subject to the specified cooldown. Set to 0 to clear.
+        channel, subject to the specified cooldown in seconds. Set to 0 to clear.
         """
         server_id = ctx.message.server.id
         if cooldown is None:
-            existing_cd = self.settings.getWatchdogUsers(server_id).get(user.id)
-            if existing_cd is None or existing_cd == 0:
+            user_settings = self.settings.getWatchdogUsers(server_id).get(user.id, {})
+            existing_cd = user_settings.get('cooldown', 0)
+            if existing_cd == 0:
                 await self.bot.say(inline('No watchdog for that user'))
             else:
                 await self.bot.say(inline('Watchdog set with cooldown of {} seconds'.format(existing_cd)))
         else:
-            self.settings.setWatchdogUser(ctx.message.server.id, user.id, cooldown)
+            self.settings.setWatchdogUser(
+                server_id, user.id, ctx.message.author.id, cooldown, reason)
             if cooldown == 0:
-                await self.bot.say(inline('Watchdog cleared'))
+                await self.bot.say(inline('Watchdog cleared for {}'.format(user.name)))
             else:
-                await self.bot.say(inline('Watchdog set'))
+                await self.bot.say(inline('Watchdog set on {} with cooldown of {} seconds'.format(user.name, cooldown)))
 
     @watchdog.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -337,10 +346,17 @@ class AutoMod2:
         server_id = message.server.id
 
         watchdog_channel_id = self.settings.getWatchdogChannel(server_id)
-        user_cooldown = self.settings.getWatchdogUsers(server_id).get(user_id, 0)
+        user_settings = self.settings.getWatchdogUsers(server_id).get(user_id)
 
-        if watchdog_channel_id is None or user_cooldown == 0:
+        if watchdog_channel_id is None or user_settings is None:
             return
+
+        user_cooldown = user_settings['cooldown']
+        request_user_id = user_settings['request_user_id']
+        reason = user_settings['reason'] or 'no reason'
+
+        request_user = message.server.get_member(request_user_id)
+        request_user_txt = request_user.mention if request_user else '???'
 
         now = datetime.utcnow()
         last_spoke_at = self.server_user_last[server_id].get(user_id)
@@ -350,13 +366,12 @@ class AutoMod2:
         if report:
             try:
                 watchdog_channel = self.bot.get_channel(watchdog_channel_id)
-                msg = 'Watchdog: {} spoke in {}'.format(message.author.name, message.channel.name)
+                msg = '**Watchdog:** {} spoke in {} ({} monitored because [{}])'.format(
+                    message.author.mention, message.channel.mention,
+                    request_user_txt, reason)
                 await self.bot.send_message(watchdog_channel, msg)
             except Exception as ex:
                 print('failed to watchdog', str(ex))
-
-#         await asyncio.sleep(10)
-#         await self.bot.delete_message(alert_msg)
 
     async def deleteAndReport(self, delete_msg, outgoing_msg):
         try:
@@ -563,7 +578,11 @@ class AutoMod2Settings(CogSettings):
             watchdog[key] = {}
         return watchdog[key]
 
-    def setWatchdogUser(self, server_id, user_id, timeout_secs):
+    def setWatchdogUser(self, server_id, user_id, request_user_id, cooldown_secs, reason):
         watchdog_users = self.getWatchdogUsers(server_id)
-        watchdog_users[user_id] = timeout_secs
+        watchdog_users[user_id] = {
+            'request_user_id': request_user_id,
+            'cooldown': cooldown_secs,
+            'reason': reason,
+        }
         self.save_settings()
