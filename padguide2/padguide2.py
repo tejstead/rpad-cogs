@@ -50,7 +50,7 @@ class PadGuide2(object):
         self.settings = PadGuide2Settings("padguide2")
         self.reload_task = None
 
-        self._general_types = [
+        self._standard_refresh = [
             PgAttribute,
             PgAwakening,
             PgDungeon,
@@ -59,7 +59,6 @@ class PadGuide2(object):
             PgEggInstance,
             PgEggMonster,
             PgEggName,
-            PgEvent,
             PgEvolution,
             PgEvolutionMaterial,
             PgMonster,
@@ -67,12 +66,16 @@ class PadGuide2(object):
             PgMonsterInfo,
             PgMonsterPrice,
             PgSeries,
-            PgScheduledEvent,
             PgSkillLeaderData,
             PgSkill,
             PgSkillRotation,
             PgSkillRotationDated,
             PgType,
+        ]
+
+        self._quick_refresh = [
+            PgEvent,
+            PgScheduledEvent,
         ]
 
         # A string -> int mapping, nicknames to monster_id_na
@@ -158,17 +161,25 @@ class PadGuide2(object):
         return results
 
     async def _download_files(self):
-        # Use a dummy file to proxy for the entire database being out of date
         # twelve hours expiry
-        general_dummy_file = DUMMY_FILE_PATTERN.format('general')
-        general_expiry_secs = 12 * 60 * 60
-        download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, general_expiry_secs)
+        standard_expiry_secs = 12 * 60 * 60
+        # four hours expiry
+        quick_expiry_secs = 4 * 60 * 60
 
-        # Need to add something that downloads if missing
-        for type in self._general_types:
+        # Use a dummy file to proxy for the entire database being out of date
+        general_dummy_file = DUMMY_FILE_PATTERN.format('general')
+        download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, standard_expiry_secs)
+
+        for type in self._standard_refresh:
             endpoint = type.file_name()
             result_file = JSON_FILE_PATTERN.format(endpoint)
-            if download_all or rpadutils.should_download(result_file, general_expiry_secs):
+            if download_all or rpadutils.should_download(result_file, standard_expiry_secs):
+                await rpadutils.async_cached_padguide_request(endpoint, result_file)
+
+        for type in self._quick_refresh:
+            endpoint = type.file_name()
+            result_file = JSON_FILE_PATTERN.format(endpoint)
+            if download_all or rpadutils.should_download(result_file, quick_expiry_secs):
                 await rpadutils.async_cached_padguide_request(endpoint, result_file)
 
         overrides_expiry_secs = 1 * 60 * 60
