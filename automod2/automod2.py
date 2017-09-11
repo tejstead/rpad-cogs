@@ -299,7 +299,7 @@ class AutoMod2:
                 request_user = ctx.message.server.get_member(request_user_id)
                 request_user_txt = request_user.name if request_user else '???'
                 member = ctx.message.server.get_member(user_id)
-                if cooldown and member:
+                if user_cooldown and member:
                     msg += '\n{} has cooldown {}, requested by {} because [{}]'.format(
                         member.name, user_cooldown, request_user_txt, reason)
 
@@ -366,10 +366,10 @@ class AutoMod2:
         if report:
             try:
                 watchdog_channel = self.bot.get_channel(watchdog_channel_id)
-                msg = '**Watchdog:** {} spoke in {} ({} monitored because [{}])'.format(
+                output_msg = '**Watchdog:** {} spoke in {} ({} monitored because [{}])\n{}'.format(
                     message.author.mention, message.channel.mention,
-                    request_user_txt, reason)
-                await self.bot.send_message(watchdog_channel, msg)
+                    request_user_txt, reason, box(message.clean_content))
+                await self.bot.send_message(watchdog_channel, output_msg)
             except Exception as ex:
                 print('failed to watchdog', str(ex))
 
