@@ -352,6 +352,9 @@ class AutoMod2:
             return
 
         user_cooldown = user_settings['cooldown']
+        if user_cooldown <= 0:
+            return
+
         request_user_id = user_settings['request_user_id']
         reason = user_settings['reason'] or 'no reason'
 
@@ -580,9 +583,12 @@ class AutoMod2Settings(CogSettings):
 
     def setWatchdogUser(self, server_id, user_id, request_user_id, cooldown_secs, reason):
         watchdog_users = self.getWatchdogUsers(server_id)
-        watchdog_users[user_id] = {
-            'request_user_id': request_user_id,
-            'cooldown': cooldown_secs,
-            'reason': reason,
-        }
+        if cooldown_secs:
+            watchdog_users[user_id] = {
+                'request_user_id': request_user_id,
+                'cooldown': cooldown_secs,
+                'reason': reason,
+            }
+        else:
+            watchdog_users.pop(user_id, None)
         self.save_settings()
