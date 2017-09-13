@@ -443,6 +443,9 @@ def replace_emoji_names_with_code(emoji_list, msg_text):
     This allows a padglobal admin without nitro to create entries with emojis
     from other servers.
     """
+    # First strip down actual emojis to just the names
+    msg_text = re.sub(r'<(:[0-9a-z_]+:)\d{18}>', r'\1', msg_text, flags=re.IGNORECASE)
+
     # Find all emoji-looking things in the message
     matches = re.findall(r':[0-9a-z_]+:', msg_text, re.IGNORECASE)
     if not matches:
