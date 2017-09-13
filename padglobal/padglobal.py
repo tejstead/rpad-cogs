@@ -28,6 +28,8 @@ PADGLOBAL_COG = None
 
 BLACKLISTED_CHARACTERS = '^[]*`~_'
 
+PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/portrait/{}.png'
+
 
 def is_padglobal_admin_check(ctx):
     return PADGLOBAL_COG.settings.checkAdmin(ctx.message.author.id)
@@ -166,6 +168,7 @@ class PadGlobal:
         command = command.lower()
         text = clean_global_mentions(text)
         text = text.replace(u'\u200b', '')
+        text = replace_emoji_names_with_code(self._get_emojis(), text)
         if command in self.bot.commands.keys():
             await self.bot.say("That is already a standard command.")
             return
@@ -431,6 +434,68 @@ class PadGlobal:
         self.settings.rmAdmin(user.id)
         await self.bot.say("done")
 
+    @padglobal.command(pass_context=True)
+    @checks.is_owner()
+    async def setemojiservers(self, ctx, *, emoji_servers=''):
+        """Set the emoji servers by ID (csv)"""
+        self.settings.emojiServers().clear()
+        if emoji_servers:
+            self.settings.setEmojiServers(emoji_servers.split(','))
+        await self.bot.say(inline('Set {} servers'.format(len(self.settings.emojiServers()))))
+
+    def _get_emojis(self):
+        emojis = list()
+        for server_id in self.settings.emojiServers():
+            emojis.extend(self.bot.get_server(server_id).emojis)
+        return emojis
+
+    @padglobal.command(pass_context=True)
+    async def addemoji(self, ctx, monster_id: int, server: str='jp'):
+        """Create padglobal monster emoji by id..
+
+        Uses jp monster IDs by default. You only need to change to na if you want to add
+        voltron or something.
+
+        If you add a jp ID, it will look like ':pad_123:'.
+        If you add a na ID, it will look like ':pad_na_123:'.
+        """
+        all_emoji_servers = self.settings.emojiServers()
+        if not all_emoji_servers:
+            await self.bot.say('No emoji servers set')
+            return
+
+        if server not in ['na', 'jp']:
+            await self.bot.say('Server must be one of [jp, na]')
+            return
+
+        if monster_id <= 0:
+            await self.bot.say('Invalid monster id')
+            return
+
+        server_ids = self.settings.emojiServers()
+        all_emojis = self._get_emojis()
+
+        source_url = PORTRAIT_TEMPLATE.format(server, monster_id)
+        emoji_name = 'pad_' + ('na_' if server == 'na' else '') + str(monster_id)
+
+        for e in all_emojis:
+            if emoji_name == e.name:
+                await self.bot.say(inline('Already exists'))
+                return
+
+        for server_id in server_ids:
+            emoji_server = self.bot.get_server(server_id)
+            if len(emoji_server.emojis) < 50:
+                break
+
+        try:
+            async with aiohttp.get(source_url) as resp:
+                emoji_content = await resp.read()
+                await self.bot.create_custom_emoji(emoji_server, name=emoji_name, image=emoji_content)
+                await self.bot.say(inline('Done creating emoji named {}'.format(emoji_name)))
+        except Exception as ex:
+            await self.bot.say(box('Error:\n' + str(ex)))
+
     async def checkCC(self, message):
         if len(message.content) < 2:
             return
@@ -624,3 +689,15 @@ class PadGlobalSettings(CogSettings):
         if term in glossary:
             glossary.pop(term)
             self.save_settings()
+
+    def emojiServers(self):
+        key = 'emoji_servers'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = []
+        return self.bot_settings[key]
+
+    def setEmojiServers(self, emoji_servers):
+        es = self.emojiServers()
+        es.clear()
+        es.extend(emoji_servers)
+        self.save_settings()
