@@ -433,6 +433,30 @@ def fix_emojis_for_server(emoji_list, msg_text):
     return msg_text
 
 
+def replace_emoji_names_with_code(emoji_list, msg_text):
+    """Finds emoji-name substrings in msg_text and corrects them.
+
+    If msg_text has something like ':emoji_1_derp:' and emoji_list contains
+    an emoji named 'emoji_1_derp' then the value will replaced with the full
+    emoji id.
+
+    This allows a padglobal admin without nitro to create entries with emojis
+    from other servers.
+    """
+    # Find all emoji-looking things in the message
+    matches = re.findall(r':[0-9a-z_]+:', msg_text, re.IGNORECASE)
+    if not matches:
+        return msg_text
+
+    # For each unique looking emoji thing
+    for m in set(matches):
+        emoji_name = m.strip(':')
+        for e in emoji_list:
+            if e.name == emoji_name:
+                msg_text = msg_text.replace(m, str(e))
+    return msg_text
+
+
 def is_valid_image_url(url):
     url = url.lower()
     return url.startswith('http') and (url.endswith('.png') or url.endswith('.jpg'))
