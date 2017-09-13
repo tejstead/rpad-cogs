@@ -1995,12 +1995,23 @@ class NamedMonsterGroup(object):
         return basename.strip()
 
     def _compute_group_basename(self, monsters):
-        def get_basename(x): return self.monster_no_to_basename[x.monster_no]
-        sorted_monsters = sorted(monsters, key=get_basename)
-        grouped = [(c, len(list(cgen))) for c, cgen in groupby(sorted_monsters, get_basename)]
-        # TODO: best_tuple selection could be better
-        best_tuple = max(grouped, key=itemgetter(1))
-        return best_tuple[0]
+        """Computes the basename for a group of monsters.
+
+        Prefer a basename with the largest count across the group. If all the
+        groups have equal size, prefer the lowest monster number basename.
+        This monster in general has better names, particularly when all the
+        names are unique, e.g. for male/female hunters."""
+        def count_and_id(): return [0, 0]
+        basename_to_info = defaultdict(count_and_id)
+
+        for m in monsters:
+            basename = self.monster_no_to_basename[m.monster_no]
+            entry = basename_to_info[basename]
+            entry[0] += 1
+            entry[1] = max(entry[1], m.monster_no)
+
+        entries = [[count_id[0], -1 * count_id[1], bn] for bn, count_id in basename_to_info.items()]
+        return max(entries)[2]
 
     def _is_low_priority_monster(self, m: PgMonster):
         lp_types = ['evolve', 'enhance', 'protected', 'awoken', 'vendor']
