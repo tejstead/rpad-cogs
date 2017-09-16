@@ -19,6 +19,7 @@ executing a python eval() on it, so some common syntax wont work. Notably, you h
 pow(x, y) instead of x^y. Here is the full symbol whitelist:
 '''
 
+
 class Calculator:
     def __init__(self, bot):
         self.bot = bot
