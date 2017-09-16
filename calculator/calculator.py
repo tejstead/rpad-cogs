@@ -4,8 +4,10 @@ A cloned and improved version of paddo's calculator cog.
 
 from math import *
 import numbers
+import os
 from random import *
 import re
+import shlex
 import subprocess
 import sys
 
@@ -47,6 +49,8 @@ class Calculator:
         cmd = """{} -c "print(eval('{}'), end='', flush=True)" """.format(sys.executable, input)
 
         try:
+            if os.name != 'nt' and sys.platform != 'win32':
+                cmd = shlex.split(cmd)
             output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, timeout=1)
             calc_result = output.decode('utf-8').strip()
         except subprocess.TimeoutExpired:
