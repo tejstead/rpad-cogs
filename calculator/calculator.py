@@ -6,10 +6,14 @@ from math import *
 import numbers
 from random import *
 import re
+import subprocess
+import sys
 
 import discord
 from discord.ext import commands
+
 from cogs.utils.chat_formatting import *
+
 
 ACCEPTED_TOKENS = r'[\[\]\-()*+/0-9=.,% ]|>|<|==|>=|<=|\||&|~|!=|^|sum|range|random|randint|choice|randrange|True|False|if|and|or|else|is|not|for|in|acos|acosh|asin|asinh|atan|atan2|atanh|ceil|copysign|cos|cosh|degrees|e|erf|erfc|exp|expm1|fabs|factorial|floor|fmod|frexp|fsum|gamma|gcd|hypot|inf|isclose|isfinite|isinf|isnan|ldexp|lgamma|log|log10|log1p|log2|modf|nan|pi|pow|radians|sin|sinh|sqrt|tan|tanh|round'
 
@@ -30,7 +34,7 @@ class Calculator:
         help_msg = HELP_MSG + '\n' + ACCEPTED_TOKENS
         await self.bot.whisper(box(help_msg))
 
-    @commands.group(pass_context=True, name='calculator', aliases=['calc'])
+    @commands.command(pass_context=True, name='calculator', aliases=['calc'])
     async def _calc(self, context, *, input):
         '''Use helpcalc for more info.'''
         bad_input = list(filter(None, re.split(ACCEPTED_TOKENS, input)))
@@ -40,15 +44,23 @@ class Calculator:
             await self.bot.say(inline(err_msg + '\n' + help_msg))
             return
 
-        calculate_stuff = eval(input)
-        if len(str(calculate_stuff)) > 0:
-            if isinstance(calculate_stuff, numbers.Number):
-                if calculate_stuff > 1:
-                    calculate_stuff = round(calculate_stuff, 3)
+        cmd = """{} -c "print(eval('{}'), end='', flush=True)" """.format(sys.executable, input)
+
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, timeout=1)
+            calc_result = output.decode('utf-8').strip()
+        except subprocess.TimeoutExpired:
+            await self.bot.say(inline('Command took too long to execute. Quit trying to break the bot.'))
+            return
+
+        if len(str(calc_result)) > 0:
+            if isinstance(calc_result, numbers.Number):
+                if calc_result > 1:
+                    calc_result = round(calc_result, 3)
 
             em = discord.Embed(color=discord.Color.blue())
             em.add_field(name='Input', value='`{}`'.format(input))
-            em.add_field(name='Result', value=calculate_stuff)
+            em.add_field(name='Result', value=calc_result)
             await self.bot.say(embed=em)
 
 
