@@ -47,6 +47,10 @@ class PadRem:
 
         self.pgrem = PgRemWrapper(None, {}, skip_load=True)
 
+    def __unload(self):
+        # Manually nulling out database because the GC for cogs seems to be pretty shitty
+        self.pgrem = PgRemWrapper(None, {}, skip_load=True)
+
     async def reload_padrem(self):
         await self.bot.wait_until_ready()
         while self == self.bot.get_cog('PadRem'):
