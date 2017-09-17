@@ -109,9 +109,6 @@ def get_pic_url(m):
         return RPAD_PIC_TEMPLATE.format('jp', m.monster_no_jp)
 
 
-EXPOSED_PAD_INFO = None
-
-
 class PadInfo:
     def __init__(self, bot):
         self.bot = bot
@@ -122,9 +119,6 @@ class PadInfo:
         self.index_na = padguide2.empty_index()
 
         self.menu = Menu(bot)
-
-        global EXPOSED_PAD_INFO
-        EXPOSED_PAD_INFO = self
 
         # These emojis are the keys into the idmenu submenus
         self.id_emoji = '\N{INFORMATION SOURCE}'
@@ -144,6 +138,12 @@ class PadInfo:
             dataIO.save_json(self.historic_lookups_file_path, {})
 
         self.historic_lookups = dataIO.load_json(self.historic_lookups_file_path)
+
+    def __unload(self):
+        # Manually nulling out database because the GC for cogs seems to be pretty shitty
+        self.index_all = padguide2.empty_index()
+        self.index_na = padguide2.empty_index()
+        self.historic_lookups = {}
 
     async def reload_nicknames(self):
         await self.bot.wait_until_ready()
@@ -289,6 +289,14 @@ class PadInfo:
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             await self._do_idmenu(ctx, m, self.pic_emoji)
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
+    @commands.command(pass_context=True)
+    async def otherinfo(self, ctx, *, query):
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            await self._do_idmenu(ctx, m, self.other_info_emoji)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
