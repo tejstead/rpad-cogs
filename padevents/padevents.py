@@ -45,6 +45,11 @@ class PadEvents:
 
         self.fake_uid = -999
 
+    def __unload(self):
+        # Manually nulling out database because the GC for cogs seems to be pretty shitty
+        self.events = list()
+        self.started_events = set()
+
     async def reload_padevents(self):
         await self.bot.wait_until_ready()
         while self == self.bot.get_cog('PadEvents'):
