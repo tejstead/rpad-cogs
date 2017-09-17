@@ -517,7 +517,6 @@ class PadGlobal:
         cmd = self.format_cc(result, message)
 
         emoji_list = message.server.emojis if message.server else []
-        result = fix_emojis_for_server(emoji_list, result)
         await self.bot.send_message(message.channel, result)
 
     def _lookup_command(self, cmd):
