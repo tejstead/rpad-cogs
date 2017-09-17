@@ -1778,7 +1778,7 @@ class MonsterIndex(object):
             for monster in mg.members:
                 if accept_filter and not accept_filter(monster):
                     continue
-                prefixes = self.compute_prefixes(monster)
+                prefixes = self.compute_prefixes(monster, mg)
                 extra_nicknames = monster_no_na_to_nicknames[monster.monster_no_na]
                 named_monster = NamedMonster(monster, named_mg, prefixes, extra_nicknames)
                 named_monsters.append(named_monster)
@@ -1813,7 +1813,7 @@ class MonsterIndex(object):
     def init_index(self):
         pass
 
-    def compute_prefixes(self, m: PgMonster):
+    def compute_prefixes(self, m: PgMonster, mg: MonsterGroup):
         prefixes = set()
 
         attr1_short_prefixes = self.attr_short_prefix_map[m.attr1]
@@ -1864,6 +1864,17 @@ class MonsterIndex(object):
         elif m.cur_evo_type == EvoType.UuvoReincarnated and not awoken_or_revo:
             prefixes.add('uuvo')
             prefixes.add('uuevo')
+
+        # If any monster in the group is a pixel, add 'nonpixel' to all the versions
+        # without pixel in the name. Add 'pixel' as a prefix to the ones with pixel in the name.
+        def is_pixel(n):
+            n = n.name_na.lower()
+            return n.startswith('pixel') or n.startswith('ドット')
+
+        for gm in mg.members:
+            if is_pixel(gm):
+                prefixes.add('pixel' if is_pixel(m) else 'nonpixel')
+                break
 
         # Collab prefixes
         prefixes.update(self.series_to_prefix_map.get(m.series.tsr_seq, []))
