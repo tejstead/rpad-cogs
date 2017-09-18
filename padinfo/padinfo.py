@@ -739,22 +739,23 @@ def monsterToOtherInfoEmbed(m: padguide2.PgMonster):
     body_text = box(tbl.get_string())
 
     search_text = YT_SEARCH_TEMPLATE.format(m.name_jp)
-    body_text += "\nJP Name: [{}]({})".format(m.name_jp, search_text)
+    body_text += "\n**JP Name**: [{}]({})".format(m.name_jp, search_text)
 
     if m.history_us:
-        body_text += '\nHistory: {}'.format(m.history_us)
+        body_text += '\n**History:** {}'.format(m.history_us)
 
-    body_text += '\nSeries: {}'.format(m.series.name)
-    body_text += '\nSell MP: {:,}'.format(m.sell_mp)
+    body_text += '\n**Series:** {}'.format(m.series.name)
+    body_text += '\n**Sell MP:** {:,}'.format(m.sell_mp)
     if m.buy_mp > 0:
-        body_text += "  Buy MP: {:,}".format(m.buy_mp)
+        body_text += "  **Buy MP:** {:,}".format(m.buy_mp)
 
     if m.exp < 1000000:
         xp_text = '{:,}'.format(m.exp)
     else:
         xp_text = '{:.1f}'.format(m.exp / 1000000).rstrip('0').rstrip('.') + 'M'
-    body_text += '\nXP to Max: {}'.format(xp_text)
-    body_text += '  Max Level: {}'.format(m.max_level)
+    body_text += '\n**XP to Max:** {}'.format(xp_text)
+    body_text += '  **Max Level:**: {}'.format(m.max_level)
+    body_text += '\n**Rarity:** {} **Cost:** {}'.format(m.rarity, m.cost)
 
     embed.description = body_text
 
