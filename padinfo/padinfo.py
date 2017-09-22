@@ -846,6 +846,7 @@ AWAKENING_NAME_MAP_RPAD = {
     'Extend Time': 'misc_te',
     'Two-Pronged Attack': 'misc_tpa',
     'Damage Void Shield Penetration': 'misc_voidshield',
+    'Awoken Assist': 'misc_assist',
 
     'Enhanced Fire Orbs': 'oe_fire',
     'Enhanced Water Orbs': 'oe_water',
@@ -906,6 +907,7 @@ AWAKENING_NAME_MAP = {
     'Guard Break': 'DEF-BREAK',
     'Additional Attack': 'EXTRA-ATK',
     'Damage Void Shield Penetration': 'VOID-BREAK',
+    'Awoken Assist': 'ASSIST',
 
     'Resistance-Bind': 'RES-BIND',
     'Resistance-Dark': 'RES-BLIND',
