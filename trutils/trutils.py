@@ -14,6 +14,7 @@ import urllib.parse
 import discord
 from discord.ext import commands
 
+from __main__ import set_cog
 from __main__ import user_allowed, send_cmd_help
 from google.cloud import vision
 
@@ -391,7 +392,9 @@ class TrUtils:
             if cog is None:
                 await self.bot.say('{} not loaded, trying to load it...'.format(cog_name))
                 try:
-                    owner_cog._load_cog('cogs.{}'.format(cog_name.lower()))
+                    module = 'cogs.{}'.format(cog_name.lower())
+                    owner_cog._load_cog(module)
+                    set_cog(module, True)
                 except Exception as e:
                     await self.bot.say(box("Loading cog failed: {}: {}".format(e.__class__.__name__, str(e))))
         await self.bot.say('Done!')
@@ -543,6 +546,57 @@ class TrUtils:
             if blacklist in l.description.lower():
                 return True
         return False
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def addroleall(self, ctx, rolename: str):
+        """Ensures that everyone in the server has a role."""
+        role = get_role(ctx.message.server.roles, rolename)
+        server = ctx.message.server
+        members = server.members
+
+        def ignore_role_fn(m: discord.Member):
+            return role in m.roles
+
+        async def change_role_fn(m: discord.Member):
+            await self.bot.add_roles(m, role)
+
+        await self.bot.say(inline("About to ensure that all {} members in the server have role: {}".format(len(members), role.name)))
+        await self._do_all_members(members, ignore_role_fn, change_role_fn)
+        await self.bot.say("done")
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def rmroleall(self, ctx, rolename: str):
+        """Ensures that everyone in the server does not have a role."""
+        role = get_role(ctx.message.server.roles, rolename)
+        server = ctx.message.server
+        members = server.members
+
+        def ignore_role_fn(m: discord.Member):
+            return role not in m.roles
+
+        async def change_role_fn(m: discord.Member):
+            await self.bot.remove_roles(m, role)
+
+        await self.bot.say(inline("About to ensure that all {} members in the server do not have role: {}".format(len(members), role.name)))
+        await self._do_all_members(members, ignore_role_fn, change_role_fn)
+        await self.bot.say("done")
+
+    async def _do_all_members(self, members, ignore_role_fn, per_member_asyncfn):
+        changed, ignored, errors = 0, 0, 0
+        for m in members:
+            if ignore_role_fn(m):
+                ignored += 1
+            else:
+                try:
+                    await per_member_asyncfn(m)
+                    await asyncio.sleep(1)
+                    changed += 1
+                except:
+                    errors += 1
+            if (changed + ignored + errors) % 10 == 0:
+                await self.bot.say(inline('Status: changed={} ignored={} errors={}'.format(changed, ignored, errors)))
 
 
 def setup(bot):
