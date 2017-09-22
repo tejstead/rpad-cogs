@@ -583,6 +583,25 @@ class TrUtils:
         await self._do_all_members(members, ignore_role_fn, change_role_fn)
         await self.bot.say("done")
 
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def addroleallrole(self, ctx, srcrolename: str, newrolename: str):
+        """Ensures that everyone in the with srcrolename server has a newrolename."""
+        srcrole = get_role(ctx.message.server.roles, srcrolename)
+        newrole = get_role(ctx.message.server.roles, newrolename)
+        server = ctx.message.server
+        members = server.members
+
+        def ignore_role_fn(m: discord.Member):
+            return srcrole not in m.roles or newrole in m.roles
+
+        async def change_role_fn(m: discord.Member):
+            await self.bot.add_roles(m, newrole)
+
+        await self.bot.say(inline("About to ensure that all members in the server with role {} have role: {}".format(srcrole.name, newrole.name)))
+        await self._do_all_members(members, ignore_role_fn, change_role_fn)
+        await self.bot.say("done")
+
     async def _do_all_members(self, members, ignore_role_fn, per_member_asyncfn):
         changed, ignored, errors = 0, 0, 0
         for m in members:
