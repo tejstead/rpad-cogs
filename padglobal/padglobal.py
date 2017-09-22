@@ -22,6 +22,7 @@ PAD Global Commands
 ^padfaq   : FAQ command list
 ^boards   : optimal boards
 ^glossary : common PAD definitions
+^which    : which monster evo info
 """
 
 PADGLOBAL_COG = None
@@ -378,7 +379,7 @@ class PadGlobal:
 
     def glossary_to_text(self):
         glossary = self.settings.glossary()
-        msg = '__**PAD Glossary terms (also check out ^pad / ^padfaq / ^boards)**__'
+        msg = '__**PAD Glossary terms (also check out ^pad / ^padfaq / ^boards / ^which)**__'
         for term in sorted(glossary.keys()):
             definition = glossary[term]
             msg += '\n**{}** : {}'.format(term, definition)
@@ -411,13 +412,73 @@ class PadGlobal:
         e.x. ^padglobal addglossary alb Awoken Liu Bei
         e.x. ^padglobal addglossary "never dathena" NA will never get dathena
         """
-        self.settings.addGlossary(term.lower(), definition)
-        await self.bot.say("done")
+        term = term.lower()
+        op = 'EDITED' if term in self.settings.glossary() else 'ADDED'
+        self.settings.addGlossary(term, definition)
+        await self.bot.say("PAD glossary term successfully {}.".format(op))
 
     @padglobal.command(pass_context=True)
     async def rmglossary(self, ctx, *, term):
         """Removes a term from the glossary."""
         self.settings.rmGlossary(term.lower())
+        await self.bot.say("done")
+
+    @commands.command(pass_context=True)
+    async def which(self, ctx, *, term: str=None):
+        """Shows PAD Which Monster entries"""
+        if term:
+            corrected_term, definition = self.lookup_which(term)
+            if definition:
+                if term != corrected_term:
+                    await self.bot.say(inline('Corrected to: {}'.format(corrected_term)))
+                await self.bot.say(definition)
+            else:
+                await self.bot.say(inline('No which info found'))
+            return
+
+        msg = self.which_to_text()
+        for page in pagify(msg):
+            await self.bot.whisper(page)
+
+    def which_to_text(self):
+        which = self.settings.which()
+        msg = '__**PAD Which Monster (also check out ^pad / ^padfaq / ^boards / ^glossary)**__'
+        msg += '```\n{}```'.format(', '.join(which))
+        return msg
+
+    def lookup_which(self, term):
+        which = self.settings.which()
+        term = term.lower().replace('?', '')
+        definition = which.get(term, None)
+
+        if definition:
+            return term, definition
+
+        matches = difflib.get_close_matches(term, which.keys(), n=1, cutoff=.8)
+
+        if not matches:
+            return term, None
+        else:
+            term = matches[0]
+            return term, which[term]
+
+    @padglobal.command(pass_context=True)
+    async def addwhich(self, ctx, name, *, definition):
+        """Adds an entry to the which monster evo list.
+        If you want to use a multiple word name, enclose it in quotes.
+
+        e.x. ^padglobal addwhich terra take the pixel one
+        e.x. ^padglobal addwhich "trance terra" take the pixel one
+        """
+        name = name.lower()
+        op = 'EDITED' if name in self.settings.glossary() else 'ADDED'
+        self.settings.addWhich(name, definition)
+        await self.bot.say("PAD which info successfully {}.".format(op))
+
+    @padglobal.command(pass_context=True)
+    async def rmwhich(self, ctx, *, name):
+        """Removes an entry from the which monster evo list."""
+        self.settings.rmWhich(name.lower())
         await self.bot.say("done")
 
     @padglobal.command(pass_context=True)
@@ -508,6 +569,9 @@ class PadGlobal:
         cmd = message.content[len(prefix):]
         final_cmd = self._lookup_command(cmd)
         if final_cmd is None:
+            # Temporary redirect to ^which
+            if cmd.startswith('which') and len(cmd) > len('which') and not cmd.startswith('which '):
+                await self.bot.send_message(message.channel, inline('^which is now a dedicated command, try that instead'))
             return
 
         if final_cmd != cmd:
@@ -619,6 +683,7 @@ class PadGlobalSettings(CogSettings):
             'faq': [],
             'boards': [],
             'glossary': {},
+            'which': {},
         }
         return config
 
@@ -687,6 +752,22 @@ class PadGlobalSettings(CogSettings):
         glossary = self.glossary()
         if term in glossary:
             glossary.pop(term)
+            self.save_settings()
+
+    def which(self):
+        key = 'which'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = {}
+        return self.bot_settings[key]
+
+    def addWhich(self, name, text):
+        self.which()[name] = text
+        self.save_settings()
+
+    def rmWhich(self, name):
+        which = self.which()
+        if name in which:
+            which.pop(name)
             self.save_settings()
 
     def emojiServers(self):
