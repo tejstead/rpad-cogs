@@ -471,7 +471,7 @@ class PadGlobal:
         e.x. ^padglobal addwhich "trance terra" take the pixel one
         """
         name = name.lower()
-        op = 'EDITED' if name in self.settings.glossary() else 'ADDED'
+        op = 'EDITED' if name in self.settings.which() else 'ADDED'
         self.settings.addWhich(name, definition)
         await self.bot.say("PAD which info successfully {}.".format(op))
 
