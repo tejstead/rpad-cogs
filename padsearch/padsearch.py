@@ -8,14 +8,17 @@ from png import itertools
 
 from __main__ import user_allowed, send_cmd_help
 
+from . import rpadutils
 from .utils import checks
 from .utils.chat_formatting import box, inline
+
 
 HELP_MSG = """
 ^search <specification string>
 
 Colors can be any of:
   fire water wood light dark
+Additionally, orb colors can be any of:
   heart jammer poison mortal
 
 Options which take multiple colors should be comma-separated.
@@ -31,7 +34,9 @@ Single instance filters
 Multiple instance filters 
 * active(str)     : Active skill name/description
 * board(colors,)  : Board change to a comma-sep list of colors
+* color(color)    : Primary monster color
 * column(color)   : Creates a column of a color
+* hascolor(color) : Primary or secondary monster color
 * leader(str)     : Leader skill description
 * name(str)       : Monster name 
 * row(color)      : Creates a row of a color
@@ -41,6 +46,13 @@ Coming soon:
 * convert(c1, c2) : Convert from color 1 to color 2
 """
 
+COLORS = [
+    'fire',
+    'water',
+    'wood',
+    'light',
+    'dark',
+]
 
 TYPES = [
     "attacker",
@@ -72,23 +84,49 @@ ORB_TYPES = [
 
 
 def assert_color(value):
-    if value not in ORB_TYPES:
-        raise Exception('Unexpected orb {}, expected one of {}'.format(value, ORB_TYPES))
+    value = replace_named_color(value)
+    if value not in COLORS:
+        raise Exception('Unexpected color {}, expected one of {}'.format(value, COLORS))
     return value
 
 
-def assert_colors(values):
-    for value in values:
-        assert_color(value)
-    return values
+def assert_orbcolor(value):
+    value = replace_named_color(value)
+    if value not in ORB_TYPES:
+        raise rpadutils.ReportableError(
+            'Unexpected orb {}, expected one of {}'.format(value, ORB_TYPES))
+    return value
 
 
-def split_csv_colors(value):
+def assert_orbcolors(values):
+    return [assert_orbcolor(c) for c in values]
+
+
+def split_csv_orbcolors(value):
     parts = [p.strip() for p in value.split(',')]
-    return assert_colors(parts)
+    return assert_orbcolors(parts)
 
 
-def replace_colors(text: str):
+COLOR_REPLACEMENTS = {
+    'red': 'fire',
+    'r': 'fire',
+    'blue': 'water',
+    'b': 'water',
+    'green': 'wood',
+    'g': 'wood',
+    'l': 'light',
+    'd': 'dark',
+    'heart': 'heal',
+    'h': 'heal',
+}
+
+
+def replace_named_color(color: str):
+    color = color.lower().strip()
+    return COLOR_REPLACEMENTS.get(color, color)
+
+
+def replace_colors_in_text(text: str):
     text = text.replace('red', 'fire')
     text = text.replace('blue', 'water')
     text = text.replace('green', 'wood')
@@ -130,8 +168,10 @@ class PadSearchLexer(object):
         'ACTIVE',
         'BOARD',
         'CD',
+        'COLOR',
         'COLUMN',
         'FARMABLE',
+        'HASCOLOR',
         'HASTE',
         'INHERITABLE',
         'LEADER',
@@ -145,13 +185,13 @@ class PadSearchLexer(object):
     def t_ACTIVE(self, t):
         r'active\(.+?\)'
         t.value = clean_name(t.value, 'active')
-        t.value = replace_colors(t.value)
+        t.value = replace_colors_in_text(t.value)
         return t
 
     def t_BOARD(self, t):
         r'board\([a-zA-z, ]+\)'
         t.value = clean_name(t.value, 'board')
-        t.value = replace_colors(t.value)
+        t.value = replace_colors_in_text(t.value)
         return t
 
     def t_CD(self, t):
@@ -160,14 +200,26 @@ class PadSearchLexer(object):
         t.value = int(t.value)
         return t
 
+    def t_COLOR(self, t):
+        r'color\([a-zA-z]+\)'
+        t.value = clean_name(t.value, 'color')
+        t.value = replace_colors_in_text(t.value)
+        return t
+
     def t_COLUMN(self, t):
         r'column\([a-zA-z]+\)'
         t.value = clean_name(t.value, 'column')
-        t.value = replace_colors(t.value)
+        t.value = replace_colors_in_text(t.value)
         return t
 
     def t_FARMABLE(self, t):
         r'farmable(\(\))?'
+        return t
+
+    def t_HASCOLOR(self, t):
+        r'hascolor\([a-zA-z]+\)'
+        t.value = clean_name(t.value, 'hascolor')
+        t.value = replace_colors_in_text(t.value)
         return t
 
     def t_HASTE(self, t):
@@ -183,7 +235,7 @@ class PadSearchLexer(object):
     def t_LEADER(self, t):
         r'leader\(.+?\)'
         t.value = clean_name(t.value, 'leader')
-        t.value = replace_colors(t.value)
+        t.value = replace_colors_in_text(t.value)
         return t
 
     def t_NAME(self, t):
@@ -194,7 +246,7 @@ class PadSearchLexer(object):
     def t_ROW(self, t):
         r'row\([a-zA-Z]+\)'
         t.value = clean_name(t.value, 'row')
-        t.value = replace_colors(t.value)
+        t.value = replace_colors_in_text(t.value)
         return t
 
     def t_SHUFFLE(self, t):
@@ -234,6 +286,8 @@ class SearchConfig(object):
         self.active = []
         self.board = []
         self.column = []
+        self.color = []
+        self.hascolor = []
         self.leader = []
         self.name = []
         self.row = []
@@ -252,15 +306,19 @@ class SearchConfig(object):
             if type == 'ACTIVE':
                 self.active.append(value)
             if type == 'BOARD':
-                self.board.append(split_csv_colors(value))
+                self.board.append(split_csv_orbcolors(value))
+            if type == 'COLOR':
+                self.color.append(assert_color(value))
             if type == 'COLUMN':
-                self.column.append(assert_colors(value))
+                self.column.append(assert_orbcolor(value))
+            if type == 'HASCOLOR':
+                self.hascolor.append(assert_color(value))
             if type == 'LEADER':
                 self.leader.append(value)
             if type == 'NAME':
                 self.name.append(value)
             if type == 'ROW':
-                self.row.append(assert_colors(value))
+                self.row.append(assert_orbcolor(value))
             if type == 'TYPE':
                 if value not in TYPES:
                     raise Exception('Unexpected type {}, expected one of {}'.format(value, TYPES))
@@ -304,6 +362,13 @@ class SearchConfig(object):
                 filters.append(board_filter(colors))
             self.filters.append(self.or_filters(filters))
 
+        if self.color:
+            filters = []
+            for ft in self.color:
+                text = ft.lower()
+                filters.append(lambda m, c=text: c in m.search.color)
+            self.filters.append(self.or_filters(filters))
+
         if self.column:
             filters = []
             for ft in self.column:
@@ -312,6 +377,13 @@ class SearchConfig(object):
                     filters.append(lambda m: m.search.column_convert)
                 else:
                     filters.append(lambda m, t=text: t in m.search.column_convert)
+            self.filters.append(self.or_filters(filters))
+
+        if self.hascolor:
+            filters = []
+            for ft in self.hascolor:
+                text = ft.lower()
+                filters.append(lambda m, c=text: c in m.search.hascolor)
             self.filters.append(self.or_filters(filters))
 
         if self.leader:
@@ -391,11 +463,7 @@ class PadSearch:
         lexer = PadSearchLexer().build()
         lexer.input(filter_spec)
 
-        try:
-            config = SearchConfig(lexer)
-        except Exception as ex:
-            await self.bot.say(inline(str(ex)))
-            return
+        config = SearchConfig(lexer)
 
         pg_cog = self.bot.get_cog('PadGuide2')
         monsters = pg_cog.database.all_monsters()
