@@ -1002,6 +1002,9 @@ class MonsterSearchHelper(object):
         self.active_min = m.active_skill.turn_min if m.active_skill else None
         self.active_max = m.active_skill.turn_max if m.active_skill else None
 
+        self.color = [m.attr1.name.lower()]
+        self.hascolor = [c.name.lower() for c in [m.attr1, m.attr2] if c]
+
         self.types = [t.lower() for t in [m.type1, m.type2, m.type3] if t]
 
         def replace_colors(text: str):
