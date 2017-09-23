@@ -1848,7 +1848,7 @@ class MonsterIndex(object):
         lower_name = m.name_na.lower()
         awoken = lower_name.startswith('awoken') or '覚醒' in lower_name
         revo = lower_name.startswith('reincarnated') or '転生' in lower_name
-        awoken_or_revo = awoken or revo
+        awoken_or_revo_or_equip = awoken or revo or m.is_equip
 
         # These clauses need to be separate to handle things like 'Awoken Thoth' which are
         # actually Evos but have awoken in the name
@@ -1865,10 +1865,10 @@ class MonsterIndex(object):
             prefixes.add('base')
         elif m.cur_evo_type == EvoType.Evo:
             prefixes.add('evo')
-        elif m.cur_evo_type == EvoType.UvoAwoken and not awoken_or_revo:
+        elif m.cur_evo_type == EvoType.UvoAwoken and not awoken_or_revo_or_equip:
             prefixes.add('uvo')
             prefixes.add('uevo')
-        elif m.cur_evo_type == EvoType.UuvoReincarnated and not awoken_or_revo:
+        elif m.cur_evo_type == EvoType.UuvoReincarnated and not awoken_or_revo_or_equip:
             prefixes.add('uuvo')
             prefixes.add('uuevo')
 
