@@ -910,6 +910,8 @@ class PgMonster(PgItem):
         self.server_actives = {}  # str(NA, JP) -> PgSkill
         self.future_skillup_rotation = {}
 
+        self.is_equip = False
+
     def key(self):
         return self.monster_no
 
@@ -964,6 +966,8 @@ class PgMonster(PgItem):
         else:
             has_awakenings = len(self.awakenings) > 0
             self.is_inheritable = has_awakenings and self.rarity >= 5 and self.sell_mp >= 3000
+
+        self.is_equip = 'Awoken Assist' in [a.get_name() for a in self.awakenings]
 
         if self.evo_from is None:
             def link(m: PgMonster, alt_evos: list):
@@ -1879,6 +1883,10 @@ class MonsterIndex(object):
                 prefixes.add('pixel' if is_pixel(m) else 'nonpixel')
                 break
 
+        if m.is_equip:
+            prefixes.add('assist')
+            prefixes.add('equip')
+
         # Collab prefixes
         prefixes.update(self.series_to_prefix_map.get(m.series.tsr_seq, []))
 
@@ -2037,7 +2045,8 @@ class NamedMonsterGroup(object):
         failed_ss = any([x in name for x in lp_substrings])
         failed_rarity = m.rarity < lp_min_rarity
         failed_chibi = name == m.name_na and m.name_na != m.name_jp
-        return failed_type or failed_ss or failed_rarity or failed_chibi
+        failed_equip = m.is_equip
+        return failed_type or failed_ss or failed_rarity or failed_chibi or failed_equip
 
     def _is_low_priority_group(self, mg: MonsterGroup):
         lp_grp_min_rarity = 5
@@ -2059,7 +2068,7 @@ class NamedMonster(object):
         self.prefixes = prefixes
 
         # Data used to determine how to rank the nicknames
-        self.is_low_priority = monster_group.is_low_priority
+        self.is_low_priority = monster_group.is_low_priority or monster.is_equip
         self.group_size = monster_group.group_size
         self.rarity = monster.rarity
 
