@@ -617,6 +617,26 @@ class TrUtils:
             if (changed + ignored + errors) % 10 == 0:
                 await self.bot.say(inline('Status: changed={} ignored={} errors={}'.format(changed, ignored, errors)))
 
+    @commands.command(pass_context=True)
+    @checks.is_owner()
+    async def superfuckingban(self, ctx, user: discord.User):
+        """Really fucking bans someone.
+
+        This will ban a user from every server that the bot can ban them from. Use with caution.
+        """
+        msg = 'Report:'
+        for server in self.bot.servers:
+            m = server.get_member(user.id)
+            if m is None:
+                msg += '\n\tUser not in {}'.format(server.name)
+                continue
+            try:
+                self.bot.ban(m, delete_message_days=0)
+                msg += '\n\tBanned from {}'.format(server.name)
+            except Exception as ex:
+                msg += '\n\tFailed to ban from {} because {}'.format(server.name, ex)
+        await self.bot.say(box(msg))
+
 
 def setup(bot):
     print('trutils bot setup')
