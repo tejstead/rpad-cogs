@@ -149,7 +149,7 @@ class PadGlobal:
         padguide_cog = self.bot.get_cog('PadGuide2')
         await padguide_cog.reload_config_files()
         padinfo_cog = self.bot.get_cog('PadInfo')
-        padinfo_cog.refresh_index()
+        await padinfo_cog.refresh_index()
         await self.bot.say('finished reload')
 
     @commands.group(pass_context=True)
