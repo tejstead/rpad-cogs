@@ -30,6 +30,49 @@ from .utils.settings import Settings
 
 LOGS_PER_CHANNEL_USER = 5
 
+AUTOMOD_HELP = """
+Automod works by creating named global patterns, and then applying them in
+specific channels as either whitelist or blacklist rules. This allows you
+to customize what text can be typed in a channel. Text from moderators is
+always ignored by this cog.
+
+Check out [p]listpatterns to see the current server-specific list of patterns.
+
+Each pattern has an 'include' component and an 'exclude' component. If text
+matches the include, then the rule matches. If it subsequently matches the
+exclude, then it does not match.
+
+Here's an example pattern:
+Rule Name                              Include regex        Exclude regex
+-----------------------------------------------------------------------------
+messages must start with a room code   ^\d{4}\s?\d{4}.*     .*test.*
+
+This pattern will match values like:
+  12345678 foo fiz
+  1234 5678 bar baz
+
+However, if the pattern contains 'test', it won't match:
+  12345678 foo fiz test bar baz
+
+To add the pattern, you'd use the following command:
+[p]automod2 addpattern "messages must start with a room code" "^\d{4}\s?\d{4}.*" ".*test.*"
+
+Remember that to bundle multiple words together you need to surround the
+argument with quotes, as above.
+
+Once you've added a pattern, you need to enable it in a channel using one
+of [p]addwhitelist or [p]addblacklist, e.g.:
+  ^automod2 addwhitelist "messages must start with a room code"
+
+If a channel has any whitelists, then text typed in the channel must match
+AT LEAST one whitelist, or it will be deleted. If ANY blacklist is matched
+the text will be deleted.
+
+You can see what patterns are enabled in a channel using [p]automod2 listrules
+
+You can also prevent users from spamming images using [p]automod2 imagelimit
+"""
+
 
 def linked_img_count(message):
     return len(message.embeds) + len(message.attachments)
@@ -59,49 +102,22 @@ class AutoMod2:
 
         self.server_user_last = defaultdict(dict)
 
+    @commands.command()
+    @checks.mod_or_permissions(manage_server=True)
+    async def automodhelp(self):
+        """Sends you info on how to use automod."""
+        for page in pagify(AUTOMOD_HELP, delims=['\n'], shorten_by=8):
+            await self.bot.whisper(box(page))
+
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def automod2(self, context):
         """AutoMod2 tools.
 
         This cog works by creating named global patterns, and then applying them in
-        specific channels as either whitelist or blacklist rules. This allows you
-        to customize what text can be typed in a channel. Text from moderators is
-        always ignored by this cog.
+        specific channels as either whitelist or blacklist rules.
 
-        Check out [p]listpatterns to see the current server-specific list of patterns.
-
-        Each pattern has an 'include' component and an 'exclude' component. If text
-        matches the include, then the rule matches. If it subsequently matches the
-        exclude, then it does not match.
-
-        Here's an example pattern:
-        Rule Name                              Include regex        Exclude regex
-        -----------------------------------------------------------------------------
-        messages must start with a room code   ^\d{4}\s?\d{4}.*     .*test.*
-
-        This pattern will match values like:
-          12345678 foo fiz
-          1234 5678 bar baz
-
-        However, if the pattern contains 'test', it won't match:
-          12345678 foo fiz test bar baz
-
-        To add the pattern, you'd use the following command:
-        [p]automod2 addpattern "messages must start with a room code" "^\d{4}\s?\d{4}.*" ".*test.*"
-
-        Remember that to bundle multiple words together you need to surround the
-        argument with quotes, as above.
-
-        Once you've added a pattern, you need to enable it in a channel using one
-        of [p]addwhitelist or [p]addblacklist, e.g.:
-          ^automod2 addwhitelist "messages must start with a room code"
-
-        If a channel has any whitelists, then text typed in the channel must match
-        AT LEAST one whitelist, or it will be deleted. If ANY blacklist is matched
-        the text will be deleted.
-
-        You can see what patterns are enabled in a channel using [p]automod2 listrules
+        For more information, use [p]automodhelp
         """
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
