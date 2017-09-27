@@ -637,6 +637,53 @@ class TrUtils:
                 msg += '\n\tFailed to ban from {} because {}'.format(server.name, ex)
         await self.bot.say(box(msg))
 
+    @commands.command(pass_context=True)
+    @commands.cooldown(1, 60, commands.BucketType.user)
+    async def feedback(self, ctx, *, message: str):
+        """Provide feedback on the bot.
+
+        Use this command to provide feedback on the bot, including new features, changes
+        to commands, requests for new ^pad/^which entries, etc.
+        """
+        feedback_channel = self.bot.get_channel(self.settings.getFeedbackChannel())
+        if feedback_channel is None:
+            await self.bot.say(inline("Feedback channel not set"))
+            return
+        server = ctx.message.server
+        owner = discord.utils.get(self.bot.get_all_members(),
+                                  id=self.bot.settings.owner)
+        author = ctx.message.author
+        footer = "User ID: " + author.id
+
+        if server:
+            source = "from {}".format(server)
+            footer += " | Server ID: " + server.id
+        else:
+            source = "through DM"
+
+        description = "Sent by {} {}".format(author, source)
+
+        e = discord.Embed(description=message)
+        if author.avatar_url:
+            e.set_author(name=description, icon_url=author.avatar_url)
+        else:
+            e.set_author(name=description)
+        e.set_footer(text=footer)
+
+        try:
+            await self.bot.send_message(feedback_channel, embed=e)
+        except:
+            await self.bot.say(inline("I'm unable to deliver your message. Sorry."))
+        else:
+            await self.bot.say(inline("Your message has been sent."))
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def setfeedbackchannel(self, ctx, channel: discord.Channel):
+        """Set the feedback destination channel."""
+        self.settings.setFeedbackChannel(channel.id)
+        await self.bot.say(inline('Done'))
+
 
 def setup(bot):
     print('trutils bot setup')
@@ -707,3 +754,10 @@ class TrUtilsSettings(CogSettings):
         if channel_id in imagebl:
             imagebl.pop(channel_id)
             self.save_settings()
+
+    def getFeedbackChannel(self):
+        return self.bot_settings.get('feedback_channel')
+
+    def setFeedbackChannel(self, channel_id: str):
+        self.bot_settings['feedback_channel'] = channel_id
+        self.save_settings()
