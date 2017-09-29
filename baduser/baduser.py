@@ -126,14 +126,14 @@ class BadUser:
 
     @baduser.command(name="strikes", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def strikes(self, ctx, user: discord.Member):
+    async def strikes(self, ctx, user: discord.User):
         """Print the strike count for a user."""
         strikes = self.settings.countUserStrikes(ctx.message.server.id, user.id)
         await self.bot.say(box('User {} has {} strikes'.format(user.name, strikes)))
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def addstrike(self, ctx, user: discord.Member, *, strike_text: str):
+    async def addstrike(self, ctx, user: discord.User, *, strike_text: str):
         """Manually add a strike to a user."""
         timestamp = str(ctx.message.timestamp)[:-7]
         msg = 'Manually added by {} ({}): {}'.format(
@@ -144,14 +144,14 @@ class BadUser:
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def clearstrikes(self, ctx, user: discord.Member):
+    async def clearstrikes(self, ctx, user: discord.User):
         """Clear all strikes for a user."""
         self.settings.clearUserStrikes(ctx.message.server.id, user.id)
         await self.bot.say(box('Cleared strikes for {}'.format(user.name)))
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def printstrikes(self, ctx, user: discord.Member):
+    async def printstrikes(self, ctx, user: discord.User):
         """Print all strikes for a user."""
         strikes = self.settings.getUserStrikes(ctx.message.server.id, user.id)
         if not strikes:
@@ -242,7 +242,7 @@ class BadUser:
     @baduser.command(pass_context=True, no_pm=True)
     @checks.is_owner()
     async def checkbanlist(self, ctx):
-        bans = self._load_banned_users()
+        bans = await self._load_banned_users()
         msg = 'Checking for banned users in {} servers'.format(len(self.bot.servers))
         for cur_server in self.bot.servers:
             msg += '\n\tChecking {}'.format(cur_server.name)
