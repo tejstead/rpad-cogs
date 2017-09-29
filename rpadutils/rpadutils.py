@@ -105,7 +105,7 @@ def get_role(roles, role_string):
         lambda r: r.name.lower() == role_string.lower(), roles)
 
     if role is None:
-        raise RoleNotFound()
+        raise ReportableError("Could not find role named " + role_string)
 
     return role
 
@@ -122,7 +122,7 @@ def get_role_from_id(bot, server, roleid):
 
     role = discord.utils.get(roles, id=roleid)
     if role is None:
-        raise RoleNotFound(server, roleid)
+        raise ReportableError("Could not find role id {} in server {}".format(roleid, server.name))
     return role
 
 
