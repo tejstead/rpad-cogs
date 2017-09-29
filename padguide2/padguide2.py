@@ -25,6 +25,8 @@ from discord.ext import commands
 import pytz
 import romkan
 
+from __main__ import send_cmd_help
+
 from . import rpadutils
 from .rpadutils import CogSettings
 from .utils import checks
