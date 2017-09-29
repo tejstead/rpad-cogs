@@ -1880,7 +1880,7 @@ class MonsterIndex(object):
 
         for gm in mg.members:
             if is_pixel(gm):
-                prefixes.add('pixel' if is_pixel(m) else 'nonpixel')
+                prefixes.update(['pixel'] if is_pixel(m) else ['np', 'nonpixel'])
                 break
 
         if m.is_equip:
