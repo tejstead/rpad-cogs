@@ -138,8 +138,9 @@ class BadUser:
         timestamp = str(ctx.message.timestamp)[:-7]
         msg = 'Manually added by {} ({}): {}'.format(
             ctx.message.author.name, timestamp, strike_text)
-        self.settings.updateBadUser(user.server.id, user.id, msg)
-        strikes = self.settings.countUserStrikes(ctx.message.server.id, user.id)
+        server_id = ctx.message.server.id
+        self.settings.updateBadUser(server_id, user.id, msg)
+        strikes = self.settings.countUserStrikes(server_id, user.id)
         await self.bot.say(box('Done. User {} now has {} strikes'.format(user.name, strikes)))
 
     @baduser.command(pass_context=True, no_pm=True)
