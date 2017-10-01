@@ -530,7 +530,8 @@ class Event:
             self.name_and_modifier += ', ' + self.clean_event_name
 
         self.event_type = EventType(scheduled_event.event_type)
-        self.dungeon_type = DungeonType(scheduled_event.dungeon.dungeon_type)
+        self.dungeon_type = DungeonType(
+            scheduled_event.dungeon.dungeon_type) if scheduled_event.dungeon else DungeonType.Unknown
 
     def start_from_now_sec(self):
         now = datetime.now(pytz.utc)
