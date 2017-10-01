@@ -68,7 +68,13 @@ class PadEvents:
         database = pg_cog.database
         scheduled_events = database.all_scheduled_events()
 
-        new_events = [Event(se) for se in scheduled_events]
+        new_events = []
+        for se in scheduled_events:
+            try:
+                new_events.append(Event(se))
+            except Exception as ex:
+                print(ex)
+
         new_started_events = set([ev.key for ev in new_events if ev.is_started()])
 
         self.events = new_events
