@@ -86,7 +86,8 @@ ORB_TYPES = [
 def assert_color(value):
     value = replace_named_color(value)
     if value not in COLORS:
-        raise Exception('Unexpected color {}, expected one of {}'.format(value, COLORS))
+        raise rpadutils.ReportableError(
+            'Unexpected color {}, expected one of {}'.format(value, COLORS))
     return value
 
 
@@ -265,7 +266,7 @@ class PadSearchLexer(object):
     t_ignore = ' \t\n'
 
     def t_error(self, t):
-        raise TypeError("Unknown text '%s'" % (t.value,))
+        raise rpadutils.ReportableError("Unknown text '%s'" % (t.value,))
 
     def build(self, **kwargs):
         # pass debug=1 to enable verbose output
@@ -321,7 +322,8 @@ class SearchConfig(object):
                 self.row.append(assert_orbcolor(value))
             if type == 'TYPE':
                 if value not in TYPES:
-                    raise Exception('Unexpected type {}, expected one of {}'.format(value, TYPES))
+                    raise rpadutils.ReportableError(
+                        'Unexpected type {}, expected one of {}'.format(value, TYPES))
                 self.types.append(value)
 
         self.filters = list()
@@ -418,7 +420,7 @@ class SearchConfig(object):
             self.filters.append(self.or_filters(filters))
 
         if not self.filters:
-            raise Exception('You need to specify at least one filter')
+            raise rpadutils.ReportableError('You need to specify at least one filter')
 
     def check_filters(self, m):
         for f in self.filters:
@@ -438,7 +440,7 @@ class SearchConfig(object):
         if expected_type != given_type:
             return current_value
         if current_value is not None:
-            raise Exception('You set {} more than once'.format(given_type))
+            raise rpadutils.ReportableError('You set {} more than once'.format(given_type))
         return new_value
 
 
@@ -459,11 +461,15 @@ class PadSearch:
 
         Use ^helpsearch for more info.
         """
-
-        lexer = PadSearchLexer().build()
-        lexer.input(filter_spec)
-
-        config = SearchConfig(lexer)
+        try:
+            config = self._make_search_config(filter_spec)
+        except Exception as ex:
+            # Try to correct for missing closing tag
+            try:
+                config = self._make_search_config(filter_spec + ')')
+            except:
+                # If it still failed, raise the original exception
+                raise ex
 
         pg_cog = self.bot.get_cog('PadGuide2')
         monsters = pg_cog.database.all_monsters()
@@ -479,6 +485,11 @@ class PadSearch:
             msg += '\n\tNo. {} {}'.format(m.monster_no_na, m.name_na)
 
         await self.bot.say(box(msg))
+
+    def _make_search_config(self, input):
+        lexer = PadSearchLexer().build()
+        lexer.input(input)
+        return SearchConfig(lexer)
 
     @commands.command(pass_context=True)
     @checks.is_owner()
