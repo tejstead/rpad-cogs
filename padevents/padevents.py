@@ -519,7 +519,7 @@ class Event:
         self.open_datetime = scheduled_event.open_datetime
         self.close_datetime = scheduled_event.close_datetime
         self.group = scheduled_event.group
-        self.dungeon_name = scheduled_event.dungeon.name
+        self.dungeon_name = scheduled_event.dungeon.name if scheduled_event.dungeon else 'unknown_dungeon'
         self.event_name = scheduled_event.event.name if scheduled_event.event else ''
 
         self.clean_dungeon_name = cleanDungeonNames(self.dungeon_name)
