@@ -480,8 +480,9 @@ class PadGlobal:
     async def _do_send_which(self, ctx, to_user: discord.Member, term, corrected_term, result):
         """Does the heavy lifting for whichto."""
         if result:
+            result_output = '**Which {}**\n{}'.format(corrected_term, result)
             result = "{} asked me to send you this:\n{}".format(
-                ctx.message.author.name, result)
+                ctx.message.author.name, result_output)
             await self.bot.send_message(to_user, result)
             msg = "Sent that info to {}".format(to_user.name)
             if term != corrected_term:
