@@ -160,7 +160,13 @@ class PadGlobal:
             await send_cmd_help(context)
 
     @padglobal.command(pass_context=True)
-    async def add(self, ctx, command: str, *, text):
+    async def say(self, ctx, *, text: str):
+        """Test a padglobal command with emoji replacements."""
+        text = replace_emoji_names_with_code(self._get_emojis(), text)
+        await self.bot.say(text)
+
+    @padglobal.command(pass_context=True)
+    async def add(self, ctx, command: str, *, text: str):
         """Adds a PAD global command
 
         Example:
@@ -580,7 +586,6 @@ class PadGlobal:
 
         cmd = self.format_cc(result, message)
 
-        emoji_list = message.server.emojis if message.server else []
         await self.bot.send_message(message.channel, result)
 
     def _lookup_command(self, cmd):
