@@ -446,6 +446,15 @@ class PadGlobal:
         for page in pagify(msg):
             await self.bot.whisper(page)
 
+    @commands.command(pass_context=True)
+    async def whichto(self, ctx, to_user: discord.Member, *, term: str):
+        """Send a user a which monster entry.
+
+        ^whichto @tactical_retreat saria
+        """
+        corrected_term, result = self.lookup_which(term)
+        await self._do_send_which(ctx, to_user, term, corrected_term, result)
+
     def which_to_text(self):
         which = self.settings.which()
         msg = '__**PAD Which Monster (also check out ^pad / ^padfaq / ^boards / ^glossary)**__'
@@ -467,6 +476,19 @@ class PadGlobal:
         else:
             term = matches[0]
             return term, which[term]
+
+    async def _do_send_which(self, ctx, to_user: discord.Member, term, corrected_term, result):
+        """Does the heavy lifting for whichto."""
+        if result:
+            result = "{} asked me to send you this:\n{}".format(
+                ctx.message.author.name, result)
+            await self.bot.send_message(to_user, result)
+            msg = "Sent that info to {}".format(to_user.name)
+            if term != corrected_term:
+                msg += ' (corrected to {})'.format(corrected_term)
+            await self.bot.say(inline(msg))
+        else:
+            await self.bot.say(inline('No which info found'))
 
     @padglobal.command(pass_context=True)
     async def addwhich(self, ctx, name, *, definition):
@@ -576,7 +598,7 @@ class PadGlobal:
         final_cmd = self._lookup_command(cmd)
         if final_cmd is None:
             # Temporary redirect to ^which
-            if cmd.startswith('which') and len(cmd) > len('which') and not cmd.startswith('which '):
+            if cmd.startswith('which') and len(cmd) > len('which') and not cmd.startswith('which ') and not cmd.startswith('whichto'):
                 await self.bot.send_message(message.channel, inline('^which is now a dedicated command, try that instead'))
             return
 
