@@ -34,6 +34,7 @@ PIXEL_FILE = 'hsv_pixels_to_orb.pdict'
 PIXEL_FILE_PATH = os.path.join(PIXEL_DATA_DIR, PIXEL_FILE)
 
 DAWNGLARE_BOARD_TEMPLATE = "https://candyninja001.github.io/Puzzled/?patt={}"
+MIRUGLARE_BOARD_TEMPLATE = "https://storage.googleapis.com/mirubot/websites/padsim/index.html?patt={}"
 
 
 class PadBoard:
@@ -138,10 +139,11 @@ class PadBoard:
         # Convert O (used by padvision code) to X (used by Puzzled for bombs)
         board_text = board_text.replace('o', 'x')
         img_url = DAWNGLARE_BOARD_TEMPLATE.format(board_text)
+        img_url2 = MIRUGLARE_BOARD_TEMPLATE.format(board_text)
         # Disabling HSV board for now. It's basically always worse
 #         hsv_url = DAWNGLARE_BOARD_TEMPLATE.format(''.join([''.join(r) for r in hsv_board]))
 
-        msg = img_url
+        msg = '{}\n{}'.format(img_url, img_url2)
 #         if img_url != hsv_url:
 #             msg += '\n{}'.format(inline("I'm uncertain about this board, check the output carefully. Compare against:"))
 #             msg += '\n{}'.format(hsv_url)
