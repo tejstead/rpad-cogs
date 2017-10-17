@@ -131,7 +131,7 @@ class DamageConfig(object):
             if type == 'ORB':
                 if value == 4:
                     self.tpa_matches.append(value)
-                if value == 30:
+                elif value == 30:
                     self.row_matches.append(value)
                 else:
                     self.orb_matches.append(value)
