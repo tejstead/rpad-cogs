@@ -323,8 +323,8 @@ class AutoMod2:
             request_user_txt = request_user.name if request_user else '???'
             member = ctx.message.server.get_member(user_id)
             if user_cooldown and member:
-                msg += '\n{} has cooldown {}, requested by {} because [{}]'.format(
-                    member.name, user_cooldown, request_user_txt, reason)
+                msg += '\n{} ({})\n\tcooldown {}\n\tby {} because [{}]'.format(
+                    member.name, member.id, user_cooldown, request_user_txt, reason)
 
         for page in pagify(msg):
             await self.bot.say(box(page))
