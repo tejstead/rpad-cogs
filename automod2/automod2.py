@@ -129,8 +129,11 @@ class AutoMod2:
         if error is not None:
             await self.bot.say(inline('Too many inputs detected, check your quotes'))
             return
-        re.compile(include_pattern)
-        re.compile(exclude_pattern)
+        try:
+            re.compile(include_pattern)
+            re.compile(exclude_pattern)
+        except Exception as ex:
+            raise rpadutils.ReportableException(str(ex))
         self.settings.addPattern(ctx, name, include_pattern, exclude_pattern)
         await self.bot.say(inline('Added pattern'))
 
@@ -295,31 +298,36 @@ class AutoMod2:
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 
-            server_id = ctx.message.server.id
-            msg = 'Watchdog config:'
-            watchdog_channel_id = self.settings.getWatchdogChannel(server_id)
-            if watchdog_channel_id:
-                watchdog_channel = self.bot.get_channel(watchdog_channel_id)
-                if watchdog_channel:
-                    msg += '\nChannel: ' + watchdog_channel.name
-                else:
-                    msg += '\nChannel configured but not found'
+    @watchdog.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def printconfig(self, ctx):
+        """Print the watchdog configuration."""
+        server_id = ctx.message.server.id
+        msg = 'Watchdog config:'
+        watchdog_channel_id = self.settings.getWatchdogChannel(server_id)
+        if watchdog_channel_id:
+            watchdog_channel = self.bot.get_channel(watchdog_channel_id)
+            if watchdog_channel:
+                msg += '\nChannel: ' + watchdog_channel.name
             else:
-                msg += '\nChannel not set'
+                msg += '\nChannel configured but not found'
+        else:
+            msg += '\nChannel not set'
 
-            for user_id, user_settings in self.settings.getWatchdogUsers(server_id).items():
-                user_cooldown = user_settings['cooldown']
-                request_user_id = user_settings['request_user_id']
-                reason = user_settings['reason'] or 'no reason'
+        for user_id, user_settings in self.settings.getWatchdogUsers(server_id).items():
+            user_cooldown = user_settings['cooldown']
+            request_user_id = user_settings['request_user_id']
+            reason = user_settings['reason'] or 'no reason'
 
-                request_user = ctx.message.server.get_member(request_user_id)
-                request_user_txt = request_user.name if request_user else '???'
-                member = ctx.message.server.get_member(user_id)
-                if user_cooldown and member:
-                    msg += '\n{} has cooldown {}, requested by {} because [{}]'.format(
-                        member.name, user_cooldown, request_user_txt, reason)
+            request_user = ctx.message.server.get_member(request_user_id)
+            request_user_txt = request_user.name if request_user else '???'
+            member = ctx.message.server.get_member(user_id)
+            if user_cooldown and member:
+                msg += '\n{} has cooldown {}, requested by {} because [{}]'.format(
+                    member.name, user_cooldown, request_user_txt, reason)
 
-            await self.bot.say(box(msg))
+        for page in pagify(msg):
+            await self.bot.say(box(page))
 
     @watchdog.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
