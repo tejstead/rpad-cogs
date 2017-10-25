@@ -543,3 +543,9 @@ class CogSettings:
             settings[server_id] = {}
 
         return settings[server_id]
+
+def get_prefix(bot, server, text):
+    for p in bot.settings.get_prefixes(server):
+        if text.startswith(p):
+            return p
+    return False
