@@ -299,7 +299,6 @@ class Seniority(object):
             cs = 5
             user_chunks = [grant_users[i:i + cs] for i in range(0, len(grant_users), cs)]
             for chunk in user_chunks:
-                print(chunk)
                 msg = 'Granting to users: ' + ','.join([m.name for m in chunk])
                 await self.bot.say(inline(msg))
                 for member in chunk:
@@ -704,7 +703,6 @@ class Seniority(object):
         incremental_points = max_points / message_cap
         new_points = current_points + incremental_points
         new_points = min(new_points, max_points)
-        print(current_points, incremental_points, new_points, message_cap, max_points)
 
         before_time = timeit.default_timer()
         await self.save_current_points(now_date_str, server, channel, user, new_points)
