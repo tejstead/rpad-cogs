@@ -14,6 +14,7 @@ from cogs.utils import checks
 from cogs.utils.dataIO import dataIO
 import sqlite3 as lite
 
+from . import rpadutils
 from .rpadutils import *
 from .utils.chat_formatting import *
 
@@ -172,6 +173,14 @@ WHERE server_id = :server_id
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT :row_count
+'''
+
+SENIORITY_BACKFILL_QUERY = '''
+SELECT user_id, content
+FROM messages INDEXED BY idx_messages_server_id_channel_id_timestamp
+WHERE server_id = :server_id
+  AND channel_id = :channel_id
+  AND timestamp between :start_timestamp and :end_timestamp
 '''
 
 
@@ -429,7 +438,7 @@ class SqlActivityLogger(object):
 
     @exlog.command(pass_context=True, no_pm=True)
     async def userreport(self, ctx, user: discord.User, start_date: str, end_date: str, count=10):
-        """exlog userreport #general_chat 2017-01-01 2017-01-10
+        """exlog userreport tactical_retreat 2017-01-01 2017-01-10
 
         Prints a report on channel activity in the specified time period for a user.
         Be careful how you specify your dates, must match the YYYY-MM-DD format
@@ -570,6 +579,21 @@ class SqlActivityLogger(object):
         self.con.commit()
         execution_time = timeit.default_timer() - before_time
         self.insert_timing.append(execution_time)
+
+    def get_server_channel_date_msgs(self, server_id, channel_id, start_date_str):
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        start_date = start_date.replace(tzinfo=rpadutils.NA_TZ_OBJ)
+        end_date = start_date + timedelta(days=1)
+
+        values = {
+            'server_id': server_id,
+            'channel_id': channel_id,
+            'start_timestamp': start_date,
+            'end_timestamp': end_date,
+        }
+
+        cursor = self.con.execute(SENIORITY_BACKFILL_QUERY, values)
+        return cursor.fetchall()
 
 
 def check_folders():
