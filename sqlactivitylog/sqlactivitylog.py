@@ -593,7 +593,8 @@ class SqlActivityLogger(object):
         }
 
         cursor = self.con.execute(SENIORITY_BACKFILL_QUERY, values)
-        return cursor.fetchall()
+        rows = cursor.fetchall()
+        return [(str(r['user_id']), str(r['content'])) for r in rows]
 
 
 def check_folders():

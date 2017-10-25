@@ -179,7 +179,7 @@ class Seniority(object):
                 if member is None:
                     continue
                 msg_content = user_msg[1]
-                self.process_message(server, channel, user, now_date_str, msg_content)
+                self.process_message(server, channel, member, now_date_str, msg_content)
 
         await self.bot.say(inline('Finished with backfill'))
 
