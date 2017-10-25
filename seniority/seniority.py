@@ -174,12 +174,16 @@ class Seniority(object):
                 server.id, channel.id, now_date_str)
             await self.bot.say(inline('Retrieved {} messages'.format(len(channel_msgs))))
 
+            points = 0
             for user_msg in channel_msgs:
                 member = server.get_member(user_msg[0])
                 if member is None:
                     continue
                 msg_content = user_msg[1]
-                self.process_message(server, channel, member, now_date_str, msg_content)
+                new_points = await self.process_message(
+                    server, channel, member, now_date_str, msg_content)
+                points += new_points or 0
+            await self.bot.say(inline('{} points were earned'.format(points)))
 
         await self.bot.say(inline('Finished with backfill'))
 
