@@ -713,6 +713,8 @@ class Seniority(object):
         execution_time = timeit.default_timer() - before_time
         self.insert_timing.append(execution_time)
 
+        return incremental_points
+
     async def get_current_channel_points(self, now_date_str: str, server: discord.Server, channel: discord.Channel, user: discord.User):
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
