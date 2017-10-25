@@ -133,7 +133,7 @@ class AutoMod2:
             re.compile(include_pattern)
             re.compile(exclude_pattern)
         except Exception as ex:
-            raise rpadutils.ReportableException(str(ex))
+            raise rpadutils.ReportableError(str(ex))
         self.settings.addPattern(ctx, name, include_pattern, exclude_pattern)
         await self.bot.say(inline('Added pattern'))
 
