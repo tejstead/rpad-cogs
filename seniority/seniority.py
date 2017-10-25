@@ -703,6 +703,9 @@ class Seniority(object):
         current_server_points = await self.get_current_server_points(now_date_str, server, user)
         current_server_points = current_server_points or 0
 
+        if current_server_points >= server_point_cap:
+            return
+
         message_cap = self.settings.message_cap(server.id)
         incremental_points = max_points / message_cap
         new_points = current_points + incremental_points
