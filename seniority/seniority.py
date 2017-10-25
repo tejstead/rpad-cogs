@@ -181,8 +181,6 @@ class Seniority(object):
                 msg_content = user_msg[1]
                 self.process_message(server, channel, user, now_date_str, msg_content)
 
-            await self.bot.say(inline('Done with channel'))
-
         await self.bot.say(inline('Finished with backfill'))
 
     @seniority.command(pass_context=True)
