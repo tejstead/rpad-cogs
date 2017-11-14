@@ -971,6 +971,8 @@ class PgMonster(PgItem):
 
         self.is_equip = 'Awoken Assist' in [a.get_name() for a in self.awakenings]
 
+        self.types = [t.lower() for t in [self.type1, self.type2, self.type3] if t]
+
         if self.evo_from is None:
             def link(m: PgMonster, alt_evos: list):
                 alt_evos.append(m)
@@ -1011,7 +1013,7 @@ class MonsterSearchHelper(object):
         self.color = [m.attr1.name.lower()]
         self.hascolor = [c.name.lower() for c in [m.attr1, m.attr2] if c]
 
-        self.types = [t.lower() for t in [m.type1, m.type2, m.type3] if t]
+        self.types = m.types
 
         def replace_colors(text: str):
             return text.replace('red', 'fire').replace('blue', 'water').replace('green', 'wood')

@@ -796,7 +796,15 @@ def monsters_to_rotation_list(monster_list, server: str, index_all: padguide2.Mo
 
     for m in monster_list:
         skill = m.server_actives[server]
-        sm = max(skill.monsters_with_active, key=lambda x: x.monster_no)
+
+        sm = skill.monsters_with_active
+        # Since some newer monsters like jewel of creation are being used as
+        # skillups, exclude them from the list of skillup targets.
+
+        def is_bad_type(m):
+            return set(['enhance', 'evolve', 'vendor']).intersection(set(m.types))
+        sm = max(sm, key=lambda x: (not is_bad_type(x), x.monster_no))
+
         skillup_name = cell_name(m)
         if skillup_name in ignore_monsters:
             continue
