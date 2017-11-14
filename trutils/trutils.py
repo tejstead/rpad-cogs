@@ -244,7 +244,7 @@ class TrUtils:
             msg_limit = 2 if channel == ctx.message.channel else 1
             async for message in self.bot.logs_from(channel, limit=msg_limit):
                 msg = message
-        content = msg.clean_content.strip()
+        content = msg.content.strip()
         content = re.sub(r'<(:[0-9a-z_]+:)\d{18}>', r'\1', content, flags=re.IGNORECASE)
         content = box(content.replace('`', u'\u200b`'))
         await self.bot.say(content)
@@ -253,7 +253,7 @@ class TrUtils:
     async def dumpmsgexact(self, ctx, msg_id: int):
         """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped"""
         msg = await self.bot.get_message(ctx.message.channel, msg_id)
-        content = msg.clean_content.strip()
+        content = msg.content.strip()
         content = box(content.replace('`', u'\u200b`'))
         await self.bot.say(content)
 
