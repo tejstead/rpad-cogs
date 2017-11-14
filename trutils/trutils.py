@@ -684,6 +684,16 @@ class TrUtils:
         self.settings.setFeedbackChannel(channel.id)
         await self.bot.say(inline('Done'))
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def mentionable(self, ctx, role: discord.Role):
+        """Toggle the mentionability of a role."""
+        try:
+            new_mentionable = not role.mentionable
+            await self.bot.edit_role(ctx.message.server, role, mentionable=new_mentionable)
+            await self.bot.say(inline('Role is now {}'.format('mentionable' if new_mentionable else 'unmentionable')))
+        except Exception as ex:
+            await self.bot.say(inline('Error: failed to alter role'))
+
 
 def setup(bot):
     print('trutils bot setup')
