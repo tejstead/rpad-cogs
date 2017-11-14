@@ -292,7 +292,7 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, aliases=['stats'])
     async def otherinfo(self, ctx, *, query):
         m, err, debug_info = self.findMonster(query)
         if m is not None:
