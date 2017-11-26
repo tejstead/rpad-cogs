@@ -20,6 +20,7 @@ class ModNotes:
         self.settings = ModNotesSettings("modnotes")
 
     @commands.group(pass_context=True, no_pm=True, aliases=["usernote"])
+    @checks.mod_or_permissions(manage_server=True)
     async def usernotes(self, context):
         """Moderator notes for users.
 

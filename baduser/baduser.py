@@ -37,6 +37,7 @@ class BadUser:
         self.logs = defaultdict(lambda: deque(maxlen=LOGS_PER_USER))
 
     @commands.group(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def baduser(self, context):
         """BadUser tools.
 
