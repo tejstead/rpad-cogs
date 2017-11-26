@@ -56,12 +56,13 @@ ON seniority(server_id, user_id, record_date)
 '''
 
 GET_USER_POINTS_QUERY = '''
-SELECT record_date, sum(points) as points
+SELECT record_date, round(sum(points), 2) as points
 FROM seniority INDEXED BY idx_server_id_user_id_record_date
 WHERE server_id = ?
   AND user_id = ?
 GROUP BY 1
-ORDER BY 1 ASC
+ORDER BY 1 DESC
+LIMIT ?
 '''
 
 GET_LOOKBACK_POINTS_QUERY = '''
@@ -354,22 +355,21 @@ class Seniority(object):
                 await self.bot.say(inline('Skipping role {} (disabled)'.format(role.name)))
                 continue
 
-            msg = 'Modified users for role {} (point cutoff {})'.format(role.name, amount)
-
             grant_users, ignored_users = await self.get_grant_ignore_users(
                 server, role, amount, lookback_days, points_greater_than)
 
-            for userid_points in grant_users:
-                user_id = userid_points[0]
-                member = server.get_member(user_id)
-                member_name = member.name if member else user_id
-                msg += '\n\t{} ({}) : {}'.format(member_name, user_id, userid_points[1])
+            def process_userlist(user_list):
+                for userid_points in user_list:
+                    user_id = userid_points[0]
+                    member = server.get_member(user_id)
+                    member_name = member.name if member else user_id
+                    points = round(userid_points[1], 2)
+                    msg += '\n\t{} ({}) : {}'.format(member_name, user_id, points)
+
+            msg = 'Modified users for role {} (point cutoff {})'.format(role.name, amount)
+            process_userlist(grant_users)
             msg += '\n\nIgnored users'
-            for userid_points in ignored_users:
-                user_id = userid_points[0]
-                member = server.get_member(user_id)
-                member_name = member.name if member else user_id
-                msg += '\n\t{} ({}) : {}'.format(member_name, user_id, userid_points[1])
+            process_userlist(ignored_users)
 
             for page in pagify(msg):
                 await self.bot.say(box(page))
@@ -440,11 +440,12 @@ class Seniority(object):
         return grant_users, ignored_users
 
     @seniority.command(pass_context=True, no_pm=True)
-    async def userhistory(self, ctx, user: discord.User):
+    async def userhistory(self, ctx, user: discord.User, limit=30):
         """Print the points per day for a user."""
+        limit = min(limit, 90)
         server = ctx.message.server
-        args = [server.id, user.id]
-        await self.queryAndPrint(server, GET_USER_POINTS_QUERY, args)
+        args = [server.id, user.id, limit]
+        await self.queryAndPrint(server, GET_USER_POINTS_QUERY, args, reverse=True, total=True)
 
     @seniority.command(pass_context=True, no_pm=True)
     async def usercurrent(self, ctx, user: discord.User):
@@ -737,7 +738,7 @@ class Seniority(object):
             async with conn.cursor() as cur:
                 await cur.execute(REPLACE_POINTS_QUERY, now_date_str, server.id, channel.id, user.id, new_points)
 
-    async def queryAndPrint(self, server, query, values, max_rows=100):
+    async def queryAndPrint(self, server, query, values, max_rows=100, reverse=False, total=False):
         before_time = timeit.default_timer()
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -746,10 +747,15 @@ class Seniority(object):
                 columns = [x[0] for x in cur.description]
         execution_time = timeit.default_timer() - before_time
 
+        if reverse:
+            rows.reverse()
+
         tbl = prettytable.PrettyTable(columns)
         tbl.hrules = prettytable.HEADER
         tbl.vrules = prettytable.NONE
         tbl.align = 'l'
+
+        grand_total = 0
 
         for idx, row in enumerate(rows):
             if idx > max_rows:
@@ -765,21 +771,27 @@ class Seniority(object):
                     # Change the UTC timezone to PT
                     raw_value = NA_TZ_OBJ.normalize(raw_value)
                     value = raw_value.strftime("%F %X")
-                if col == 'channel_id':
+                elif col == 'channel_id':
                     channel = server.get_channel(value) if server else None
                     value = channel.name if channel else value
-                if col == 'user_id':
+                elif col == 'user_id':
                     member = server.get_member(value) if server else None
                     value = member.name if member else value
-                if col == 'server_id':
+                elif col == 'server_id':
                     server_obj = self.bot.get_server(value)
                     value = server_obj.name if server_obj else value
+                elif cidx + 1 == len(columns):
+                    grand_total += force_number(value)
                 table_row.append(value)
 
             tbl.add_row(table_row)
 
         result_text = "{} results fetched in {}s\n{}".format(
             len(rows), round(execution_time, 2), tbl.get_string())
+
+        if total:
+            result_text += '\n\nTotal: {}'.format(grand_total)
+
         for p in pagify(result_text):
             await self.bot.say(box(p))
 
