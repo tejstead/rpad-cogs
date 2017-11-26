@@ -103,24 +103,39 @@ class BadUser:
         self.settings.updateChannel(ctx.message.server.id, None)
         await self.bot.say(inline('Cleared the announcement channel'))
 
-    @baduser.command(name="list", pass_context=True, no_pm=True)
+    @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def list(self, ctx):
-        """List the positive/negative role configuration."""
+    async def togglestrikeprivacy(self, ctx):
+        """Change strike existance policy."""
+        server = ctx.message.server
+        self.settings.setStrikesPrivate(server.id, not self.settings.getStrikesPrivate(server.id))
+        output = '\nStrike existance is now ' + \
+            'private' if self.settings.getStrikesPrivate(server.id) else 'public'
+        await self.bot.say(inline(output))
+
+    @baduser.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def config(self, ctx):
+        """Print the baduser configuration."""
+        server = ctx.message.server
         output = 'Punishment roles:\n'
-        for role_id in self.settings.getPunishmentRoles(ctx.message.server.id):
+        for role_id in self.settings.getPunishmentRoles(server.id):
             try:
-                role = get_role_from_id(self.bot, ctx.message.server, role_id)
+                role = get_role_from_id(self.bot, server, role_id)
                 output += '\t' + role.name
             except Exception as e:
                 output += str(e)
         output += '\nPositive roles:\n'
-        for role_id in self.settings.getPositiveRoles(ctx.message.server.id):
+        for role_id in self.settings.getPositiveRoles(server.id):
             try:
-                role = get_role_from_id(self.bot, ctx.message.server, role_id)
+                role = get_role_from_id(self.bot, server, role_id)
                 output += '\t' + role.name
             except Exception as e:
                 output += str(e)
+
+        output += '\nStrike contents are private'
+        output += '\nStrike existance is ' + \
+            ('private' if self.settings.getStrikesPrivate(server.id) else 'public')
 
         await self.bot.say(box(output))
 
@@ -175,6 +190,10 @@ class BadUser:
         error_messages = list()
         for server in self.bot.servers:
             if server.id == cur_server.id:
+                continue
+
+            if self.settings.getStrikesPrivate(server.id):
+                error_messages.append("Server '{}' set its strikes private".format(server.name))
                 continue
 
             try:
@@ -482,3 +501,12 @@ class BadUserSettings(CogSettings):
     def getChannel(self, server_id):
         server = self.getServer(server_id)
         return server.get('update_channel')
+
+    def getStrikesPrivate(self, server_id):
+        server = self.getServer(server_id)
+        return server.get('strikes_private', False)
+
+    def setStrikesPrivate(self, server_id, strikes_private):
+        server = self.getServer(server_id)
+        server['strikes_private'] = strikes_private
+        self.save_settings()
