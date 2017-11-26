@@ -180,6 +180,21 @@ class BadUser:
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
+    async def deletestrike(self, ctx, user: discord.User, strike_num: int):
+        """Delete a specific strike for a user."""
+        strikes = self.settings.getUserStrikes(ctx.message.server.id, user.id)
+        if not strikes or len(strikes) < strike_num:
+            await self.bot.say(box('Strike not found for {}'.format(user.name)))
+            return
+
+        strike = strikes[strike_num - 1]
+        strikes.remove(strike)
+        self.settings.setUserStrikes(ctx.message.server.id, user.id, strikes)
+        await self.bot.say(inline('Removed strike {}. User has {} remaining.'.format(strike_num, len(strikes))))
+        await self.bot.say(box(strike))
+
+    @baduser.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def report(self, ctx):
         """Displays a report of information on bad users for the server."""
         cur_server = ctx.message.server
