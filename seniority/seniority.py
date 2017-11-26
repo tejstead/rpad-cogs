@@ -997,3 +997,10 @@ def setup(bot):
     n = Seniority(bot)
     bot.add_cog(n)
     bot.loop.create_task(n.init())
+
+
+def force_number(s):
+    try:
+        return float(s)
+    except ValueError:
+        return 0
