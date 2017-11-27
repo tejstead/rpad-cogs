@@ -296,7 +296,9 @@ class BadUser:
         msg = 'Checking for banned users in {} servers'.format(len(self.bot.servers))
         for cur_server in self.bot.servers:
             msg += await self._check_ban_list(cur_server)
-        await self.bot.say(box(msg))
+
+        for page in pagify(msg):
+            await self.bot.say(box(page))
 
     @baduser.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
