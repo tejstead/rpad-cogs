@@ -275,18 +275,50 @@ class BadUser:
         for page in pagify(msg):
             await self.bot.say(box(page))
 
+    @baduser.command(pass_context=True)
+    @checks.is_owner()
+    async def addban(self, ctx, user_id: int, *, reason: str):
+        user_id = str(user_id)
+        self.settings.addBannedUser(user_id, reason)
+        await self.bot.say(inline('Done'))
+
+    @baduser.command(pass_context=True)
+    @checks.is_owner()
+    async def rmban(self, ctx, user_id: int):
+        user_id = str(user_id)
+        self.settings.rmBannedUser(user_id)
+        await self.bot.say(inline('Done'))
+
     @baduser.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def checkbanlist(self, ctx):
+    async def globalcheckbanlist(self, ctx):
         bans = await self._load_banned_users()
         msg = 'Checking for banned users in {} servers'.format(len(self.bot.servers))
         for cur_server in self.bot.servers:
-            msg += '\n\tChecking {}'.format(cur_server.name)
-            await self.bot.request_offline_members(cur_server)
-            for member in cur_server.members:
-                if member.id in bans:
-                    msg += '\n\t\tBanned user: {} ({})'.format(member.name, member.id)
+            msg += await self._check_ban_list(cur_server)
         await self.bot.say(box(msg))
+
+    @baduser.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def checkbanlist(self, ctx):
+        msg = 'Checking for banned users'
+        msg += await self._check_ban_list(ctx.message.server)
+        await self.bot.say(box(msg))
+
+    async def _check_ban_list(self, server: discord.Server):
+        # external_ban_list is [user_id]
+        # local_ban_list is {user.id : reason}
+        external_bans = await self._load_banned_users()
+        local_bans = self.settings.bannedUsers()
+        msg = '\n\tChecking {}'.format(server.name)
+        await self.bot.request_offline_members(server)
+        for member in server.members:
+            if member.id in external_bans:
+                msg += '\n\t\tExternal banned user: {} ({})'.format(member.name, member.id)
+            if member.id in local_bans:
+                msg += '\n\t\tLocal banned user: {} ({}) for: {}'.format(
+                    member.name, member.id, local_ban_list[member.id])
+        return msg
 
     async def _load_banned_users(self):
         ban_file_path = 'data/baduser/global_ban_list.txt'
@@ -424,7 +456,8 @@ def setup(bot):
 class BadUserSettings(CogSettings):
     def make_default_settings(self):
         config = {
-            'servers': {}
+            'servers': {},
+            'banned_users': {}
         }
         return config
 
@@ -494,6 +527,11 @@ class BadUserSettings(CogSettings):
         else:
             return len(badusers[user_id])
 
+    def setUserStrikes(self, server_id, user_id, strikes):
+        badusers = self.getBadUsers(server_id)
+        badusers[user_id] = strikes
+        self.save_settings()
+
     def clearUserStrikes(self, server_id, user_id):
         badusers = self.getBadUsers(server_id)
         badusers.pop(user_id, None)
@@ -525,4 +563,15 @@ class BadUserSettings(CogSettings):
     def setStrikesPrivate(self, server_id, strikes_private):
         server = self.getServer(server_id)
         server['strikes_private'] = strikes_private
+        self.save_settings()
+
+    def bannedUsers(self):
+        return self.bot_settings['banned_users']
+
+    def addBannedUser(self, user_id: str, reason: str):
+        self.bannedUsers()[user_id] = reason
+        self.save_settings()
+
+    def rmBannedUser(self, user_id: str):
+        self.bannedUsers().pop(user_id, None)
         self.save_settings()
