@@ -359,17 +359,19 @@ class Seniority(object):
                 server, role, amount, lookback_days, points_greater_than)
 
             def process_userlist(user_list):
+                r = ''
                 for userid_points in user_list:
                     user_id = userid_points[0]
                     member = server.get_member(user_id)
                     member_name = member.name if member else user_id
                     points = round(userid_points[1], 2)
-                    msg += '\n\t{} ({}) : {}'.format(member_name, user_id, points)
+                    r += '\n\t{} ({}) : {}'.format(member_name, user_id, points)
+                return r
 
             msg = 'Modified users for role {} (point cutoff {})'.format(role.name, amount)
-            process_userlist(grant_users)
+            msg += process_userlist(grant_users)
             msg += '\n\nIgnored users'
-            process_userlist(ignored_users)
+            msg += process_userlist(ignored_users)
 
             for page in pagify(msg):
                 await self.bot.say(box(page))
