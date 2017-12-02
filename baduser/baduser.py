@@ -319,7 +319,7 @@ class BadUser:
                 msg += '\n\t\tExternal banned user: {} ({})'.format(member.name, member.id)
             if member.id in local_bans:
                 msg += '\n\t\tLocal banned user: {} ({}) for: {}'.format(
-                    member.name, member.id, local_ban_list[member.id])
+                    member.name, member.id, local_bans[member.id])
         return msg
 
     async def _load_banned_users(self):
