@@ -40,6 +40,21 @@ def is_padglobal_admin():
     return commands.check(is_padglobal_admin_check)
 
 
+def lookup_named_monster(query: str):
+    padinfo_cog = PADGLOBAL_COG.bot.get_cog('PadInfo')
+    if padinfo_cog is None:
+        return None, "cog not loaded"
+    nm, err, debug_info = padinfo_cog._findMonster(query)
+    return nm, err, debug_info
+
+
+def monster_no_to_monster(monster_no):
+    padinfo_cog = PADGLOBAL_COG.bot.get_cog('PadInfo')
+    if padinfo_cog is None:
+        return None
+    return padinfo_cog.get_monster_by_no(monster_no)
+
+
 class PadGlobal:
     """Global PAD commands."""
 
@@ -72,8 +87,9 @@ class PadGlobal:
     @commands.command(pass_context=True)
     @is_padglobal_admin()
     async def debugid(self, ctx, *, query):
-        padinfo_cog = self.bot.get_cog('PadInfo')
-        m, err, debug_info = padinfo_cog._findMonster(query)
+        padinfo_cog = PADGLOBAL_COG.bot.get_cog('PadInfo')
+        # m is a named monster
+        m, err, debug_info = lookup_named_monster(query)
 
         if m is None:
             await self.bot.say(box('No match: ' + err))
@@ -435,8 +451,7 @@ class PadGlobal:
         if term:
             corrected_term, definition = self.lookup_which(term)
             if definition:
-                if term != corrected_term:
-                    await self.bot.say(inline('Corrected to: {}'.format(corrected_term)))
+                await self.bot.say(inline('Which {}'.format(corrected_term)))
                 await self.bot.say(definition)
             else:
                 await self.bot.say(inline('No which info found'))
@@ -456,12 +471,23 @@ class PadGlobal:
         await self._do_send_which(ctx, to_user, term, corrected_term, result)
 
     def which_to_text(self):
-        which = self.settings.which()
         msg = '__**PAD Which Monster (also check out ^pad / ^padfaq / ^boards / ^glossary)**__'
-        msg += '```\n{}```'.format(', '.join(which))
+        items = list()
+        monsters = list()
+        for w in self.settings.which():
+            if w.isdigit():
+                nm, _, _ = lookup_named_monster(w)
+                name = nm.group_computed_basename.title()
+                monsters.append(name)
+            else:
+                items.append(w)
+
+        msg += '```\nGeneral:\n{}\t```'.format(', '.join(sorted(items)))
+        msg += '```\nMonsters:\n{}\t```'.format(', '.join(sorted(monsters)))
+
         return msg
 
-    def lookup_which(self, term):
+    def lookup_which(self, term, old_only=False):
         which = self.settings.which()
         term = term.lower().replace('?', '')
         definition = which.get(term, None)
@@ -469,13 +495,23 @@ class PadGlobal:
         if definition:
             return term, definition
 
-        matches = difflib.get_close_matches(term, which.keys(), n=1, cutoff=.8)
-
-        if not matches:
-            return term, None
-        else:
+        matches = difflib.get_close_matches(term, which.keys(), n=1, cutoff=.9)
+        if matches:
             term = matches[0]
             return term, which[term]
+
+        # Temporary while we migrate which
+        if old_only:
+            return term, None
+
+        nm, _, _ = lookup_named_monster(term)
+        if nm is None:
+            return term, None
+        m = monster_no_to_monster(nm.monster_no)
+
+        name = nm.group_computed_basename.title()
+        definition = which.get(str(nm.base_monster_no), None)
+        return name, definition
 
     async def _do_send_which(self, ctx, to_user: discord.Member, term, corrected_term, result):
         """Does the heavy lifting for whichto."""
@@ -485,7 +521,7 @@ class PadGlobal:
                 ctx.message.author.name, result_output)
             await self.bot.send_message(to_user, result)
             msg = "Sent that info to {}".format(to_user.name)
-            if term != corrected_term:
+            if term.lower() != corrected_term.lower():
                 msg += ' (corrected to {})'.format(corrected_term)
             await self.bot.say(inline(msg))
         else:
@@ -494,12 +530,23 @@ class PadGlobal:
     @padglobal.command(pass_context=True)
     async def addwhich(self, ctx, name, *, definition):
         """Adds an entry to the which monster evo list.
-        If you want to use a multiple word name, enclose it in quotes.
+        If you provide a monster ID, the term will be entered for that monster tree.
+        e.x. ^padglobal addwhich 3818 take the pixel one
 
+        If you want to use a generic term, provide any string.
         e.x. ^padglobal addwhich terra take the pixel one
+
+        If you want to use a multiple word name, enclose it in quotes.
         e.x. ^padglobal addwhich "trance terra" take the pixel one
         """
         name = name.lower()
+        if name.isdigit():
+            m = monster_no_to_monster(int(name))
+            if m != m.base_monster:
+                m = m.base_monster
+                await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
+            name = str(m.monster_no)
+
         op = 'EDITED' if name in self.settings.which() else 'ADDED'
         self.settings.addWhich(name, definition)
         await self.bot.say("PAD which info successfully {}.".format(op))
@@ -507,8 +554,55 @@ class PadGlobal:
     @padglobal.command(pass_context=True)
     async def rmwhich(self, ctx, *, name):
         """Removes an entry from the which monster evo list."""
-        self.settings.rmWhich(name.lower())
+        name = name.lower()
+        if name.isdigit():
+            m = monster_no_to_monster(int(name))
+            if m != m.base_monster:
+                m = m.base_monster
+                await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
+            name = str(m.monster_no)
+
+        self.settings.rmWhich(name)
         await self.bot.say("done")
+
+    @padglobal.command(pass_context=True)
+    async def migratewhich(self, ctx, term, *, query):
+        """Migrate an entry from the old which format to the monster name.
+
+        term should be the exact entry in which
+        query can be any monster query, which will resolve as normal
+        """
+        await self.bot.say(inline('starting'))
+        term, definition = self.lookup_which(term, old_only=True)
+        if definition is None:
+            await self.bot.say(inline('could not match that term'))
+            return
+        nm, _, _ = lookup_named_monster(term)
+        if nm is None:
+            await self.bot.say(inline('could not match that query'))
+            return
+
+        monster_name = nm.group_computed_basename.title()
+        m = monster_no_to_monster(nm.monster_no)
+        base_monster_no_na = m.base_monster.monster_no_na
+
+        msg = 'It looks like you are trying to migrate term:\n\t' + term
+        msg += '\n\nTo monster tree:\n\t({}) {}'.format(base_monster_no_na, monster_name)
+        msg += '\n\nwith contents:\n\n' + definition
+        msg += '\n\nIf this is correct, type yes now'
+
+        for page in pagify(msg):
+            await self.bot.say(box(page))
+
+        resp_msg = await self.bot.wait_for_message(author=ctx.message.author, timeout=10)
+        if resp_msg is None or resp_msg.content.lower().strip() != 'yes':
+            await self.bot.say(inline('canceling migration'))
+            return
+
+        self.settings.rmWhich(term)
+        self.settings.addWhich(str(m.base_monster.monster_no), definition)
+
+        await self.bot.say(inline("done"))
 
     @padglobal.command(pass_context=True)
     @checks.is_owner()

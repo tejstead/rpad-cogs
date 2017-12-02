@@ -914,6 +914,10 @@ class PgMonster(PgItem):
 
         self.is_equip = False
 
+        # Monsters start off pointing to themselves as the base, this will
+        # change once the MonsterGroups are computed.
+        self.base_monster = self
+
     def key(self):
         return self.monster_no
 
@@ -1148,6 +1152,7 @@ class MonsterGroup(object):
         self._initialize_members()
 
     def _recursive_add(self, m: PgMonster):
+        m.base_monster = self.base_monster
         self.members.append(m)
         for em in m.evo_to:
             self._recursive_add(em)
@@ -1991,6 +1996,7 @@ class NamedMonsterGroup(object):
 
         monsters = monster_group.members
         self.group_size = len(monsters)
+        self.base_monster_no = monster_group.base_monster.monster_no
 
         self.monster_no_to_basename = {
             m.monster_no: self._compute_monster_basename(m) for m in monsters
@@ -2066,6 +2072,9 @@ class NamedMonster(object):
         # Hold on to the IDs instead
         self.monster_no = monster.monster_no
         self.monster_no_na = monster.monster_no_na
+
+        # ID of the root of the tree for this monster
+        self.base_monster_no = monster_group.base_monster_no
 
         # This stuff is important for nickname generation
         self.group_basenames = monster_group.basenames
