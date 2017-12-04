@@ -471,19 +471,23 @@ class PadGlobal:
         await self._do_send_which(ctx, to_user, term, corrected_term, result)
 
     def which_to_text(self):
-        msg = '__**PAD Which Monster (also check out ^pad / ^padfaq / ^boards / ^glossary)**__'
         items = list()
-        monsters = list()
+        monsters = defaultdict(list)
         for w in self.settings.which():
             if w.isdigit():
                 nm, _, _ = lookup_named_monster(w)
                 name = nm.group_computed_basename.title()
-                monsters.append(name)
+                m = monster_no_to_monster(nm.monster_no)
+                grp = m.series.name
+                monsters[grp].append(name)
             else:
                 items.append(w)
 
-        msg += '```\nGeneral:\n{}\t```'.format(', '.join(sorted(items)))
-        msg += '```\nMonsters:\n{}\t```'.format(', '.join(sorted(monsters)))
+        msg = '__**PAD Which Monster (also check out ^pad / ^padfaq / ^boards / ^glossary)**__'
+        msg += '\n**General**\n`{}`'.format(', '.join(sorted(items)))
+        for grp in sorted(monsters.keys()):
+            msg += '\n**{}**'.format(grp)
+            msg += '\n`{}`'.format(', '.join(sorted(monsters[grp])))
 
         return msg
 
