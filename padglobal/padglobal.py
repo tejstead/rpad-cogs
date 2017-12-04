@@ -7,6 +7,7 @@ import re
 
 import discord
 from discord.ext import commands
+import prettytable
 
 from __main__ import user_allowed, send_cmd_help
 
@@ -483,11 +484,17 @@ class PadGlobal:
             else:
                 items.append(w)
 
-        msg = '__**PAD Which Monster (also check out ^pad / ^padfaq / ^boards / ^glossary)**__'
-        msg += '\n**General**\n`{}`'.format(', '.join(sorted(items)))
+        msg = '__**PAD Which Monster**__ *(also check out ^pad / ^padfaq / ^boards / ^glossary)*'
+        msg += '\n```General:\n{}```'.format(', '.join(sorted(items)))
+
+        tbl = prettytable.PrettyTable(['Group', 'Members'])
+        tbl.hrules = prettytable.HEADER
+        tbl.vrules = prettytable.NONE
+        tbl.align = "l"
         for grp in sorted(monsters.keys()):
-            msg += '\n**{}**'.format(grp)
-            msg += '\n`{}`'.format(', '.join(sorted(monsters[grp])))
+            tbl.add_row([grp, ', '.join(sorted(monsters[grp]))])
+
+        msg += '```{}```'.format(tbl.get_string())
 
         return msg
 
