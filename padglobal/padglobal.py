@@ -11,6 +11,7 @@ import prettytable
 
 from __main__ import user_allowed, send_cmd_help
 
+from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
@@ -494,7 +495,8 @@ class PadGlobal:
         for grp in sorted(monsters.keys()):
             tbl.add_row([grp, ', '.join(sorted(monsters[grp]))])
 
-        msg += '\n\n{}'.format(tbl.get_string())
+        tbl_string = rpadutils.strip_right_multiline(tbl.get_string())
+        msg += '\n\n{}'.format(tbl_string)
 
         return msg
 

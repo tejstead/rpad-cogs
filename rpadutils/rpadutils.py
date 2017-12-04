@@ -544,8 +544,14 @@ class CogSettings:
 
         return settings[server_id]
 
+
 def get_prefix(bot, server, text):
     for p in bot.settings.get_prefixes(server):
         if text.startswith(p):
             return p
     return False
+
+
+def strip_right_multiline(txt: str):
+    """Useful for prettytable output where there is a lot of right spaces,"""
+    return '\n'.join([x.strip() for x in txt.splitlines()])
