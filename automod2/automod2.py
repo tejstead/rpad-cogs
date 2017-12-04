@@ -417,7 +417,8 @@ class AutoMod2:
 
         for value in patterns:
             tbl.add_row([value['name'], value['include_pattern'], value['exclude_pattern']])
-        return tbl.get_string()
+
+        return rpadutils.strip_right_multiline(tbl.get_string())
 
 
 def matchesPattern(pattern, txt):
