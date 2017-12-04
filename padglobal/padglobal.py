@@ -458,9 +458,10 @@ class PadGlobal:
                 await self.bot.say(inline('No which info found'))
             return
 
+        await self.bot.whisper('__**PAD Which Monster**__ *(also check out ^pad / ^padfaq / ^boards / ^glossary)*')
         msg = self.which_to_text()
         for page in pagify(msg):
-            await self.bot.whisper(page)
+            await self.bot.whisper(box(page))
 
     @commands.command(pass_context=True)
     async def whichto(self, ctx, to_user: discord.Member, *, term: str):
@@ -484,8 +485,7 @@ class PadGlobal:
             else:
                 items.append(w)
 
-        msg = '__**PAD Which Monster**__ *(also check out ^pad / ^padfaq / ^boards / ^glossary)*'
-        msg += '\n```General:\n{}```'.format(', '.join(sorted(items)))
+        msg = '\nGeneral:\n{}'.format(', '.join(sorted(items)))
 
         tbl = prettytable.PrettyTable(['Group', 'Members'])
         tbl.hrules = prettytable.HEADER
@@ -494,7 +494,7 @@ class PadGlobal:
         for grp in sorted(monsters.keys()):
             tbl.add_row([grp, ', '.join(sorted(monsters[grp]))])
 
-        msg += '```{}```'.format(tbl.get_string())
+        msg += '\n\n{}'.format(tbl.get_string())
 
         return msg
 
