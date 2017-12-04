@@ -572,14 +572,13 @@ class PadGlobal:
         term should be the exact entry in which
         query can be any monster query, which will resolve as normal
         """
-        await self.bot.say(inline('starting'))
         term, definition = self.lookup_which(term, old_only=True)
         if definition is None:
             await self.bot.say(inline('could not match that term'))
             return
-        nm, _, _ = lookup_named_monster(term)
+        nm, err, _ = lookup_named_monster(query)
         if nm is None:
-            await self.bot.say(inline('could not match that query'))
+            await self.bot.say(inline('could not match that query:' + err))
             return
 
         monster_name = nm.group_computed_basename.title()
