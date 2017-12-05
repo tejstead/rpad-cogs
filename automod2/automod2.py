@@ -89,8 +89,9 @@ def mod_or_perms(ctx, **perms):
 
 
 class CtxWrapper:
-    def __init__(self, msg):
+    def __init__(self, msg, bot):
         self.message = msg
+        self.bot = bot
 
 
 class AutoMod2:
@@ -214,7 +215,7 @@ class AutoMod2:
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
 
-        ctx = CtxWrapper(message)
+        ctx = CtxWrapper(message, self.bot)
         image_limit = self.settings.getImageLimit(ctx)
         if image_limit == 0:
             return
@@ -255,7 +256,7 @@ class AutoMod2:
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
 
-        ctx = CtxWrapper(message)
+        ctx = CtxWrapper(message, self.bot)
         if mod_or_perms(ctx, kick_members=True):
             return
 
