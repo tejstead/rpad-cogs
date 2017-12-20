@@ -64,41 +64,46 @@ class ChannelMod:
             await self.bot.edit_channel(channel, name=new_name)
 
     async def check_inactive_channel(self, server_id: str, channel_id: str, timeout: int):
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            print('timeout check: cannot find channel', channel_id)
+            return
+
+        server = channel.server
+
+        has_permissions = channel.permissions_for(server.me).manage_channels
+        if not has_permissions:
+            print('no manage channel permissions, disabling', channel_id)
+            self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
+            return
+
         try:
-            channel = self.bot.get_channel(channel_id)
-            if channel is None:
-                print('timeout check: cannot find channel', channel_id)
-                return
-
-            server = channel.server
-
-            has_permissions = channel.permissions_for(server.me).manage_channels
-            if not has_permissions:
-                print('no manage channel permissions, disabling', channel_id)
-                self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
-                return
-
             async for message in self.bot.logs_from(channel, limit=1):
                 pass
-
-            time_delta = datetime.utcnow() - message.timestamp
-            time_exceeded = time_delta.total_seconds() > timeout
-
-            if time_exceeded and not channel.name.endswith(INACTIVE):
-                new_name = channel.name + INACTIVE
-                await self.bot.edit_channel(channel, name=new_name)
-
         except Exception as ex:
-            print('failed to check inactivity channel: ' + str(ex))
-            traceback.print_exc()
-#             self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
+            print('failed to retrieve logs: ' + str(ex))
+            return
+
+        time_delta = datetime.utcnow() - message.timestamp
+        time_exceeded = time_delta.total_seconds() > timeout
+
+        if time_exceeded and not channel.name.endswith(INACTIVE):
+            new_name = channel.name + INACTIVE
+            try:
+                await self.bot.edit_channel(channel, name=new_name)
+            except Exception as ex:
+                print('failed to edit channel: ' + str(ex))
 
     async def check_inactive_channels(self):
         for server_id in self.settings.servers().keys():
             for channel_id, channel_config in self.settings.get_inactivity_monitor_channels(server_id).items():
                 timeout = channel_config['timeout']
-                if timeout > 0:
+                if timeout <= 0:
+                    continue
+                try:
                     await self.check_inactive_channel(server_id, channel_id, timeout)
+                except Exception as ex:
+                    print('failed to check inactivity channel: ' + str(ex))
 
     async def channel_inactivity_monitor(self):
         await self.bot.wait_until_ready()
