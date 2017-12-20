@@ -71,6 +71,34 @@ class PadGlobal:
 
     @commands.command(pass_context=True)
     @is_padglobal_admin()
+    async def breakglass(self, ctx, *, reason: str):
+        """Shuts down the bot, for emergency use only.
+
+        If the bot needs to be restarted in an emergency, you can use this to do it.
+        Since the bot automatically restarts after being shut down for 30s, this
+        command just kills the bot.
+
+        Obviously this will only work if the bot can read messages, but there is a
+        class of problems where the bot can read messages but not respond, so this
+        could handle those cases.
+        """
+        msg = '------------------------\n'
+        msg += '{} shut down the bot because: {}\n'.format(ctx.message.author.name, reason)
+        msg += '------------------------\n'
+        print(msg)
+
+        try:
+            owner = discord.utils.get(self.bot.get_all_members(),
+                                      id=self.bot.settings.owner)
+            await self.bot.send_message(owner, msg)
+            await self.bot.say("Owner has been notified, shutting down...")
+        except Exception as ex:
+            print('Failed to notifiy for breakglass: ' + str(ex))
+
+        await self.bot.shutdown()
+
+    @commands.command(pass_context=True)
+    @is_padglobal_admin()
     async def debugiddump(self, ctx):
         padinfo_cog = self.bot.get_cog('PadInfo')
         mi = padinfo_cog.index_all
