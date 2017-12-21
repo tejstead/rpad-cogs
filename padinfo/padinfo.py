@@ -880,6 +880,18 @@ AWAKENING_NAME_MAP_RPAD = {
     'Enhanced Wood Att.': 'row_wood',
     'Enhanced Light Att.': 'row_light',
     'Enhanced Dark Att.': 'row_dark',
+
+    'Skill Charge': 'misc_skillcharge',
+    'Super Additional Attack': 'misc_super_extraattack',
+    'Resistance-Bind＋': 'res_bind_super',
+    'Extend Time＋': 'misc_te_super',
+    'Resistance-Cloud': 'res_cloud',
+    'Resistance-Board Restrict': 'res_seal',
+    'Skill Boost＋': 'misc_sb_super',
+    'L-Shape Attack': 'l_attack',
+    'L-Shape Damage Reduction': 'l_shield',
+    'Enhance when HP is below 50%': 'attack_boost_low',
+    'Enhance when HP is above 80%': 'attack_boost_high',
 }
 
 AWAKENING_NAME_MAP = {
