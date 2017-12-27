@@ -2,6 +2,7 @@ import asyncio
 import inspect
 from pathlib import Path
 import re
+import time
 import unicodedata
 
 import discord
@@ -177,12 +178,13 @@ def checkPadguideCacheFile(cache_file, expiry_secs):
     return False
 
 
-async def async_cached_padguide_request(endpoint, result_file):
+async def async_cached_padguide_request(endpoint, result_file, time_ms=0):
     """Make a request to the PadGuide API.
 
     The endpoint is the JSP file name on the PadGuide API.
-    The result_file is the place to store the resulting file."""
-    time_ms = 0  # Pull for all-time
+    The result_file is the place to store the resulting file.
+    The time_ms is the time since update to pull for. Set to 0 for all time. Cannot be 0 for events.
+    """
     resp = await async_padguide_ts_request(time_ms, endpoint)
     writeJsonFile(result_file, resp)
 
