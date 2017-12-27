@@ -112,7 +112,7 @@ class PadEvents:
                                 except Exception as ex:
                                     # deregister gr
                                     traceback.print_exc()
-                                    self.settings.removeGuerrillaReg(gr['channel_id'], gr['server'])
+#                                     self.settings.removeGuerrillaReg(gr['channel_id'], gr['server'])
                                     print(
                                         "caught exception while sending guerrilla msg, deregistering " + str(ex))
                                     print('for ' + (channel.name if channel else 'unknown') +
@@ -130,8 +130,8 @@ class PadEvents:
                                 await self.pageOutput(msg, channel_id=daily_registration['channel_id'])
                         except Exception as ex:
                             traceback.print_exc()
-                            self.settings.removeDailyReg(
-                                daily_registration['channel_id'], daily_registration['server'])
+#                             self.settings.removeDailyReg(
+#                                 daily_registration['channel_id'], daily_registration['server'])
                             print("caught exception while sending daily msg, deregistering " + str(ex))
 
             except Exception as ex:
