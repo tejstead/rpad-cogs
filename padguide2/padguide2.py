@@ -203,11 +203,11 @@ class PadGuide2(object):
 
         for type in self._quick_refresh:
             cur_time = int(round(time.time() * 1000))
-            one_day_ago = cur_time - 24 * 60 * 60 * 1000
+            three_weeks_ago = cur_time - 3 * 7 * 24 * 60 * 60 * 1000
             endpoint = type.file_name()
             result_file = JSON_FILE_PATTERN.format(endpoint)
             if download_all or rpadutils.should_download(result_file, quick_expiry_secs):
-                await rpadutils.async_cached_padguide_request(endpoint, result_file, time_ms=one_day_ago)
+                await rpadutils.async_cached_padguide_request(endpoint, result_file, time_ms=three_weeks_ago)
 
         overrides_expiry_secs = 1 * 60 * 60
         rpadutils.makeCachedPlainRequest2(
