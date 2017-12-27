@@ -18,6 +18,7 @@ from itertools import groupby
 from operator import itemgetter
 import os
 import re
+import time
 import traceback
 
 import discord
@@ -201,10 +202,12 @@ class PadGuide2(object):
                 await rpadutils.async_cached_padguide_request(endpoint, result_file)
 
         for type in self._quick_refresh:
+            cur_time = int(round(time.time() * 1000))
+            one_day_ago = cur_time - 24 * 60 * 60 * 1000
             endpoint = type.file_name()
             result_file = JSON_FILE_PATTERN.format(endpoint)
             if download_all or rpadutils.should_download(result_file, quick_expiry_secs):
-                await rpadutils.async_cached_padguide_request(endpoint, result_file)
+                await rpadutils.async_cached_padguide_request(endpoint, result_file, time_ms=one_day_ago)
 
         overrides_expiry_secs = 1 * 60 * 60
         rpadutils.makeCachedPlainRequest2(
