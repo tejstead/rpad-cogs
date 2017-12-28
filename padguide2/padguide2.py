@@ -63,6 +63,7 @@ class PadGuide2(object):
             PgEggInstance,
             PgEggMonster,
             PgEggName,
+            PgEvent,
             PgEvolution,
             PgEvolutionMaterial,
             PgMonster,
@@ -78,7 +79,6 @@ class PadGuide2(object):
         ]
 
         self._quick_refresh = [
-            PgEvent,
             PgScheduledEvent,
         ]
 
