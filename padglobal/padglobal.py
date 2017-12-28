@@ -478,19 +478,27 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def which(self, ctx, *, term: str=None):
         """Shows PAD Which Monster entries"""
-        if term:
-            corrected_term, definition = self.lookup_which(term)
-            if definition:
-                await self.bot.say(inline('Which {}'.format(corrected_term)))
-                await self.bot.say(definition)
-            else:
-                await self.bot.say(inline('No which info found'))
+        if term is None:
+            await self.bot.whisper('__**PAD Which Monster**__ *(also check out ^pad / ^padfaq / ^boards / ^glossary)*')
+            msg = self.which_to_text()
+            for page in pagify(msg):
+                await self.bot.whisper(box(page))
             return
 
-        await self.bot.whisper('__**PAD Which Monster**__ *(also check out ^pad / ^padfaq / ^boards / ^glossary)*')
-        msg = self.which_to_text()
-        for page in pagify(msg):
-            await self.bot.whisper(box(page))
+        term = term.lower().replace('?', '')
+        nm, _, _ = lookup_named_monster(term)
+        if nm is None:
+            await self.bot.say(inline('No monster matched that query'))
+            return
+
+        name = nm.group_computed_basename.title()
+        definition = self.settings.which().get(str(nm.base_monster_no), None)
+        if definition is None:
+            await self.bot.say(inline('No which info for {}'.format(name)))
+            return
+
+        await self.bot.say(inline('Which {}'.format(name)))
+        await self.bot.say(definition)
 
     @commands.command(pass_context=True)
     async def whichto(self, ctx, to_user: discord.Member, *, term: str):
@@ -527,32 +535,6 @@ class PadGlobal:
         msg += '\n\n{}'.format(tbl_string)
 
         return msg
-
-    def lookup_which(self, term, old_only=False):
-        which = self.settings.which()
-        term = term.lower().replace('?', '')
-        definition = which.get(term, None)
-
-        if definition:
-            return term, definition
-
-        matches = difflib.get_close_matches(term, which.keys(), n=1, cutoff=.9)
-        if matches:
-            term = matches[0]
-            return term, which[term]
-
-        # Temporary while we migrate which
-        if old_only:
-            return term, None
-
-        nm, _, _ = lookup_named_monster(term)
-        if nm is None:
-            return term, None
-        m = monster_no_to_monster(nm.monster_no)
-
-        name = nm.group_computed_basename.title()
-        definition = which.get(str(nm.base_monster_no), None)
-        return name, definition
 
     async def _do_send_which(self, ctx, to_user: discord.Member, term, corrected_term, result):
         """Does the heavy lifting for whichto."""
@@ -605,44 +587,6 @@ class PadGlobal:
 
         self.settings.rmWhich(name)
         await self.bot.say("done")
-
-    @padglobal.command(pass_context=True)
-    async def migratewhich(self, ctx, term, *, query):
-        """Migrate an entry from the old which format to the monster name.
-
-        term should be the exact entry in which
-        query can be any monster query, which will resolve as normal
-        """
-        term, definition = self.lookup_which(term, old_only=True)
-        if definition is None:
-            await self.bot.say(inline('could not match that term'))
-            return
-        nm, err, _ = lookup_named_monster(query)
-        if nm is None:
-            await self.bot.say(inline('could not match that query:' + err))
-            return
-
-        monster_name = nm.group_computed_basename.title()
-        m = monster_no_to_monster(nm.monster_no)
-        base_monster_no_na = m.base_monster.monster_no_na
-
-        msg = 'It looks like you are trying to migrate term:\n\t' + term
-        msg += '\n\nTo monster tree:\n\t({}) {}'.format(base_monster_no_na, monster_name)
-        msg += '\n\nwith contents:\n\n' + definition
-        msg += '\n\nIf this is correct, type yes now'
-
-        for page in pagify(msg):
-            await self.bot.say(box(page))
-
-        resp_msg = await self.bot.wait_for_message(author=ctx.message.author, timeout=10)
-        if resp_msg is None or resp_msg.content.lower().strip() != 'yes':
-            await self.bot.say(inline('canceling migration'))
-            return
-
-        self.settings.rmWhich(term)
-        self.settings.addWhich(str(m.base_monster.monster_no), definition)
-
-        await self.bot.say(inline("done"))
 
     @padglobal.command(pass_context=True)
     @checks.is_owner()
