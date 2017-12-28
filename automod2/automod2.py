@@ -496,7 +496,7 @@ class AutoMod2Settings(CogSettings):
             channels = server['channels']
             for channel_id in list(channels.keys()):
                 channel = channels[channel_id]
-                if channel['whitelist'] or channel['blacklist'] or channel['image_limit']:
+                if channel.get('whitelist') or channel.get('blacklist') or channel.get('image_limit'):
                     continue
                 channels.pop(channel_id)
 
