@@ -36,7 +36,7 @@ specific channels as either whitelist or blacklist rules. This allows you
 to customize what text can be typed in a channel. Text from moderators is
 always ignored by this cog.
 
-Check out [p]listpatterns to see the current server-specific list of patterns.
+Check out [p]automod2 patterns to see the current server-specific list of patterns.
 
 Each pattern has an 'include' component and an 'exclude' component. If text
 matches the include, then the rule matches. If it subsequently matches the
@@ -68,7 +68,7 @@ If a channel has any whitelists, then text typed in the channel must match
 AT LEAST one whitelist, or it will be deleted. If ANY blacklist is matched
 the text will be deleted.
 
-You can see what patterns are enabled in a channel using [p]automod2 listrules
+You can see the configuration for the server using [p]automod2 list
 
 You can also prevent users from spamming images using [p]automod2 imagelimit
 """
@@ -99,6 +99,7 @@ class AutoMod2:
         self.bot = bot
 
         self.settings = AutoMod2Settings("automod2")
+        self.settings.cleanup()
         self.channel_user_logs = defaultdict(lambda: deque(maxlen=LOGS_PER_CHANNEL_USER))
 
         self.server_user_last = defaultdict(dict)
@@ -173,22 +174,30 @@ class AutoMod2:
         self.settings.rmBlacklist(ctx, name)
         await self.bot.say(inline('Removed blacklist config for: ' + name))
 
-    @automod2.command(name="listrules", pass_context=True, no_pm=True)
+    @automod2.command(name="list", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def listRules(self, ctx):
+    async def list(self, ctx):
         """List the whitelist/blacklist configuration for the current channel."""
-        whitelists, blacklists = self.settings.getRulesForChannel(ctx)
-        output = 'AutoMod configs for this channel\n\n'
-        output += 'Whitelists:\n'
-        output += self.patternsToTableText(whitelists)
-        output += '\n\n\n'
-        output += 'Blacklists:\n'
-        output += self.patternsToTableText(blacklists)
+        output = 'AutoMod configs\n'
+        channels = self.settings.getChannels(ctx)
+        for channel_id, config in channels.items():
+            channel = self.bot.get_channel(channel_id)
+            if channel is None:
+                continue
+
+            output += '\n#{}'.format(channel.name)
+            output += '\n\tWhitelists'
+            for name in config['whitelist']:
+                output += '\n\t\t{}'.format(name)
+            output += '\n\tBlacklists'
+            for name in config['blacklist']:
+                output += '\n\t\t{}'.format(name)
+            output += '\n\tImage Limit: {}'.format(config['image_limit'])
         await boxPagifySay(self.bot.say, output)
 
-    @automod2.command(name="listpatterns", pass_context=True, no_pm=True)
+    @automod2.command(name="patterns", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
-    async def listPatterns(self, ctx):
+    async def patterns(self, ctx):
         """List the registered patterns."""
         patterns = self.settings.getPatterns(ctx)
         output = 'AutoMod patterns for this server\n\n'
@@ -481,6 +490,15 @@ class AutoMod2Settings(CogSettings):
             'configs': {}
         }
         return config
+
+    def cleanup(self):
+        for server in self.serverConfigs().values():
+            channels = server['channels']
+            for channel_id in list(channels.keys()):
+                channel = channels[channel_id]
+                if channel['whitelist'] or channel['blacklist'] or channel['image_limit']:
+                    continue
+                channels.pop(channel_id)
 
     def serverConfigs(self):
         return self.bot_settings['configs']
