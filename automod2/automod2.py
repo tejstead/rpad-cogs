@@ -192,7 +192,7 @@ class AutoMod2:
             output += '\n\tBlacklists'
             for name in config['blacklist']:
                 output += '\n\t\t{}'.format(name)
-            output += '\n\tImage Limit: {}'.format(config['image_limit'])
+            output += '\n\tImage Limit: {}'.format(config.get('image_limit'))
         await boxPagifySay(self.bot.say, output)
 
     @automod2.command(name="patterns", pass_context=True, no_pm=True)
