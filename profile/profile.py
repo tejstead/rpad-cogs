@@ -286,7 +286,7 @@ class Profile:
         for p in matching_profiles:
             pad_id = formatId(p['id'])
             pad_name = p.get('name', 'unknown')
-            profile_text = p['text']
+            profile_text = p['text'].replace('`', '')
 
             line1 = "'{}' : {}".format(pad_name, pad_id)
             line2 = profile_text
