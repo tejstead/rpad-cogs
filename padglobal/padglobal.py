@@ -485,20 +485,26 @@ class PadGlobal:
                 await self.bot.whisper(box(page))
             return
 
+        name, definition = await self._resolve_which(term)
+        if name is None or definition is None:
+            return
+        await self.bot.say(inline('Which {}'.format(name)))
+        await self.bot.say(definition)
+
+    async def _resolve_which(self, term):
         term = term.lower().replace('?', '')
         nm, _, _ = lookup_named_monster(term)
         if nm is None:
             await self.bot.say(inline('No monster matched that query'))
-            return
+            return None, None
 
         name = nm.group_computed_basename.title()
         definition = self.settings.which().get(str(nm.base_monster_no), None)
         if definition is None:
             await self.bot.say(inline('No which info for {}'.format(name)))
-            return
+            return None, None
 
-        await self.bot.say(inline('Which {}'.format(name)))
-        await self.bot.say(definition)
+        return name, definition
 
     @commands.command(pass_context=True)
     async def whichto(self, ctx, to_user: discord.Member, *, term: str):
@@ -506,8 +512,10 @@ class PadGlobal:
 
         ^whichto @tactical_retreat saria
         """
-        corrected_term, result = self.lookup_which(term)
-        await self._do_send_which(ctx, to_user, term, corrected_term, result)
+        name, definition = await self._resolve_which(term)
+        if name is None or definition is None:
+            return
+        await self._do_send_which(ctx, to_user, name, definition)
 
     def which_to_text(self):
         items = list()
@@ -536,19 +544,14 @@ class PadGlobal:
 
         return msg
 
-    async def _do_send_which(self, ctx, to_user: discord.Member, term, corrected_term, result):
+    async def _do_send_which(self, ctx, to_user: discord.Member, name, definition):
         """Does the heavy lifting for whichto."""
-        if result:
-            result_output = '**Which {}**\n{}'.format(corrected_term, result)
-            result = "{} asked me to send you this:\n{}".format(
-                ctx.message.author.name, result_output)
-            await self.bot.send_message(to_user, result)
-            msg = "Sent that info to {}".format(to_user.name)
-            if term.lower() != corrected_term.lower():
-                msg += ' (corrected to {})'.format(corrected_term)
-            await self.bot.say(inline(msg))
-        else:
-            await self.bot.say(inline('No which info found'))
+        result_output = '**Which {}**\n{}'.format(name, definition)
+        result = "{} asked me to send you this:\n{}".format(
+            ctx.message.author.name, result_output)
+        await self.bot.send_message(to_user, result)
+        msg = "Sent info on {} to {}".format(name, to_user.name)
+        await self.bot.say(inline(msg))
 
     @padglobal.command(pass_context=True)
     async def addwhich(self, ctx, name, *, definition):
