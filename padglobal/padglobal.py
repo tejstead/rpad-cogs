@@ -554,39 +554,30 @@ class PadGlobal:
         await self.bot.say(inline(msg))
 
     @padglobal.command(pass_context=True)
-    async def addwhich(self, ctx, name, *, definition):
+    async def addwhich(self, ctx, monster_id: int, *, definition):
         """Adds an entry to the which monster evo list.
+
         If you provide a monster ID, the term will be entered for that monster tree.
         e.x. ^padglobal addwhich 3818 take the pixel one
-
-        If you want to use a generic term, provide any string.
-        e.x. ^padglobal addwhich terra take the pixel one
-
-        If you want to use a multiple word name, enclose it in quotes.
-        e.x. ^padglobal addwhich "trance terra" take the pixel one
         """
-        name = name.lower()
-        if name.isdigit():
-            m = monster_no_to_monster(int(name))
-            if m != m.base_monster:
-                m = m.base_monster
-                await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-            name = str(m.monster_no)
+        m = monster_no_to_monster(monster_id)
+        if m != m.base_monster:
+            m = m.base_monster
+            await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
+        name = str(m.monster_no)
 
         op = 'EDITED' if name in self.settings.which() else 'ADDED'
         self.settings.addWhich(name, definition)
         await self.bot.say("PAD which info successfully {}.".format(op))
 
     @padglobal.command(pass_context=True)
-    async def rmwhich(self, ctx, *, name):
+    async def rmwhich(self, ctx, *, monster_id: int):
         """Removes an entry from the which monster evo list."""
-        name = name.lower()
-        if name.isdigit():
-            m = monster_no_to_monster(int(name))
-            if m != m.base_monster:
-                m = m.base_monster
-                await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-            name = str(m.monster_no)
+        m = monster_no_to_monster(monster_id)
+        if m != m.base_monster:
+            m = m.base_monster
+            await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
+        name = str(m.monster_no)
 
         self.settings.rmWhich(name)
         await self.bot.say("done")
@@ -763,6 +754,116 @@ class PadGlobal:
             return raw_result
         return str(getattr(first, second, raw_result))
 
+    @commands.command(pass_context=True)
+    async def guide(self, ctx, *, term: str=None):
+        """Shows Leader and Dungeon guide entries."""
+        if term is None:
+            await self.send_guide()
+            return
+
+        term, text, err = self.get_guide_text(term)
+        if text is None:
+            await self.bot.say(inline(err))
+            return
+
+        await self.bot.say(text)
+
+    def get_guide_text(self, term: str):
+        term = term.lower()
+        if term in self.settings.dungeonGuide():
+            return term, self.settings.dungeonGuide()[term], None
+
+        nm, _, _ = lookup_named_monster(term)
+        if nm is None:
+            return None, None, 'No dungeon monster or matched that query'
+
+        name = nm.group_computed_basename.title()
+        definition = self.settings.leaderGuide().get(str(nm.base_monster_no), None)
+        if definition is None:
+            return None, None, 'A monster matched that query but has no guide'
+
+        return name, definition, None
+
+    async def send_guide(self):
+        msg = self.guide_to_text()
+        for page in pagify(msg):
+            await self.bot.whisper(page)
+
+    def guide_to_text(self):
+        msg = '__**Dungeon Guides**__'
+        dungeon_guide = self.settings.dungeonGuide()
+        for term in sorted(dungeon_guide.keys()):
+            definition = dungeon_guide[term]
+            msg += '\n**{}** :\n{}'.format(term, definition)
+
+        leader_guide = self.settings.leaderGuide()
+        name_to_guide = {self.term_to_monster_name(
+            monster_id): definition for monster_id, definition in leader_guide.items()}
+
+        msg += '\n\n__**Leader Guides**__'
+        for term in sorted(name_to_guide.keys()):
+            definition = name_to_guide[term]
+            msg += '\n**{}** :\n{}'.format(term, definition)
+
+        return msg
+
+    @padglobal.command(pass_context=True)
+    async def guideto(self, ctx, to_user: discord.Member, *, term: str):
+        """Send a user a dungeon/leader guide entry.
+
+        ^guideto @tactical_retreat osc10
+        """
+        term, text, err = self.get_guide_text(term)
+        if text is None:
+            await self.bot.say(inline(err))
+            return
+
+        result_output = '**Guide for {}**\n{}'.format(term, text)
+        result = "{} asked me to send you this:\n{}".format(
+            ctx.message.author.name, result_output)
+        await self.bot.send_message(to_user, result)
+        msg = "Sent guide for {} to {}".format(term, to_user.name)
+        await self.bot.say(inline(msg))
+
+    @padglobal.command(pass_context=True)
+    async def adddungeonguide(self, ctx, term: str, *, definition: str):
+        term = term.lower()
+        op = 'EDITED' if term in self.settings.dungeonGuide() else 'ADDED'
+        self.settings.addDungeonGuide(term, definition)
+        await self.bot.say("PAD dungeon guide successfully {}.".format(op))
+
+    @padglobal.command(pass_context=True)
+    async def rmdungeonguide(self, ctx, term: str):
+        self.settings.rmDungeonGuide(term.lower())
+        await self.bot.say("done")
+
+    @padglobal.command(pass_context=True)
+    async def addleaderguide(self, ctx, monster_id: int, *, definition: str):
+        m = monster_no_to_monster(monster_id)
+        if m != m.base_monster:
+            m = m.base_monster
+            await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
+        name = str(m.monster_no)
+
+        op = 'EDITED' if name in self.settings.leaderGuide() else 'ADDED'
+        self.settings.addLeaderGuide(name, definition)
+        await self.bot.say("PAD which info successfully {}.".format(op))
+
+    @padglobal.command(pass_context=True)
+    async def rmleaderguide(self, ctx, monster_id: int):
+        m = monster_no_to_monster(monster_id)
+        if m != m.base_monster:
+            m = m.base_monster
+            await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
+        name = str(m.monster_no)
+
+        self.settings.rmLeaderGuide(name)
+        await self.bot.say("done")
+
+    def term_to_monster_name(self, term):
+        nm, _, _ = lookup_named_monster(term)
+        return nm.group_computed_basename.title()
+
 
 def check_folders():
     if not os.path.exists("data/padglobal"):
@@ -890,3 +991,35 @@ class PadGlobalSettings(CogSettings):
         es.clear()
         es.extend(emoji_servers)
         self.save_settings()
+
+    def leaderGuide(self):
+        key = 'leader_guide'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = {}
+        return self.bot_settings[key]
+
+    def addLeaderGuide(self, name, text):
+        self.leaderGuide()[name] = text
+        self.save_settings()
+
+    def rmLeaderGuide(self, name):
+        options = self.leaderGuide()
+        if name in options:
+            options.pop(name)
+            self.save_settings()
+
+    def dungeonGuide(self):
+        key = 'dungeon_guide'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = {}
+        return self.bot_settings[key]
+
+    def addDungeonGuide(self, name, text):
+        self.dungeonGuide()[name] = text
+        self.save_settings()
+
+    def rmDungeonGuide(self, name):
+        options = self.dungeonGuide()
+        if name in options:
+            options.pop(name)
+            self.save_settings()
