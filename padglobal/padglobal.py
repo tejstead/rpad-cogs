@@ -803,7 +803,7 @@ class PadGlobal:
         msg += '\n\n__**Leader Guides**__'
         for term in sorted(name_to_guide.keys()):
             definition = name_to_guide[term]
-            msg += '\n**{}** :\n{}'.format(term, definition)
+            msg += '\n**{}** :\n{}\n'.format(term, definition)
 
         return msg
 
