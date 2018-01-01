@@ -794,7 +794,7 @@ class PadGlobal:
         dungeon_guide = self.settings.dungeonGuide()
         for term in sorted(dungeon_guide.keys()):
             definition = dungeon_guide[term]
-            msg += '\n**{}** :\n{}'.format(term, definition)
+            msg += '\n**{}** :\n{}\n'.format(term, definition)
 
         leader_guide = self.settings.leaderGuide()
         name_to_guide = {self.term_to_monster_name(
