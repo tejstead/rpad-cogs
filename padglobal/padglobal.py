@@ -754,7 +754,7 @@ class PadGlobal:
             return raw_result
         return str(getattr(first, second, raw_result))
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, aliases=["guides"])
     async def guide(self, ctx, *, term: str=None):
         """Shows Leader and Dungeon guide entries."""
         if term is None:
