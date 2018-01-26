@@ -4,11 +4,10 @@ import logging
 import os
 import traceback
 
-import discord
-from discord.ext import commands
-
 from cogs.utils import checks
 from cogs.utils.chat_formatting import inline, box
+import discord
+from discord.ext import commands
 
 from .rpadutils import CogSettings
 
@@ -28,7 +27,7 @@ class ChannelMod:
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_channels=True)
     async def channelmod(self, ctx):
-        """Manage Channel Moderation settings"""
+        """Manage channel moderation settings"""
         if ctx.invoked_subcommand is None:
             await self.bot.send_cmd_help(ctx)
 

@@ -129,7 +129,12 @@ class PadBoard:
 
     @commands.command(pass_context=True)
     async def dawnglare(self, ctx, user: discord.Member=None):
-        """Scans your recent messages for images. Attempts to convert the image into a dawnglare link."""
+        """Converts your most recent image to a dawnglare link
+
+        Scans your recent messages for images (links with embeds, or uploads)
+        and attempts to detect a board, and the orbs in that board. Posts a
+        link to dawnglare with the contents of your board.
+        """
         image_data = await self.get_recent_image(ctx, user, ctx.message)
         if not image_data:
             return

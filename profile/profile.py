@@ -2,10 +2,11 @@ import asyncio
 from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
-from enum import Enum
+from dateutil import tz
 import http.client
 import json
 import os
+import pytz
 import re
 import threading
 import time
@@ -13,13 +14,12 @@ import time
 import traceback
 import urllib.parse
 
-from dateutil import tz
+from enum import Enum
+
+from __main__ import user_allowed, send_cmd_help
 import discord
 from discord.ext import commands
 import prettytable
-import pytz
-
-from __main__ import user_allowed, send_cmd_help
 
 from .rpadutils import CogSettings
 from .utils import checks
@@ -73,9 +73,9 @@ class Profile:
 
     @commands.command(name="idme", pass_context=True)
     async def idMe(self, ctx, server=None):
-        """idme [server]
+        """Prints out your profile to the current channel
 
-        Prints out your profile to the current room. If you do not provide a server, your default is used
+        If you do not provide a server, your default is used
         """
         profile_msg = await self.getIdMsg(ctx.message.author, server, False)
         if profile_msg is None:
@@ -85,9 +85,9 @@ class Profile:
 
     @commands.command(name="idto", pass_context=True)
     async def idTo(self, ctx, user: discord.Member, server=None):
-        """idto <user> [server]
+        """Whispers your profile to specified user
 
-        Prints out your profile to specified user. If you do not provide a server, your default is used
+        If you do not provide a server, your default is used
         """
         profile_msg = await self.getIdMsg(ctx.message.author, server)
         if profile_msg is None:
@@ -101,9 +101,9 @@ class Profile:
 
     @commands.command(name="idfor", pass_context=True)
     async def idFor(self, ctx, user: discord.Member, server=None):
-        """idfor <user> [server]
+        """Prints out the profile of the specified user
 
-        Prints out the profile of the specified user. If you do not provide a server, your default is used
+        If you do not provide a server, your default is used.
         """
         profile_msg = await self.getIdMsg(user, server)
         if profile_msg is None:
@@ -125,10 +125,6 @@ class Profile:
         if server is None:
             return None
 
-        if for_other and not self.settings.getPublic(user.id, server):
-            await self.bot.say(inline("That user's profile is private"))
-            return None
-
         pad_id = self.settings.getId(user.id, server)
         pad_name = self.settings.getName(user.id, server)
         profile_text = self.settings.getProfileText(user.id, server)
@@ -148,9 +144,8 @@ class Profile:
 
     @profile.command(name="server", pass_context=True)
     async def setServer(self, ctx, server):
-        """profile server <server>
+        """Set your default server to one of [NA, EU, JP, KR]
 
-        Sets your default server to one of the supported servers: [NA, EU, JP, KR].
         This server is used to default the idme command if you don't provide a server.
         """
         server = normalizeServer(server)
@@ -163,9 +158,9 @@ class Profile:
 
     @profile.command(name="id", pass_context=True)
     async def setId(self, ctx, server, *id):
-        """profile id <server> <id>
+        """Sets your ID for a server
 
-        Sets your ID for a server. ID must be 9 digits, can be space/comma/dash delimited.
+        ID must be 9 digits, can be space/comma/dash delimited.
         """
         server = await self.getServer(ctx, server)
         if server is None:
@@ -182,10 +177,7 @@ class Profile:
 
     @profile.command(name="name", pass_context=True)
     async def setName(self, ctx, server, *name):
-        """profile name <server> <name>
-
-        Sets your in game name for a server.
-        """
+        """Sets your in game name for a server"""
         server = await self.getServer(ctx, server)
         if server is None:
             return None
@@ -196,9 +188,9 @@ class Profile:
 
     @profile.command(name="text", pass_context=True)
     async def setText(self, ctx, server, *text):
-        """profile text <server> <profile text>
+        """Sets your profile text for the server.
 
-        Sets your profile text for the server, used by the idme command and search.
+        This info is used by the idme command and search.
         """
         server = await self.getServer(ctx, server)
         if server is None:
@@ -215,9 +207,9 @@ class Profile:
 
     @profile.command(name="clear", pass_context=True)
     async def clear(self, ctx, server=None):
-        """profile clear [server]
+        """Deletes your saved profile for a server
 
-        Deletes your saved profile for a server, or if no server is provided then all profiles.
+        If no server is provided then all profiles are deleted.
         """
         user_id = ctx.message.author.id
         if server is None:
@@ -228,31 +220,11 @@ class Profile:
             self.settings.clearProfile(user_id, server)
             await self.bot.say(inline('Cleared your profile for ' + server))
 
-    @profile.command(name="visibility", pass_context=True)
-    async def visibility(self, ctx, visibility, server=None):
-        """profile visibility <public|private> [server]
-
-        Toggle the visibility of your profile. If your profile is private, users will not be able
-        to find you via search or idfor. The only data users can access are things you have
-        provided via profile commands.
-        """
-        server = await self.getServer(ctx, server)
-        if server is None:
-            return None
-
-        visibility = visibility.lower()
-        if visibility in ['public', 'private']:
-            user_id = ctx.message.author.id
-            self.settings.setPublic(user_id, server, visibility == 'public')
-            await self.bot.say(inline('Your profile visibility on {} is now : {}'.format(server, visibility)))
-        else:
-            await self.bot.say(inline('Visibility must be one of [public, private] but got : ' + visibility))
-
     @profile.command(name="search", pass_context=True, no_pm=False)
     async def search(self, ctx, server, *search_text):
         """profile search <server> <search text>
 
-        Scans all public profiles for the search text and PMs the results.
+        Scans all profiles for the search text and PMs the results.
         """
         server = await self.getServer(ctx, server)
         if server is None:
@@ -265,13 +237,11 @@ class Profile:
 
         # Get all profiles for server
         profiles = [p[server] for p in self.settings.profiles().values() if server in p]
-        # Limit to just the public ones
-        profiles = filter(lambda p: p.get('public', True), profiles)
         # Eliminate profiles without an ID set
         profiles = filter(lambda p: 'id' in p, profiles)
         profiles = list(profiles)
 
-        # Match the public profiles against the search text
+        # Match the profiles against the search text
         matching_profiles = filter(lambda p: search_text in p.get('text', '').lower(), profiles)
         matching_profiles = list(matching_profiles)
 
@@ -348,13 +318,6 @@ class ProfileSettings(CogSettings):
 
     def getId(self, user, server):
         return self.getProfile(user, server).get('id', '000000000')
-
-    def setPublic(self, user, server, is_public):
-        self.getProfile(user, server)['public'] = is_public
-        self.save_settings()
-
-    def getPublic(self, user, server):
-        return self.getProfile(user, server).get('public', True)
 
     def setName(self, user, server, name):
         self.getProfile(user, server)['name'] = name

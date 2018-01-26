@@ -1,21 +1,22 @@
 from datetime import datetime
 from datetime import timedelta
+from dateutil import tz
 import os
+import pytz
 import time
 
-from dateutil import tz
+from __main__ import send_cmd_help
 import discord
 from discord.ext import commands
-import pytz
-
-from __main__ import send_cmd_help
 
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.dataIO import fileIO
 
 
-tz_lookup = dict([(pytz.timezone(x).localize(datetime.now()).tzname(), pytz.timezone(x)) for x in pytz.all_timezones])
+tz_lookup = dict([(pytz.timezone(x).localize(datetime.now()).tzname(), pytz.timezone(x))
+                  for x in pytz.all_timezones])
+
 
 class TimeCog:
     """Utilities to convert time"""
@@ -24,8 +25,8 @@ class TimeCog:
         self.bot = bot
 
     @commands.command(name="time", pass_context=True)
-    async def time(self, ctx, tz):
-        """Converts time"""
+    async def time(self, ctx, *, tz: str):
+        """Displays the current time in the supplied timezone"""
         try:
             tz_obj = tzStrToObj(tz)
         except Exception as e:
@@ -37,8 +38,8 @@ class TimeCog:
         await self.bot.say(inline(msg))
 
     @commands.command(name="timeto", pass_context=True)
-    async def timeto(self, ctx, tz, time):
-        """Converts time"""
+    async def timeto(self, ctx, tz: str, *, time: str):
+        """Compute the time remaining until the [timezone] [time]"""
         try:
             tz_obj = tzStrToObj(tz)
         except Exception as e:
@@ -59,7 +60,8 @@ class TimeCog:
             req_time = req_time + timedelta(days=1)
         delta = req_time - now
 
-        msg = "There are " + fmtHrsMins(delta.seconds).strip() + " until " + time.strip() + " in " + now.strftime('%Z')
+        msg = "There are " + fmtHrsMins(delta.seconds).strip() + \
+            " until " + time.strip() + " in " + now.strftime('%Z')
         await self.bot.say(inline(msg))
 
 
@@ -79,13 +81,16 @@ def timeStrToObj(timestr):
         pass
     raise Exception()
 
+
 def fmtHrsMins(seconds):
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     return '{:2}hrs {:2}mins'.format(int(hours), int(minutes))
 
+
 def fmtTimeShort(dt):
     return dt.strftime("%I:%M %p")
+
 
 def tzStrToObj(tz):
     tz = tz.lower().strip()
@@ -102,6 +107,7 @@ def tzStrToObj(tz):
 
     tz_obj = pytz.timezone(tz)
     return tz_obj
+
 
 def setup(bot):
     n = TimeCog(bot)

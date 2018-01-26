@@ -5,28 +5,28 @@ from collections import defaultdict
 import csv
 from datetime import datetime
 from datetime import timedelta
-from enum import Enum
+from dateutil import tz
 import http.client
 from itertools import groupby
 import json
 from operator import itemgetter
 import os
+import pytz
 import random
 import re
+from setuptools.command.alias import alias
 import threading
 import time
 import time
 import traceback
 import urllib.parse
 
-from dateutil import tz
+from enum import Enum
+
+from __main__ import user_allowed, send_cmd_help
 import discord
 from discord.ext import commands
 import prettytable
-import pytz
-from setuptools.command.alias import alias
-
-from __main__ import user_allowed, send_cmd_help
 
 from . import padguide2
 from .rpadutils import *
@@ -88,7 +88,7 @@ class PadRem:
 
     @commands.command(name="remlist", pass_context=True)
     async def _remlist(self, ctx):
-        """Prints out all available rare egg machines that can be rolled."""
+        """Lists available rare egg machines that can be rolled"""
         msg = ""
 
         for server, config in self.pgrem.server_to_config.items():
@@ -101,7 +101,7 @@ class PadRem:
 
     @commands.command(name="reminfo", pass_context=True)
     async def _reminfo(self, ctx, server, rem_name):
-        """Prints out detailed information on the contents of a REM.
+        """Displays detailed information on the contents of a REM
 
         You must specify the server, NA or JP.
         You must specify the rem name. Use 'remlist' to get the full
@@ -124,7 +124,7 @@ class PadRem:
 
     @commands.command(name="rollrem", pass_context=True)
     async def _rollrem(self, ctx, server, rem_name):
-        """Rolls a rare egg machine and prints the result.
+        """Rolls a rare egg machine and prints the result
 
         You must specify the server, NA or JP.
         You must specify the rem name. Use 'remlist' to get the full
@@ -149,7 +149,7 @@ class PadRem:
 
     @commands.command(name="rollremfor", pass_context=True)
     async def _rollremfor(self, ctx, server: str, rem_name: str, monster_query: str):
-        """Rolls a rare egg machine until the selected monster pops out.
+        """Rolls a rare egg machine until the selected monster pops out
 
         You must specify the server, NA or JP.
         You must specify the rem name. Use 'remlist' to get the full

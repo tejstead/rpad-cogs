@@ -5,31 +5,31 @@ from collections import defaultdict
 import csv
 from datetime import datetime
 from datetime import timedelta
+from dateutil import tz
 import difflib
-from enum import Enum
 import http.client
 import io
 from itertools import groupby
 import json
 from operator import itemgetter
 import os
+import pytz
 import re
+from setuptools.command.alias import alias
 import sys
 import threading
 import time
 import traceback
 import urllib.parse
 
-from dateutil import tz
+from enum import Enum
+
+from __main__ import user_allowed, send_cmd_help
 import discord
 from discord.ext import commands
 import prettytable
-import pytz
 import romkan
-from setuptools.command.alias import alias
 import unidecode
-
-from __main__ import user_allowed, send_cmd_help
 
 from . import padguide2
 from .rpadutils import *
@@ -170,6 +170,7 @@ class PadInfo:
 
     @commands.command(pass_context=True)
     async def skillrotation(self, ctx, server: str='NA'):
+        """Print the current rotating skillups for a server (NA/JP)"""
         server = normalizeServer(server)
         if server not in ['NA', 'JP']:
             await self.bot.say(inline('Supported servers are NA, JP'))
@@ -182,7 +183,8 @@ class PadInfo:
             await self.bot.say(box(page))
 
     @commands.command(pass_context=True)
-    async def jpname(self, ctx, *, query):
+    async def jpname(self, ctx, *, query: str):
+        """Print the Japanese name of a monster"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             await self.bot.say(monsterToHeader(m))
@@ -191,14 +193,16 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(name="id", pass_context=True)
-    async def _do_id_all(self, ctx, *, query):
+    async def _do_id_all(self, ctx, *, query: str):
+        """Monster info (main tab)"""
         await self._do_id(ctx, query)
 
     @commands.command(name="idna", pass_context=True)
-    async def _do_id_na(self, ctx, *, query):
+    async def _do_id_na(self, ctx, *, query: str):
+        """Monster info (limited to NA monsters ONLY)"""
         await self._do_id(ctx, query, na_only=True)
 
-    async def _do_id(self, ctx, query, na_only=False):
+    async def _do_id(self, ctx, query: str, na_only=False):
         m, err, debug_info = self.findMonster(query, na_only=na_only)
         if m is not None:
             await self._do_idmenu(ctx, m, self.id_emoji)
@@ -206,7 +210,8 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(name="evos", pass_context=True)
-    async def evos(self, ctx, *, query):
+    async def evos(self, ctx, *, query: str):
+        """Monster info (evolutions tab)"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             await self._do_idmenu(ctx, m, self.evo_emoji)
@@ -214,7 +219,8 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(name="mats", pass_context=True, aliases=['evomats', 'evomat'])
-    async def evomats(self, ctx, *, query):
+    async def evomats(self, ctx, *, query: str):
+        """Monster info (evo materials tab)"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             await self._do_idmenu(ctx, m, self.mats_emoji)
@@ -222,7 +228,8 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(pass_context=True)
-    async def pantheon(self, ctx, *, query):
+    async def pantheon(self, ctx, *, query: str):
+        """Monster info (pantheon tab)"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             menu = await self._do_idmenu(ctx, m, self.pantheon_emoji)
@@ -232,7 +239,8 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(pass_context=True)
-    async def skillups(self, ctx, *, query):
+    async def skillups(self, ctx, *, query: str):
+        """Monster info (evolutions tab)"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             menu = await self._do_idmenu(ctx, m, self.skillups_emoji)
@@ -285,7 +293,8 @@ class PadInfo:
             print('Menu failure', ex)
 
     @commands.command(pass_context=True, aliases=['img'])
-    async def pic(self, ctx, *, query):
+    async def pic(self, ctx, *, query: str):
+        """Monster info (full image tab)"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             await self._do_idmenu(ctx, m, self.pic_emoji)
@@ -293,7 +302,8 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(pass_context=True, aliases=['stats'])
-    async def otherinfo(self, ctx, *, query):
+    async def otherinfo(self, ctx, *, query: str):
+        """Monster info (misc info tab)"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             await self._do_idmenu(ctx, m, self.other_info_emoji)
@@ -301,7 +311,8 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(pass_context=True)
-    async def lookup(self, ctx, *, query):
+    async def lookup(self, ctx, *, query: str):
+        """Short info results for a monster query"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
             embed = monsterToHeaderEmbed(m)
@@ -310,8 +321,8 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(pass_context=True, aliases=['leaders', 'leaderskills', 'ls'])
-    async def leaderskill(self, ctx, left_query, right_query=None, *, bad=None):
-        """Display the multiplier and leaderskills for two monsters.
+    async def leaderskill(self, ctx, left_query: str, right_query: str=None, *, bad=None):
+        """Display the multiplier and leaderskills for two monsters
 
         If either your left or right query contains spaces, wrap in quotes.
         e.g.: ^leaderskill "r sonia" "b sonia"
@@ -351,6 +362,7 @@ class PadInfo:
 
     @commands.command(name="helpid", pass_context=True, aliases=['helppic', 'helpimg'])
     async def _helpid(self, ctx):
+        """Whispers you info on how to craft monster queries for ^id"""
         await self.bot.whisper(box(HELP_MSG))
 
     @commands.group(pass_context=True)

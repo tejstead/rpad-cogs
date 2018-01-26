@@ -514,7 +514,9 @@ class TrUtils:
                 result = await result
 
     @commands.command(pass_context=True)
+    @checks.is_owner()
     async def checkimg(self, ctx, img: str):
+        """Classify the given image and display the results."""
         if img.startswith('https://cdn.discordapp'):
             await self.bot.say(inline('That URL probably wont work because Discord blocks non-browser requests'))
 
