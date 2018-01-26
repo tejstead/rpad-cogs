@@ -26,6 +26,7 @@ class ChannelMod:
         self.settings = ChannelModSettings("channelmod")
 
     @commands.group(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_channels=True)
     async def channelmod(self, ctx):
         """Manage Channel Moderation settings"""
         if ctx.invoked_subcommand is None:
