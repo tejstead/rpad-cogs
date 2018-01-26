@@ -354,6 +354,7 @@ class PadInfo:
         await self.bot.whisper(box(HELP_MSG))
 
     @commands.group(pass_context=True)
+    @checks.is_owner()
     async def padinfo(self, ctx):
         """PAD info management"""
         if ctx.invoked_subcommand is None:
