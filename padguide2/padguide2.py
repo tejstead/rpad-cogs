@@ -216,6 +216,7 @@ class PadGuide2(object):
             BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, overrides_expiry_secs)
 
     @commands.group(pass_context=True)
+    @checks.is_owner()
     async def padguide2(self, ctx):
         """PAD database management"""
         if ctx.invoked_subcommand is None:
