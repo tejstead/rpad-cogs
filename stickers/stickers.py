@@ -33,8 +33,8 @@ class Stickers:
         self.c_commands = dataIO.load_json(self.file_path)
         self.settings = StickersSettings("stickers")
 
-        global PADGLOBAL_COG
-        PADGLOBAL_COG = self
+        global STICKER_COG
+        STICKER_COG = self
 
     @commands.group(pass_context=True)
     @is_sticker_admin()
