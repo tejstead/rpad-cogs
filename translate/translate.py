@@ -46,6 +46,7 @@ class Translate:
                 await self.bot.send_message(message.channel, embed=em)
 
     @commands.group(pass_context=True)
+    @checks.is_owner()
     async def translate(self, context):
         """Translation utilities."""
         if context.invoked_subcommand is None:
