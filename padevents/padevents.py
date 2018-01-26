@@ -147,6 +147,7 @@ class PadEvents:
         print("done check_started")
 
     @commands.group(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def padevents(self, ctx):
         """PAD event tracking"""
         if ctx.invoked_subcommand is None:
@@ -411,16 +412,14 @@ class PadEvents:
         header = "Times are PT below\n\n"
         return header + tbl.get_string() + "\n"
 
-    @padevents.command(name="partial", pass_context=True)
-    async def _partial(self, ctx, server):
-        await self.doPartial(ctx, server)
-
     @commands.command(pass_context=True, aliases=['events'])
     async def eventsna(self, ctx):
+        """Print upcoming daily events for NA."""
         await self.doPartial(ctx, 'NA')
 
     @commands.command(pass_context=True)
     async def eventsjp(self, ctx):
+        """Print upcoming daily events for JP."""
         await self.doPartial(ctx, 'JP')
 
     async def doPartial(self, ctx, server):
