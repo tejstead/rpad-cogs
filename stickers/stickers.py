@@ -13,6 +13,17 @@ from .utils import checks
 from .utils.dataIO import dataIO
 
 
+STICKER_COG = None
+
+
+def is_sticker_admin_check(ctx):
+    return STICKER_COG.settings.checkAdmin(ctx.message.author.id)
+
+
+def is_sticker_admin():
+    return commands.check(is_sticker_admin_check)
+
+
 class Stickers:
     """Sticker commands."""
 
@@ -22,23 +33,24 @@ class Stickers:
         self.c_commands = dataIO.load_json(self.file_path)
         self.settings = StickersSettings("stickers")
 
+        global PADGLOBAL_COG
+        PADGLOBAL_COG = self
+
     @commands.group(pass_context=True)
+    @is_sticker_admin()
     async def sticker(self, context):
         """Global stickers."""
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
     @sticker.command(pass_context=True)
+    @is_sticker_admin()
     async def add(self, ctx, command: str, *, text):
         """Adds a sticker
 
         Example:
         !stickers add "whale happy" link_to_happy_whale
         """
-        if not self.settings.checkAdmin(ctx.message.author.id):
-            await self.bot.say(inline("Not authorized to edit stickers"))
-            return
-
         command = command.lower()
         if command in self.bot.commands.keys():
             await self.bot.say("That is already a standard command.")
@@ -52,15 +64,12 @@ class Stickers:
         await self.bot.say("Sticker successfully added.")
 
     @sticker.command(pass_context=True)
+    @is_sticker_admin()
     async def delete(self, ctx, command: str):
         """Deletes a sticker
 
         Example:
         !stickers delete "whale happy" """
-        if not self.settings.checkAdmin(ctx.message.author.id):
-            await self.bot.say(inline("Not authorized to edit stickers"))
-            return
-
         command = command.lower()
         cmdlist = self.c_commands
         if command in cmdlist:
