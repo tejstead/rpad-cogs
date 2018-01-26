@@ -685,6 +685,7 @@ class TrUtils:
         await self.bot.say(inline('Done'))
 
     @commands.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def mentionable(self, ctx, role: discord.Role):
         """Toggle the mentionability of a role."""
         try:
