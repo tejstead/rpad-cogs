@@ -50,6 +50,7 @@ class PadBoard:
             self.logs[message.author.id].append(url)
 
     @commands.group(pass_context=True)
+    @checks.is_owner()
     async def padboard(self, context):
         """PAD board utilities."""
         if context.invoked_subcommand is None:
