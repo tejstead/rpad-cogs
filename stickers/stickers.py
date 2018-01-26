@@ -3,10 +3,9 @@ from collections import defaultdict
 import os
 import re
 
+from __main__ import user_allowed, send_cmd_help
 import discord
 from discord.ext import commands
-
-from __main__ import user_allowed, send_cmd_help
 
 from .rpadutils import *
 from .rpadutils import CogSettings
