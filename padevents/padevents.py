@@ -2,10 +2,11 @@ import asyncio
 from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
-from enum import Enum
+from dateutil import tz
 import http.client
 import json
 import os
+import pytz
 import re
 import threading
 import time
@@ -13,13 +14,12 @@ import time
 import traceback
 import urllib.parse
 
-from dateutil import tz
+from enum import Enum
+
+from __main__ import user_allowed, send_cmd_help
 import discord
 from discord.ext import commands
 import prettytable
-import pytz
-
-from __main__ import user_allowed, send_cmd_help
 
 from . import padguide2
 from .rpadutils import *
@@ -114,9 +114,7 @@ class PadEvents:
                                     traceback.print_exc()
 #                                     self.settings.removeGuerrillaReg(gr['channel_id'], gr['server'])
                                     print(
-                                        "caught exception while sending guerrilla msg, deregistering " + str(ex))
-                                    print('for ' + (channel.name if channel else 'unknown') +
-                                          ' sending ' + message)
+                                        "caught exception while sending guerrilla msg" + str(ex))
 
                     else:
                         if not e.dungeon_type in [DungeonType.Normal]:
@@ -132,7 +130,7 @@ class PadEvents:
                             traceback.print_exc()
 #                             self.settings.removeDailyReg(
 #                                 daily_registration['channel_id'], daily_registration['server'])
-                            print("caught exception while sending daily msg, deregistering " + str(ex))
+                            print("caught exception while sending daily msg " + str(ex))
 
             except Exception as ex:
                 traceback.print_exc()
