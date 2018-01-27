@@ -2,20 +2,19 @@ import asyncio
 from collections import deque
 from datetime import datetime, timedelta
 import os
+import pytz
 import re
 import sys
 import textwrap
 import timeit
 
+from __main__ import send_cmd_help
 import aioodbc
+from cogs.utils import checks
+from cogs.utils.dataIO import dataIO
 import discord
 from discord.ext import commands
 import prettytable
-import pytz
-
-from __main__ import send_cmd_help
-from cogs.utils import checks
-from cogs.utils.dataIO import dataIO
 import sqlite3 as lite
 
 from . import rpadutils
@@ -119,13 +118,18 @@ class Seniority(object):
         self.db_path = self.settings.folder + '/log.db'
         self.lock = True
         self.insert_timing = deque(maxlen=1000)
+        print('Seniority: init complete')
 
     def __unload(self):
+        print('Seniority: unloading')
         self.lock = True
         self.pool.close()
+        print('Seniority: unloading complete')
 
     async def init(self):
+        print('Seniority: init')
         if not self.lock:
+            print('Seniority: bailing on unlock')
             return
 
         if os.name != 'nt' and sys.platform != 'win32':
@@ -141,6 +145,8 @@ class Seniority(object):
                 await cur.execute(CREATE_INDEX_3)
                 await cur.execute(CREATE_INDEX_4)
         self.lock = False
+
+        print('Seniority: init complete')
 
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -672,12 +678,14 @@ class Seniority(object):
     async def on_message(self, message: discord.Message):
         if message.server is None:
             return
+        print('Seniority: onmsg for ' + message.author.name)
         server = message.server
         channel = message.channel
         user = message.author
         msg_content = message.content
         now_date_str = now_date()
         await self.process_message(server, channel, user, now_date_str, msg_content)
+        print('Seniority: onmsg for ' + message.author.name + ' complete')
 
     async def process_message(self, server: discord.Server, channel: discord.Channel, user: discord.User, now_date_str: str, msg_content: str):
         if self.lock:
