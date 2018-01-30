@@ -1,7 +1,10 @@
 import asyncio
 from collections import deque
 from datetime import datetime, timedelta
+import discord
+from discord.ext import commands
 import os
+import prettytable
 import pytz
 import re
 import sys
@@ -12,9 +15,6 @@ from __main__ import send_cmd_help
 import aioodbc
 from cogs.utils import checks
 from cogs.utils.dataIO import dataIO
-import discord
-from discord.ext import commands
-import prettytable
 import sqlite3 as lite
 
 from . import rpadutils
@@ -678,14 +678,12 @@ class Seniority(object):
     async def on_message(self, message: discord.Message):
         if message.server is None:
             return
-        print('Seniority: onmsg for ' + message.author.name)
         server = message.server
         channel = message.channel
         user = message.author
         msg_content = message.content
         now_date_str = now_date()
         await self.process_message(server, channel, user, now_date_str, msg_content)
-        print('Seniority: onmsg for ' + message.author.name + ' complete')
 
     async def process_message(self, server: discord.Server, channel: discord.Channel, user: discord.User, now_date_str: str, msg_content: str):
         if self.lock:
