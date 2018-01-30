@@ -33,6 +33,10 @@ PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/portrai
 
 DISABLED_MSG = 'PAD Global info disabled on this server'
 
+FARMABLE_MSG = 'This monster is **farmable** so make as many copies of whichever evos you like.'
+MP_BUY_MSG = ('This monster can be purchased with MP. **DO NOT** buy MP cards without a good reason'
+              ', check ^mpdra? for specific recommendations.')
+
 PADGLOBAL_COG = None
 
 
@@ -320,7 +324,8 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def pad(self, ctx):
         """Shows PAD global command list"""
-        if await self._check_disabled(ctx): return
+        if await self._check_disabled(ctx):
+            return
         configured = self.settings.faq() + self.settings.boards()
         cmdlist = {k: v for k, v in self.c_commands.items() if k not in configured}
         await self.print_cmdlist(ctx, cmdlist)
@@ -328,14 +333,16 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def padfaq(self, ctx):
         """Shows PAD FAQ command list"""
-        if await self._check_disabled(ctx): return
+        if await self._check_disabled(ctx):
+            return
         cmdlist = {k: v for k, v in self.c_commands.items() if k in self.settings.faq()}
         await self.print_cmdlist(ctx, cmdlist)
 
     @commands.command(pass_context=True)
     async def boards(self, ctx):
         """Shows PAD Boards command list"""
-        if await self._check_disabled(ctx): return
+        if await self._check_disabled(ctx):
+            return
         cmdlist = {k: v for k, v in self.c_commands.items() if k in self.settings.boards()}
         await self.print_cmdlist(ctx, cmdlist)
 
@@ -410,7 +417,8 @@ class PadGlobal:
 
         ^glossaryto @tactical_retreat godfest
         """
-        if await self._check_disabled(ctx): return
+        if await self._check_disabled(ctx):
+            return
         corrected_term, result = self.lookup_glossary(term)
         await self._do_send_term(ctx, to_user, term, corrected_term, result)
 
@@ -420,7 +428,8 @@ class PadGlobal:
 
         ^padto @tactical_retreat jewels?
         """
-        if await self._check_disabled(ctx): return
+        if await self._check_disabled(ctx):
+            return
         corrected_term = self._lookup_command(term)
         result = self.c_commands.get(corrected_term, None)
         await self._do_send_term(ctx, to_user, term, corrected_term, result)
@@ -442,7 +451,8 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def glossary(self, ctx, *, term: str=None):
         """Shows PAD Glossary entries"""
-        if await self._check_disabled(ctx): return
+        if await self._check_disabled(ctx):
+            return
 
         if term:
             term, definition = self.lookup_glossary(term)
@@ -506,7 +516,8 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def which(self, ctx, *, term: str=None):
         """Shows PAD Which Monster entries"""
-        if await self._check_disabled(ctx): return
+        if await self._check_disabled(ctx):
+            return
 
         if term is None:
             await self.bot.whisper('__**PAD Which Monster**__ *(also check out ^pad / ^padfaq / ^boards / ^glossary)*')
@@ -530,11 +541,19 @@ class PadGlobal:
 
         name = nm.group_computed_basename.title()
         definition = self.settings.which().get(str(nm.base_monster_no), None)
-        if definition is None:
+
+        if definition is not None:
+            return name, definition
+
+        monster = monster_no_to_monster(nm.base_monster_no)
+
+        if monster.mp_evo:
+            return name, MP_BUY_MSG
+        elif monster.farmable_evo:
+            return name, FARMABLE_MSG
+        else:
             await self.bot.say(inline('No which info for {}'.format(name)))
             return None, None
-
-        return name, definition
 
     @commands.command(pass_context=True)
     async def whichto(self, ctx, to_user: discord.Member, *, term: str):
@@ -542,7 +561,8 @@ class PadGlobal:
 
         ^whichto @tactical_retreat saria
         """
-        if await self._check_disabled(ctx): return
+        if await self._check_disabled(ctx):
+            return
 
         name, definition = await self._resolve_which(term)
         if name is None or definition is None:
@@ -703,7 +723,7 @@ class PadGlobal:
         final_cmd = self._lookup_command(cmd)
         if final_cmd is None:
             return
-        
+
         if self.settings.checkDisabled(message):
             await self.bot.send_message(message.channel, inline(DISABLED_MSG))
             return
