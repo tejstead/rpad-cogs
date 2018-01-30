@@ -13,12 +13,11 @@ import os
 import re
 from time import time
 
+from __main__ import send_cmd_help
+from __main__ import settings
 import discord
 from discord.ext import commands
 import prettytable
-
-from __main__ import send_cmd_help
-from __main__ import settings
 
 from . import rpadutils
 from .rpadutils import *
@@ -185,14 +184,20 @@ class AutoMod2:
             if channel is None:
                 continue
 
+            whitelists = config['whitelist']
+            blacklists = config['blacklist']
+            image_limit = config.get('image_limit')
+            if len(whitelists + blacklists) + image_limit == 0:
+                continue
+
             output += '\n#{}'.format(channel.name)
             output += '\n\tWhitelists'
-            for name in config['whitelist']:
+            for name in whitelists:
                 output += '\n\t\t{}'.format(name)
             output += '\n\tBlacklists'
-            for name in config['blacklist']:
+            for name in blacklists:
                 output += '\n\t\t{}'.format(name)
-            output += '\n\tImage Limit: {}'.format(config.get('image_limit'))
+            output += '\n\tImage Limit: {}'.format(image_limit)
         await boxPagifySay(self.bot.say, output)
 
     @automod2.command(name="patterns", pass_context=True, no_pm=True)
