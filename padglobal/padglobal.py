@@ -1,13 +1,12 @@
 from collections import defaultdict
 import csv
 import difflib
-import io
-import os
-import re
-
 import discord
 from discord.ext import commands
+import io
+import os
 import prettytable
+import re
 
 from __main__ import user_allowed, send_cmd_help
 
@@ -27,11 +26,14 @@ PAD Global Commands
 ^which    : which monster evo info
 """
 
-PADGLOBAL_COG = None
 
 BLACKLISTED_CHARACTERS = '^[]*`~_'
 
 PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/portrait/{}.png'
+
+DISABLED_MSG = 'PAD Global info disabled on this server'
+
+PADGLOBAL_COG = None
 
 
 def is_padglobal_admin_check(ctx):
@@ -96,6 +98,25 @@ class PadGlobal:
             print('Failed to notifiy for breakglass: ' + str(ex))
 
         await self.bot.shutdown()
+
+    @commands.command(pass_context=True)
+    @checks.admin_or_permissions(manage_server=True)
+    async def togglepadglobal(self, ctx):
+        """Enable or disable PAD Global commands for the server."""
+        server_id = ctx.message.server.id
+        if server_id in self.settings.disabledServers():
+            self.settings.rmDisabledServer(server_id)
+        else:
+            self.settings.addDisabledServer(server_id)
+        status = 'disabled' if self.settings.checkDisabled(ctx) else 'enabled'
+        await self.bot.say(inline('PAD Global commands {} on this server').format(status))
+
+    async def _check_disabled(self, ctx):
+        """If the server is disabled, print a warning and return True"""
+        if self.settings.checkDisabled(ctx):
+            await self.bot.say(inline(DISABLED_MSG))
+            return True
+        return False
 
     @commands.command(pass_context=True)
     @is_padglobal_admin()
@@ -299,6 +320,7 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def pad(self, ctx):
         """Shows PAD global command list"""
+        if await self._check_disabled(ctx): return
         configured = self.settings.faq() + self.settings.boards()
         cmdlist = {k: v for k, v in self.c_commands.items() if k not in configured}
         await self.print_cmdlist(ctx, cmdlist)
@@ -306,12 +328,14 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def padfaq(self, ctx):
         """Shows PAD FAQ command list"""
+        if await self._check_disabled(ctx): return
         cmdlist = {k: v for k, v in self.c_commands.items() if k in self.settings.faq()}
         await self.print_cmdlist(ctx, cmdlist)
 
     @commands.command(pass_context=True)
     async def boards(self, ctx):
         """Shows PAD Boards command list"""
+        if await self._check_disabled(ctx): return
         cmdlist = {k: v for k, v in self.c_commands.items() if k in self.settings.boards()}
         await self.print_cmdlist(ctx, cmdlist)
 
@@ -386,6 +410,7 @@ class PadGlobal:
 
         ^glossaryto @tactical_retreat godfest
         """
+        if await self._check_disabled(ctx): return
         corrected_term, result = self.lookup_glossary(term)
         await self._do_send_term(ctx, to_user, term, corrected_term, result)
 
@@ -395,6 +420,7 @@ class PadGlobal:
 
         ^padto @tactical_retreat jewels?
         """
+        if await self._check_disabled(ctx): return
         corrected_term = self._lookup_command(term)
         result = self.c_commands.get(corrected_term, None)
         await self._do_send_term(ctx, to_user, term, corrected_term, result)
@@ -416,6 +442,8 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def glossary(self, ctx, *, term: str=None):
         """Shows PAD Glossary entries"""
+        if await self._check_disabled(ctx): return
+
         if term:
             term, definition = self.lookup_glossary(term)
             if definition:
@@ -478,6 +506,8 @@ class PadGlobal:
     @commands.command(pass_context=True)
     async def which(self, ctx, *, term: str=None):
         """Shows PAD Which Monster entries"""
+        if await self._check_disabled(ctx): return
+
         if term is None:
             await self.bot.whisper('__**PAD Which Monster**__ *(also check out ^pad / ^padfaq / ^boards / ^glossary)*')
             msg = self.which_to_text()
@@ -512,6 +542,8 @@ class PadGlobal:
 
         ^whichto @tactical_retreat saria
         """
+        if await self._check_disabled(ctx): return
+
         name, definition = await self._resolve_which(term)
         if name is None or definition is None:
             return
@@ -670,9 +702,10 @@ class PadGlobal:
         cmd = message.content[len(prefix):]
         final_cmd = self._lookup_command(cmd)
         if final_cmd is None:
-            # Temporary redirect to ^which
-            if cmd.startswith('which') and len(cmd) > len('which') and not cmd.startswith('which ') and not cmd.startswith('whichto'):
-                await self.bot.send_message(message.channel, inline('^which is now a dedicated command, try that instead'))
+            return
+        
+        if self.settings.checkDisabled(message):
+            await self.bot.send_message(message.channel, inline(DISABLED_MSG))
             return
 
         if final_cmd != cmd:
@@ -894,6 +927,7 @@ class PadGlobalSettings(CogSettings):
             'boards': [],
             'glossary': {},
             'which': {},
+            'disabled_servers': [],
         }
         return config
 
@@ -1022,4 +1056,26 @@ class PadGlobalSettings(CogSettings):
         options = self.dungeonGuide()
         if name in options:
             options.pop(name)
+            self.save_settings()
+
+    def disabledServers(self):
+        return self.bot_settings['disabled_servers']
+
+    def checkDisabled(self, ctx_or_msg):
+        if hasattr(ctx_or_msg, 'message'):
+            ctx_or_msg = ctx_or_msg.message
+        if ctx_or_msg.server is None:
+            return False
+        return ctx_or_msg.server.id in self.disabledServers()
+
+    def addDisabledServer(self, server_id):
+        disabled_servers = self.disabledServers()
+        if server_id not in disabled_servers:
+            disabled_servers.append(server_id)
+            self.save_settings()
+
+    def rmDisabledServer(self, server_id):
+        disabled_servers = self.disabledServers()
+        if server_id in disabled_servers:
+            disabled_servers.remove(server_id)
             self.save_settings()
