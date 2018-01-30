@@ -9,15 +9,15 @@ from _datetime import datetime
 from collections import defaultdict
 from collections import deque
 import copy
+import discord
+from discord.ext import commands
 import os
+import prettytable
 import re
 from time import time
 
 from __main__ import send_cmd_help
 from __main__ import settings
-import discord
-from discord.ext import commands
-import prettytable
 
 from . import rpadutils
 from .rpadutils import *
@@ -102,6 +102,7 @@ class AutoMod2:
         self.channel_user_logs = defaultdict(lambda: deque(maxlen=LOGS_PER_CHANNEL_USER))
 
         self.server_user_last = defaultdict(dict)
+        self.server_phrase_last = defaultdict(dict)
 
     @commands.command()
     @checks.mod_or_permissions(manage_server=True)
@@ -329,6 +330,7 @@ class AutoMod2:
         else:
             msg += '\nChannel not set'
 
+        msg += '\n\nUsers'
         for user_id, user_settings in self.settings.getWatchdogUsers(server_id).items():
             user_cooldown = user_settings['cooldown']
             request_user_id = user_settings['request_user_id']
@@ -340,6 +342,18 @@ class AutoMod2:
             if user_cooldown and member:
                 msg += '\n{} ({})\n\tcooldown {}\n\tby {} because [{}]'.format(
                     member.name, member.id, user_cooldown, request_user_txt, reason)
+
+        msg += '\n\nPhrases'
+        for name, phrase_settings in self.settings.getWatchdogPhrases(server_id).items():
+            phrase_cooldown = phrase_settings['cooldown']
+            request_user_id = phrase_settings['request_user_id']
+            phrase = phrase_settings['phrase']
+
+            request_user = ctx.message.server.get_member(request_user_id)
+            request_user_txt = request_user.name if request_user else '???'
+            if phrase_cooldown:
+                msg += '\n{} -> {}\n\tcooldown {}\n\tby {}'.format(
+                    name, phrase, phrase_cooldown, request_user_txt)
 
         for page in pagify(msg):
             await self.bot.say(box(page))
@@ -370,6 +384,36 @@ class AutoMod2:
 
     @watchdog.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
+    async def phrase(self, ctx, name: str, cooldown: int, *, phrase: str=None):
+        """Keep an eye out for a phrase (regex).
+
+        Whenever the regex is matched, a note will be printed to the watchdog
+        channel, subject to the specified cooldown in seconds.
+
+        Name is descriptive. Set a cooldown of 0 to clear.
+        """
+        server_id = ctx.message.server.id
+
+        if cooldown == 0:
+            self.settings.setWatchdogPhrase(
+                server_id, name, None, None, None)
+            await self.bot.say(inline('Watchdog phrase cleared for {}'.format(name)))
+            return
+
+        try:
+            re.compile(phrase)
+        except Exception as ex:
+            raise rpadutils.ReportableError(str(ex))
+
+        if cooldown < 300:
+            await self.bot.say(inline('Overriding cooldown to minimum'))
+            cooldown = 300
+        self.settings.setWatchdogPhrase(server_id, name, ctx.message.author.id, cooldown, phrase)
+        self.server_phrase_last[server_id][name] = None
+        await self.bot.say(inline('Watchdog named {} set on {} with cooldown of {} seconds'.format(name, phrase, cooldown)))
+
+    @watchdog.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
     async def channel(self, ctx, channel: discord.Channel):
         """Set the announcement channel."""
         server_id = ctx.message.server.id
@@ -377,21 +421,25 @@ class AutoMod2:
         await self.bot.say(inline('Watchdog channel set'))
 
     async def mod_message_watchdog(self, message):
-        user_id = message.author.id
-        if user_id == self.bot.user.id or message.channel.is_private:
+        if message.author.id == self.bot.user.id or message.channel.is_private:
+            return
+        if self.settings.getWatchdogChannel(message.server.id) is None:
             return
 
-        channel_id = message.channel.id
-        server_id = message.server.id
+        await self.mod_message_watchdog_user(message)
+        await self.mod_message_watchdog_phrase(message)
 
+    async def mod_message_watchdog_user(self, message):
+        user_id = message.author.id
+        server_id = message.server.id
         watchdog_channel_id = self.settings.getWatchdogChannel(server_id)
         user_settings = self.settings.getWatchdogUsers(server_id).get(user_id)
 
-        if watchdog_channel_id is None or user_settings is None:
+        if user_settings is None:
             return
 
-        user_cooldown = user_settings['cooldown']
-        if user_cooldown <= 0:
+        cooldown = user_settings['cooldown']
+        if cooldown <= 0:
             return
 
         request_user_id = user_settings['request_user_id']
@@ -403,17 +451,53 @@ class AutoMod2:
         now = datetime.utcnow()
         last_spoke_at = self.server_user_last[server_id].get(user_id)
         self.server_user_last[server_id][user_id] = now
+        time_since = (now - last_spoke_at).total_seconds() if last_spoke_at else 9999
 
-        report = last_spoke_at is None or (now - last_spoke_at).total_seconds() > user_cooldown
-        if report:
-            try:
-                watchdog_channel = self.bot.get_channel(watchdog_channel_id)
-                output_msg = '**Watchdog:** {} spoke in {} ({} monitored because [{}])\n{}'.format(
+        report = time_since > cooldown
+        if not report:
+            return
+
+        output_msg = '**Watchdog:** {} spoke in {} ({} monitored because [{}])\n{}'.format(
+            message.author.mention, message.channel.mention,
+            request_user_txt, reason, box(message.clean_content))
+        await self._watchdog_print(watchdog_channel_id, output_msg)
+
+    async def mod_message_watchdog_phrase(self, message):
+        server_id = message.server.id
+        watchdog_channel_id = self.settings.getWatchdogChannel(server_id)
+
+        for phrase_settings in self.settings.getWatchdogPhrases(server_id).values():
+            name = phrase_settings['name']
+            cooldown = phrase_settings['cooldown']
+            request_user_id = phrase_settings['request_user_id']
+            phrase = phrase_settings['phrase']
+
+            if cooldown <= 0:
+                continue
+
+            now = datetime.utcnow()
+            last_spoke_at = self.server_phrase_last[server_id].get(name)
+            time_since = (now - last_spoke_at).total_seconds() if last_spoke_at else 9999
+
+            report = time_since > cooldown
+            if not report:
+                continue
+
+            p = re.compile(phrase, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+            if p.match(message.clean_content):
+                self.server_phrase_last[server_id][name] = now
+                output_msg = '**Watchdog:** {} spoke in {} `(rule [{}] matched phrase [{}])`\n{}'.format(
                     message.author.mention, message.channel.mention,
-                    request_user_txt, reason, box(message.clean_content))
-                await self.bot.send_message(watchdog_channel, output_msg)
-            except Exception as ex:
-                print('failed to watchdog', str(ex))
+                    name, phrase, box(message.clean_content))
+                await self._watchdog_print(watchdog_channel_id, output_msg)
+                return
+
+    async def _watchdog_print(self, watchdog_channel_id, output_msg):
+        try:
+            watchdog_channel = self.bot.get_channel(watchdog_channel_id)
+            await self.bot.send_message(watchdog_channel, output_msg)
+        except Exception as ex:
+            print('failed to watchdog', str(ex))
 
     async def deleteAndReport(self, delete_msg, outgoing_msg):
         try:
@@ -479,14 +563,12 @@ def matchesIncludeExclude(include_pattern, exclude_pattern, txt):
 
 
 def setup(bot):
-    print('automod2 bot setup')
     n = AutoMod2(bot)
     bot.add_listener(n.mod_message_images, "on_message")
     bot.add_listener(n.mod_message, "on_message")
     bot.add_listener(n.mod_message_edit, "on_message_edit")
     bot.add_listener(n.mod_message_watchdog, "on_message")
     bot.add_cog(n)
-    print('done adding automod2 bot')
 
 
 class AutoMod2Settings(CogSettings):
@@ -640,4 +722,24 @@ class AutoMod2Settings(CogSettings):
             }
         else:
             watchdog_users.pop(user_id, None)
+        self.save_settings()
+
+    def getWatchdogPhrases(self, server_id):
+        watchdog = self.getWatchdog(server_id)
+        key = 'phrases'
+        if key not in watchdog:
+            watchdog[key] = {}
+        return watchdog[key]
+
+    def setWatchdogPhrase(self, server_id, name, request_user_id, cooldown_secs, phrase):
+        watchdog_phrases = self.getWatchdogPhrases(server_id)
+        if cooldown_secs:
+            watchdog_phrases[name] = {
+                'name': name,
+                'request_user_id': request_user_id,
+                'cooldown': cooldown_secs,
+                'phrase': phrase,
+            }
+        else:
+            watchdog_phrases.pop(name, None)
         self.save_settings()
