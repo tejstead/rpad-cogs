@@ -1,14 +1,15 @@
 import asyncio
+from dateutil.tz import gettz
+import dill
+import discord
+from discord.ext import commands
+from discord.ext.commands import CommandNotFound
+from discord.ext.commands import converter
 import inspect
 from pathlib import Path
 import re
 import time
 import unicodedata
-
-import discord
-from discord.ext import commands
-from discord.ext.commands import CommandNotFound
-from discord.ext.commands import converter
 
 from cogs.utils.chat_formatting import *
 
@@ -23,7 +24,8 @@ class RpadUtils:
     async def on_command_error(self, error, ctx):
         channel = ctx.message.channel
         if isinstance(error, ReportableError):
-            await self.bot.send_message(channel, error.message)
+            msg = 'An error occurred while processing your command: {}'.format(error.message)
+            await self.bot.send_message(channel, inline(msg))
 
 
 def setup(bot):
