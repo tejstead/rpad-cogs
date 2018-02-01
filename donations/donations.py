@@ -136,6 +136,19 @@ class Donations:
         self.settings.addInsultsEnabled(user_id)
         await self.bot.say(ctx.message.author.mention + ' ' 'Oh, I will.\n' + random.choice(self.insults_list))
 
+    @commands.command(pass_context=True, hidden=True)
+    async def insultripper(self, ctx):
+        """Fuck ripper."""
+        ripper_id = '123529484476350467'
+        ripper = ctx.message.server.get_member(ripper_id)
+        insult = random.choice(self.insults_list)
+        if ripper:
+            await self.bot.say(ripper.mention + ' ' + insult)
+        else:
+            await self.bot.say('Ripper is not in this server but I let him know anyway')
+            ripper = discord.utils.get(self.bot.get_all_members(), id=ripper_id)
+            await self.bot.send_message(ripper, '{} asked me to send you this:\n{}'.format(ctx.message.author.name, insult))
+
     @commands.command(pass_context=True)
     async def plsno(self, ctx):
         """I am merciful (donor only)."""
