@@ -371,14 +371,22 @@ class BadUser:
                 await self.bot.send_message(channel_obj, msg)
 
     async def mod_user_join(self, member):
+        update_channel = self.settings.getChannel(member.server.id)
+        if update_channel is None:
+            return
+        
+        channel_obj = discord.Object(update_channel)
         strikes = self.settings.countUserStrikes(member.server.id, member.id)
         if strikes:
             msg = 'Hey @here a user with {} strikes just joined the server: {}'.format(
-                strikes, member.name)
-            update_channel = self.settings.getChannel(member.server.id)
-            if update_channel is not None:
-                channel_obj = discord.Object(update_channel)
-                await self.bot.send_message(channel_obj, msg)
+                strikes, member.mention)
+            await self.bot.send_message(channel_obj, msg)
+        
+        local_ban = self.settings.bannedUsers().get(member.id, None) 
+        if local_ban:
+            msg = 'Hey @here locally banned user {} (for: {}) just joined the server'.format(
+                member.mention, local_ban)
+            await self.bot.send_message(channel_obj, msg)
 
     async def check_punishment(self, before, after):
         if before.roles == after.roles:
