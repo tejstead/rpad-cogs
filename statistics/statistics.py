@@ -47,6 +47,7 @@ class Statistics:
             pass
 
     @commands.command()
+    @checks.is_owner()
     async def botstats(self):
         """
         Retreive statistics
@@ -55,6 +56,7 @@ class Statistics:
         await self.bot.say(embed=message)
 
     @commands.command(pass_context=True)
+    @checks.is_owner()
     async def statsrefresh(self, context, seconds: int=0):
         """
         Set the refresh rate by which the statistics are updated
