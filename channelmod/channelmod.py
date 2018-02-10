@@ -4,10 +4,11 @@ import logging
 import os
 import traceback
 
-from cogs.utils import checks
-from cogs.utils.chat_formatting import inline, box
 import discord
 from discord.ext import commands
+
+from cogs.utils import checks
+from cogs.utils.chat_formatting import inline, box
 
 from .rpadutils import CogSettings
 
@@ -23,6 +24,7 @@ class ChannelMod:
     def __init__(self, bot):
         self.bot = bot
         self.settings = ChannelModSettings("channelmod")
+        self.channel_last_spoke = {}
 
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_channels=True)
@@ -59,7 +61,12 @@ class ChannelMod:
         channel = message.channel
         timeout = self.settings.get_inactivity_monitor_channel_timeout(server.id, channel.id)
 
-        if timeout > 0 and channel.name.endswith(INACTIVE):
+        if timeout <= 0:
+            return
+        
+        self.channel_last_spoke[channel.id] = datetime.utcnow()
+        
+        if channel.name.endswith(INACTIVE):
             new_name = channel.name[:-len(INACTIVE)]
             await self.bot.edit_channel(channel, name=new_name)
 
@@ -77,14 +84,8 @@ class ChannelMod:
             self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
             return
 
-        try:
-            async for message in self.bot.logs_from(channel, limit=1):
-                pass
-        except Exception as ex:
-            print('failed to retrieve logs: ' + str(ex))
-            return
-
-        time_delta = datetime.utcnow() - message.timestamp
+        last_spoke_at = self.channel_last_spoke.get(channel.id, 9999)
+        time_delta = datetime.utcnow() - last_spoke_at
         time_exceeded = time_delta.total_seconds() > timeout
 
         if time_exceeded and not channel.name.endswith(INACTIVE):
