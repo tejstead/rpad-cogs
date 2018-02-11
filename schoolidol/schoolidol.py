@@ -75,9 +75,20 @@ class SchoolIdol:
 
     async def do_menu(self, ctx, c):
         emoji_to_embed = OrderedDict()
-        emoji_to_embed[self.regular_emoji] = make_card_embed(c, IMAGE_FIELD)
-        emoji_to_embed[self.idol_emoji] = make_card_embed(c, IDOL_IMAGE_FIELD)
-        starting_menu_emoji = self.regular_emoji
+        regular_embed = make_card_embed(c, IMAGE_FIELD)
+        if regular_embed:
+            emoji_to_embed[self.regular_emoji] = regular_embed
+            starting_menu_emoji = self.regular_emoji
+            
+        idol_embed = make_card_embed(c, IDOL_IMAGE_FIELD)
+        if idol_embed:
+            emoji_to_embed[self.idol_emoji] = idol_embed
+            starting_menu_emoji = self.idol_emoji
+            
+        if starting_menu_emoji is None:
+            await self.bot.say(inline('no images found'))
+            return None
+        
         return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed)
     
     async def _do_menu(self, ctx, starting_menu_emoji, emoji_to_embed):
@@ -95,10 +106,14 @@ class SchoolIdol:
             
 
 def make_card_embed(c, url_field):
+    image_url = c[url_field]
+    if not image_url:
+        return None
+    
     embed = discord.Embed()
     embed.title = toHeader(c)
     embed.url = get_info_url(c)
-    embed.set_image(url='http:{}'.format(c[url_field]))
+    embed.set_image(url='http:{}'.format(image_url))
     embed.set_footer(text='Requester may click the reactions below to switch tabs')
     return embed
     
