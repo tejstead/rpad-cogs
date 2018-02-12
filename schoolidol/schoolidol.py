@@ -46,13 +46,17 @@ class SchoolIdol:
 
         self.id_to_card = {c['id']: c for c in self.card_data}
         name_to_card = {'{}'.format(c['idol']['name']).lower(): c for c in self.card_data}
-        firstname_to_card = {c['idol']['name'].lower().split(' ')[0]: c for c in self.card_data}
+        firstname_to_card = {c['idol']['name'].lower().split(' ')[-1]: c for c in self.card_data}
         collection_name_to_card = {'{} {}'.format(
             c['translated_collection'], c['idol']['name']).lower(): c for c in self.card_data}
         collection_firstname_to_card = {'{} {}'.format(
-            c['translated_collection'], c['idol']['name'].split(' ')[0]).lower(): c for c in self.card_data}
-        self.names_to_card = {**firstname_to_card, **name_to_card, **
-                              collection_name_to_card, **collection_firstname_to_card}
+            c['translated_collection'], c['idol']['name'].split(' ')[-1]).lower(): c for c in self.card_data}
+        self.names_to_card = {
+            **name_to_card,
+            **firstname_to_card,
+            **collection_name_to_card,
+            ** collection_firstname_to_card,
+        }
 
     @commands.command(pass_context=True)
     async def sifid(self, ctx, *, query: str):
