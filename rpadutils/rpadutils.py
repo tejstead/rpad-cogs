@@ -138,9 +138,6 @@ def normalizeServer(server):
     return 'NA' if server == 'US' else server
 
 
-cache_folder = 'data/padevents'
-
-
 def should_download(file_path, expiry_secs):
     if not os.path.exists(file_path):
         print("file does not exist, downloading " + file_path)
@@ -272,7 +269,7 @@ class Menu():
             Messages:
                 Strings or embeds to use for the menu.
                 Pass as a list for number menu
-        Optional agruments:
+        Optional arguments:
             page (Defaults to 0):
                 The message in messages that will be displayed
             timeout (Defaults to 15):
@@ -281,7 +278,7 @@ class Menu():
                 The same check that wait_for_reaction takes
             is_open (Defaults to False):
                 Whether or not the menu can take input from any user
-            emoji (Decaults to self.emoji):
+            emoji (Defaults to self.emoji):
                 A dictionary containing emoji to use for the menu.
                 If you pass this, use the same naming scheme as self.emoji
             message (Defaults to None):
@@ -364,6 +361,20 @@ class Menu():
 
 def char_to_emoji(c):
     c = c.lower()
+    if c >= '0' and c <= '9':
+        names = {
+            '0': '0⃣',
+            '1': '1⃣',
+            '2': '2⃣',
+            '3': '3⃣',
+            '4': '4⃣',
+            '5': '5⃣',
+            '6': '6⃣',
+            '7': '7⃣',
+            '8': '8⃣',
+            '9': '9⃣',
+        }
+        return names[c]
     if c < 'a' or c > 'z':
         return c
 
