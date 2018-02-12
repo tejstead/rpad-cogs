@@ -63,9 +63,9 @@ class ChannelMod:
 
         if timeout <= 0:
             return
-        
+
         self.channel_last_spoke[channel.id] = datetime.utcnow()
-        
+
         if channel.name.endswith(INACTIVE):
             new_name = channel.name[:-len(INACTIVE)]
             await self.bot.edit_channel(channel, name=new_name)
@@ -84,8 +84,9 @@ class ChannelMod:
             self.settings.set_inactivity_monitor_channel(server_id, channel_id, 0)
             return
 
-        last_spoke_at = self.channel_last_spoke.get(channel.id, 9999)
-        time_delta = datetime.utcnow() - last_spoke_at
+        now = datetime.utcnow()
+        last_spoke_at = self.channel_last_spoke.get(channel.id)
+        time_delta = (now - last_spoke_at).total_seconds() if last_spoke_at else 9999
         time_exceeded = time_delta.total_seconds() > timeout
 
         if time_exceeded and not channel.name.endswith(INACTIVE):
