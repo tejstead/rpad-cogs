@@ -13,7 +13,6 @@ import csv
 from datetime import datetime
 from datetime import timedelta
 import difflib
-from enum import Enum
 from itertools import groupby
 from operator import itemgetter
 import os
@@ -23,6 +22,7 @@ import traceback
 
 import discord
 from discord.ext import commands
+from enum import Enum
 import pytz
 import romkan
 
@@ -1859,7 +1859,7 @@ class MonsterIndex(object):
             prefixes.add('chibi')
 
         lower_name = m.name_na.lower()
-        awoken = lower_name.startswith('awoken') or '覚醒' in lower_name
+        awoken = lower_name.startswith('awoken') or '覚醒' in lower_name or '極醒' in lower_name
         revo = lower_name.startswith('reincarnated') or '転生' in lower_name
         awoken_or_revo_or_equip = awoken or revo or m.is_equip
 
