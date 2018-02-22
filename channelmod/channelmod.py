@@ -87,7 +87,7 @@ class ChannelMod:
         now = datetime.utcnow()
         last_spoke_at = self.channel_last_spoke.get(channel.id)
         time_delta = (now - last_spoke_at).total_seconds() if last_spoke_at else 9999
-        time_exceeded = time_delta.total_seconds() > timeout
+        time_exceeded = time_delta > timeout
 
         if time_exceeded and not channel.name.endswith(INACTIVE):
             new_name = channel.name + INACTIVE
