@@ -59,6 +59,7 @@ TYPES = [
     "awoken",
     "balance",
     "devil",
+    "dragon",
     "enhance",
     "evolve",
     "god",
