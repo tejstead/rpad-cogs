@@ -272,7 +272,7 @@ class AutoMod2:
             return
 
         ctx = CtxWrapper(message, self.bot)
-        if mod_or_perms(ctx, kick_members=True):
+        if mod_or_perms(ctx, manage_messages=True):
             return
 
         whitelists, blacklists = self.settings.getRulesForChannel(ctx)
