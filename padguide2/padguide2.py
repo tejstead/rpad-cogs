@@ -38,6 +38,7 @@ from .utils.dataIO import dataIO
 DUMMY_FILE_PATTERN = 'data/padguide2/{}.dummy'
 JSON_FILE_PATTERN = 'data/padguide2/{}.json'
 CSV_FILE_PATTERN = 'data/padguide2/{}.csv'
+ATTR_EXPORT_PATH = 'data/padguide2/card_data.csv'
 
 GROUP_BASENAMES_OVERRIDES_SHEET = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid=2070615818&single=true&output=csv'
 NICKNAME_OVERRIDES_SHEET = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid=0&single=true&output=csv'
@@ -167,6 +168,26 @@ class PadGuide2(object):
 
         self.database = PgRawDatabase()
         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
+
+        self.write_monster_attr_data()
+
+    def write_monster_attr_data(self):
+        """Write id,server,attr1,attr2 to be used by the portrait generation process."""
+        attr_short_prefix_map = {
+            Attribute.Fire: 'r',
+            Attribute.Water: 'b',
+            Attribute.Wood: 'g',
+            Attribute.Light: 'l',
+            Attribute.Dark: 'd',
+        }
+
+        with open(ATTR_EXPORT_PATH, 'w') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',', lineterminator='\n')
+            for m in self.database._monster_map.values():
+                attr1 = attr_short_prefix_map[m.attr1]
+                attr2 = attr_short_prefix_map[m.attr2] if m.attr2 else ''
+                writer.writerow([m.monster_no_na, 'na', attr1, attr2])
+                writer.writerow([m.monster_no_jp, 'jp', attr1, attr2])
 
     def _csv_to_tuples(self, file_path: str):
         # Loads a two-column CSV into a dict.
