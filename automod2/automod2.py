@@ -187,7 +187,7 @@ class AutoMod2:
 
             whitelists = config['whitelist']
             blacklists = config['blacklist']
-            image_limit = config.get('image_limit')
+            image_limit = config.get('image_limit', 0)
             if len(whitelists + blacklists) + image_limit == 0:
                 continue
 
