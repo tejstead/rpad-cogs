@@ -1,9 +1,11 @@
 from _datetime import datetime
 import asyncio
+import io
 import logging
 import os
 import traceback
 
+import aiohttp
 import discord
 from discord.ext import commands
 
@@ -158,12 +160,28 @@ class ChannelMod:
 
         channel = message.channel
         mirrored_channels = self.settings.get_mirrored_channels(channel.id)
+
+        if mirrored_channels and message.attachments:
+            # If we know we're copying a message and that message has an attachment,
+            # pre download it and reuse it for every upload.
+            attachment = message.attachments[0]
+            if 'url' and 'filename' in attachment:
+                url = attachment['url']
+                filename = attachment['filename']
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as response:
+                        attachment_bytes = io.BytesIO(await response.read())
+
         for dest_channel_id in mirrored_channels:
             try:
                 dest_channel = self.bot.get_channel(dest_channel_id)
                 if not dest_channel:
                     continue
-                dest_message = await self.bot.send_message(dest_channel, message.content)
+
+                if attachment_bytes:
+                    dest_message = await self.bot.send_file(dest_channel, attachment_bytes, filename=filename, content=message.content)
+                else:
+                    dest_message = await self.bot.send_message(dest_channel, message.content)
                 self.settings.add_mirrored_message(
                     channel.id, message.id, dest_channel.id, dest_message.id)
             except Exception as ex:
