@@ -309,4 +309,4 @@ class ChannelModSettings(CogSettings):
         if channel_config:
             return channel_config['messages'].get(source_message, [])
         else:
-            return None
+            return []
