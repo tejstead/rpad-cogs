@@ -10,7 +10,7 @@ from discord.ext import commands
 from cogs.utils import checks
 from cogs.utils.chat_formatting import inline, box
 
-from .rpadutils import CogSettings
+from .rpadutils import CogSettings, ReportableError
 
 
 log = logging.getLogger("red.admin")
@@ -116,18 +116,108 @@ class ChannelMod:
             except:
                 traceback.print_exc()
 
+    @channelmod.command(pass_context=True)
+    @checks.is_owner()
+    async def addmirror(self, ctx, source_channel_id: str, dest_channel_id: str, docheck: bool=True):
+        """Set mirroring between two channels."""
+        if docheck and (not self.bot.get_channel(source_channel_id) or not self.bot.get_channel(dest_channel_id)):
+            await self.bot.say(inline('Check your channel IDs, or maybe the bot is not in those servers'))
+            return
+        self.settings.add_mirrored_channel(source_channel_id, dest_channel_id)
+        await self.bot.say(inline('Done'))
+
+    @channelmod.command(pass_context=True)
+    @checks.is_owner()
+    async def rmmirror(self, ctx, source_channel_id: str, dest_channel_id: str, docheck: bool=True):
+        """Remove mirroring between two channels."""
+        if docheck and (not self.bot.get_channel(source_channel_id) or not self.bot.get_channel(dest_channel_id)):
+            await self.bot.say(inline('Check your channel IDs, or maybe the bot is not in those servers'))
+            return
+        self.settings.rm_mirrored_channel(source_channel_id, dest_channel_id)
+        await self.bot.say(inline('Done'))
+
+    @channelmod.command(pass_context=True)
+    @checks.is_owner()
+    async def mirrorconfig(self, ctx):
+        """List mirror config."""
+        mirrored_channels = self.settings.mirrored_channels()
+        msg = 'Mirrored channels\n'
+        for mc_id, config in mirrored_channels.items():
+            channel = self.bot.get_channel(mc_id)
+            channel_name = channel.name if channel else 'unknown'
+            msg += '\n{} ({})'.format(mc_id, channel_name)
+            for channel_id in config['channels']:
+                channel = self.bot.get_channel(channel_id)
+                channel_name = channel.name if channel else 'unknown'
+                msg += '\n\t{} ({})'.format(channel_id, channel_name)
+        await self.bot.say(box(msg))
+
+    async def mirror_msg_new(self, message):
+        if message.author.id == self.bot.user.id or message.channel.is_private:
+            return
+
+        channel = message.channel
+        mirrored_channels = self.settings.get_mirrored_channels(channel.id)
+        for dest_channel_id in mirrored_channels:
+            try:
+                dest_channel = self.bot.get_channel(dest_channel_id)
+                if not dest_channel:
+                    continue
+                dest_message = await self.bot.send_message(dest_channel, message.content)
+                self.settings.add_mirrored_message(
+                    channel.id, message.id, dest_channel.id, dest_message.id)
+            except Exception as ex:
+                print('Failed to mirror message from ', channel.id, 'to', dest_channel_id, ':', ex)
+                traceback.print_exc()
+
+    async def mirror_msg_edit(self, message, new_message):
+        await self.mirror_msg_mod(message, new_message.content)
+
+    async def mirror_msg_delete(self, message):
+        await self.mirror_msg_mod(message, None)
+
+    async def mirror_msg_mod(self, message, new_message_content: str=None):
+        if message.author.id == self.bot.user.id or message.channel.is_private:
+            return
+
+        channel = message.channel
+        mirrored_messages = self.settings.get_mirrored_messages(channel.id, message.id)
+        for (dest_channel_id, dest_message_id) in mirrored_messages:
+            try:
+                dest_channel = self.bot.get_channel(dest_channel_id)
+                if not dest_channel:
+                    print('could not locate channel to mod')
+                    continue
+                dest_message = await self.bot.get_message(dest_channel, dest_message_id)
+                if not dest_message:
+                    print('could not locate message to mod')
+                    continue
+
+                if new_message_content:
+                    await self.bot.edit_message(dest_message, new_content=new_message_content)
+                else:
+                    await self.bot.delete_message(dest_message)
+            except Exception as ex:
+                print('Failed to mirror message edit from ',
+                      channel.id, 'to', dest_channel_id, ':', ex)
+
 
 def setup(bot):
     n = ChannelMod(bot)
     bot.add_cog(n)
     bot.add_listener(n.log_channel_activity_check, "on_message")
     bot.loop.create_task(n.channel_inactivity_monitor())
+    bot.add_listener(n.mirror_msg_new, "on_message")
+    bot.add_listener(n.mirror_msg_edit, "on_message_edit")
+    bot.add_listener(n.mirror_msg_delete, "on_message_delete")
 
 
 class ChannelModSettings(CogSettings):
     def make_default_settings(self):
         config = {
             'servers': {},
+            'mirrored_channels': {},
+            'max_mirrored_messages': 20,
         }
         return config
 
@@ -156,3 +246,67 @@ class ChannelModSettings(CogSettings):
         channels = self.get_inactivity_monitor_channels(server_id)
         channel = channels.get(channel_id, {})
         return channel.get('timeout', 0)
+
+    def max_mirrored_messages(self):
+        return self.bot_settings['max_mirrored_messages']
+
+    def mirrored_channels(self):
+        # Mirrored channels looks like:
+        #  <source_channel_id>: {
+        #    'channels': [dest_channel_id_1, dest_channel_id2],
+        #    'messages': {
+        #      <source_msg_id>: [
+        #         (dest_channel_id, dest_channel_msg],
+        #      ]
+        #    }
+        #  }
+        return self.bot_settings['mirrored_channels']
+
+    def get_mirrored_channels(self, source_channel: str):
+        return self.mirrored_channels().get(source_channel, {}).get('channels', [])
+
+    def add_mirrored_channel(self, source_channel: str, dest_channel: str):
+        channels = self.mirrored_channels()
+        if source_channel == dest_channel:
+            raise ReportableError('Cannot mirror a channel to itself')
+        if dest_channel in channels:
+            raise ReportableError('Destination channel is already a source channel')
+        if source_channel not in channels:
+            channels[source_channel] = {
+                'channels': [],
+                'messages': {},
+            }
+        channels[source_channel]['channels'].append(dest_channel)
+        self.save_settings()
+
+    def rm_mirrored_channel(self, source_channel: str, dest_channel: str):
+        channels = self.mirrored_channels()
+        config = channels.get(source_channel)
+        if config:
+            config['channels'].pop(dest_channel, None)
+            self.save_settings()
+
+    def add_mirrored_message(self, source_channel: str, source_message: str, dest_channel: str, dest_message: str):
+        channel_config = self.mirrored_channels()[source_channel]
+        messages = channel_config['messages']
+        if source_message not in messages:
+            messages[source_message] = []
+
+        targets = messages[source_message]
+        new_entry = [dest_channel, dest_message]
+        if new_entry not in targets:
+            targets.append(new_entry)
+            self.save_settings()
+
+        if len(messages) > self.max_mirrored_messages():
+            oldest_msg = min(messages.keys())
+            messages.pop(oldest_msg)
+            self.save_settings()
+
+    def get_mirrored_messages(self, source_channel: str, source_message: str):
+        """Returns either None or [(channel_id, message_id), ...]"""
+        channel_config = self.mirrored_channels().get(source_channel, None)
+        if channel_config:
+            return channel_config['messages'].get(source_message, [])
+        else:
+            return None
