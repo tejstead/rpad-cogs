@@ -1806,6 +1806,7 @@ class MonsterIndex(object):
             139: ['new years', 'ny'],
             149: ['wedding', 'bride'],
             154: ['padr'],
+            175: ['valentines', 'vday'],
         }
 
         monster_no_na_to_nicknames = defaultdict(set)
@@ -1998,13 +1999,15 @@ class MonsterIndex(object):
         # No decent matches. Try near hits on nickname instead
         matches = difflib.get_close_matches(query, self.all_entries.keys(), n=1, cutoff=.8)
         if len(matches):
-            return self.all_entries[matches[0]], None, 'Close nickname match'
+            match = matches[0]
+            return self.all_entries[match], None, 'Close nickname match ({})'.format(match)
 
         # Still no decent matches. Try near hits on full name instead
         matches = difflib.get_close_matches(
             query, self.all_na_name_to_monsters.keys(), n=1, cutoff=.9)
         if len(matches):
-            return self.all_na_name_to_monsters[matches[0]], None, 'Close name match'
+            match = matches[0]
+            return self.all_na_name_to_monsters[match], None, 'Close name match ({})'.format(match)
 
         # couldn't find anything
         return None, "Could not find a match for: " + query, None
