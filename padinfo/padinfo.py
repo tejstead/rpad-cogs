@@ -1,6 +1,6 @@
 import asyncio
 from builtins import filter, map
-from collections import OrderedDict, Counter
+from collections import OrderedDict
 from collections import defaultdict
 import csv
 from datetime import datetime
@@ -60,16 +60,6 @@ computed nickname list and overrides: https://docs.google.com/spreadsheets/d/1Ey
 submit an override suggestion: https://docs.google.com/forms/d/1kJH9Q0S8iqqULwrRqB9dSxMOMebZj6uZjECqi4t9_z0/edit"""
 
 EMBED_NOT_GENERATED = -1
-
-
-class OrderedCounter(Counter, OrderedDict):
-    """Counter that remembers the order elements are first seen"""
-
-    def __repr__(self):
-        return "%s(%r)" % (self.__class_.__name__, OrderedDict(self))
-
-    def __reduce__(self):
-        return self.__class__, (OrderedDict(self),)
 
 
 INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
@@ -249,7 +239,6 @@ class PadInfo:
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
-#     async def _do_idmenu(self, ctx, m : Monster, starting_menu_emoji):
     async def _do_idmenu(self, ctx, m, starting_menu_emoji):
         id_embed = monsterToEmbed(m, self.get_emojis())
         evo_embed = monsterToEvoEmbed(m)
@@ -272,6 +261,19 @@ class PadInfo:
             emoji_to_embed[self.skillups_emoji] = skillups_embed
 
         emoji_to_embed[self.other_info_emoji] = other_info_embed
+
+        return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed)
+
+    async def _do_evolistenu(self, ctx, sm):
+        monsters = sm.alt_evos
+        monsters.sort(key=lambda m: m.monster_no)
+
+        emoji_to_embed = OrderedDict()
+        for idx, m in enumerate(monsters):
+            emoji = char_to_emoji(str(idx))
+            emoji_to_embed[emoji] = monsterToEmbed(m, self.get_emojis())
+            if m == sm:
+                starting_menu_emoji = emoji
 
         return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed)
 
@@ -317,6 +319,15 @@ class PadInfo:
         if m is not None:
             embed = monsterToHeaderEmbed(m)
             await self.bot.say(embed=embed)
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
+    @commands.command(pass_context=True)
+    async def evolist(self, ctx, *, query):
+        """Monster info (for all monsters in the evo tree)"""
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            await self._do_evolistenu(ctx, m)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
