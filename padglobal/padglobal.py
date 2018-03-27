@@ -711,6 +711,9 @@ class PadGlobal:
             await self.bot.say(box('Error:\n' + str(ex)))
 
     async def checkCC(self, message):
+        if message.author.id == self.bot.user.id:
+            return
+
         if len(message.content) < 2:
             return
 
