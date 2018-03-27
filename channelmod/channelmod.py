@@ -161,6 +161,7 @@ class ChannelMod:
         channel = message.channel
         mirrored_channels = self.settings.get_mirrored_channels(channel.id)
 
+        attachment_bytes = None
         if mirrored_channels and message.attachments:
             # If we know we're copying a message and that message has an attachment,
             # pre download it and reuse it for every upload.
