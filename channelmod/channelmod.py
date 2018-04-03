@@ -161,8 +161,15 @@ class ChannelMod:
         channel = message.channel
         mirrored_channels = self.settings.get_mirrored_channels(channel.id)
 
+        if not mirrored_channels:
+            return
+
+        attribution_required = self.settings.get_last_spoke(channel.id) != message.author.id
+        if attribution_required:
+            self.settings.set_last_spoke(channel.id, message.author.id)
+
         attachment_bytes = None
-        if mirrored_channels and message.attachments:
+        if message.attachments:
             # If we know we're copying a message and that message has an attachment,
             # pre download it and reuse it for every upload.
             attachment = message.attachments[0]
@@ -178,6 +185,12 @@ class ChannelMod:
                 dest_channel = self.bot.get_channel(dest_channel_id)
                 if not dest_channel:
                     continue
+
+                if attribution_required:
+                    msg = 'Posted by **{}** in *{} - #{}*:'.format(message.author.name,
+                                                                   message.server.name,
+                                                                   message.channel.name)
+                    await self.bot.send_message(dest_channel, msg)
 
                 if attachment_bytes:
                     dest_message = await self.bot.send_file(dest_channel, attachment_bytes, filename=filename, content=message.content)
@@ -272,6 +285,7 @@ class ChannelModSettings(CogSettings):
     def mirrored_channels(self):
         # Mirrored channels looks like:
         #  <source_channel_id>: {
+        #    'last_spoke: '<user_id>',
         #    'channels': [dest_channel_id_1, dest_channel_id2],
         #    'messages': {
         #      <source_msg_id>: [
@@ -283,6 +297,13 @@ class ChannelModSettings(CogSettings):
 
     def get_mirrored_channels(self, source_channel: str):
         return self.mirrored_channels().get(source_channel, {}).get('channels', [])
+
+    def get_last_spoke(self, source_channel: str):
+        return self.mirrored_channels().get(source_channel, {}).get('last_spoke', None)
+
+    def set_last_spoke(self, source_channel: str, last_spoke: str):
+        self.mirrored_channels().get(source_channel)['last_spoke'] = last_spoke
+        self.save_settings()
 
     def add_mirrored_channel(self, source_channel: str, dest_channel: str):
         channels = self.mirrored_channels()
