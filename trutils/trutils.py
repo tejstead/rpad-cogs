@@ -209,7 +209,11 @@ class TrUtils:
     @commands.command(pass_context=True)
     @checks.mod_or_permissions(manage_server=True)
     async def editmsg(self, ctx, channel: discord.Channel, msg_id: int, *, new_msg: str):
-        """Given a channel and an ID for a message printed in that channel, replaces it."""
+        """Given a channel and an ID for a message printed in that channel, replaces it.
+
+        To find a message ID, enable developer mode in Discord settings and
+        click the ... on a message.
+        """
         try:
             msg = await self.bot.get_message(channel, str(msg_id))
         except discord.NotFound:
@@ -229,12 +233,21 @@ class TrUtils:
     @checks.mod_or_permissions(manage_server=True)
     async def dumpchannel(self, ctx, channel: discord.Channel, msg_id: int=None):
         """Given a channel and an ID for a message printed in that channel, dumps it 
-        boxed with formatting escaped and some issues cleaned up"""
+        boxed with formatting escaped and some issues cleaned up.
+
+        To find a message ID, enable developer mode in Discord settings and
+        click the ... on a message.
+        """
         await self._dump(ctx, channel, msg_id)
 
     @commands.command(pass_context=True)
     async def dumpmsg(self, ctx, msg_id: int=None):
-        """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped and some issues cleaned up"""
+        """Given an ID for a message printed in the current channel, dumps it
+        boxed with formatting escaped and some issues cleaned up.
+
+        To find a message ID, enable developer mode in Discord settings and
+        click the ... on a message.
+        """
         await self._dump(ctx, ctx.message.channel, msg_id)
 
     async def _dump(self, ctx, channel: discord.Channel=None, msg_id: int=None):
@@ -251,7 +264,12 @@ class TrUtils:
 
     @commands.command(pass_context=True)
     async def dumpmsgexact(self, ctx, msg_id: int):
-        """Given an ID for a message printed in the current channel, dumps it boxed with formatting escaped"""
+        """Given an ID for a message printed in the current channel, dumps it 
+        boxed with formatting escaped.
+
+        To find a message ID, enable developer mode in Discord settings and
+        click the ... on a message.
+        """
         msg = await self.bot.get_message(ctx.message.channel, msg_id)
         content = msg.content.strip()
         content = box(content.replace('`', u'\u200b`'))
