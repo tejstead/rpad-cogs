@@ -322,8 +322,8 @@ class ChannelModSettings(CogSettings):
     def rm_mirrored_channel(self, source_channel: str, dest_channel: str):
         channels = self.mirrored_channels()
         config = channels.get(source_channel)
-        if config:
-            config['channels'].pop(dest_channel, None)
+        if config and dest_channel in config['channels']:
+            config['channels'].remove(dest_channel)
             self.save_settings()
 
     def add_mirrored_message(self, source_channel: str, source_message: str, dest_channel: str, dest_message: str):
