@@ -194,6 +194,7 @@ class ChannelMod:
 
                 if attachment_bytes:
                     dest_message = await self.bot.send_file(dest_channel, attachment_bytes, filename=filename, content=message.content)
+                    attachment_bytes.seek(0)
                 else:
                     dest_message = await self.bot.send_message(dest_channel, message.content)
                 self.settings.add_mirrored_message(
@@ -201,6 +202,9 @@ class ChannelMod:
             except Exception as ex:
                 print('Failed to mirror message from ', channel.id, 'to', dest_channel_id, ':', ex)
                 traceback.print_exc()
+
+        if attachment_bytes:
+            attachment_bytes.close()
 
     async def mirror_msg_edit(self, message, new_message):
         await self.mirror_msg_mod(message, new_message_content=new_message.content)
@@ -262,6 +266,8 @@ def setup(bot):
     bot.add_listener(n.mirror_msg_new, "on_message")
     bot.add_listener(n.mirror_msg_edit, "on_message_edit")
     bot.add_listener(n.mirror_msg_delete, "on_message_delete")
+    bot.add_listener(n.mirror_reaction_add, "on_reaction_add")
+    bot.add_listener(n.mirror_reaction_remove, "on_reaction_remove")
 
 
 class ChannelModSettings(CogSettings):
