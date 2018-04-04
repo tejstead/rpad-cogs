@@ -203,12 +203,28 @@ class ChannelMod:
                 traceback.print_exc()
 
     async def mirror_msg_edit(self, message, new_message):
-        await self.mirror_msg_mod(message, new_message.content)
+        await self.mirror_msg_mod(message, new_message_content=new_message.content)
 
     async def mirror_msg_delete(self, message):
-        await self.mirror_msg_mod(message, None)
+        await self.mirror_msg_mod(message, delete_message_content=True)
 
-    async def mirror_msg_mod(self, message, new_message_content: str=None):
+    async def mirror_reaction_add(self, reaction, user):
+        message = reaction.message
+        if message.author.id != user.id:
+            return
+        await self.mirror_msg_mod(message, new_message_reaction=reaction.emoji)
+
+    async def mirror_reaction_remove(self, reaction, user):
+        message = reaction.message
+        if message.author.id != user.id:
+            return
+        await self.mirror_msg_mod(message, delete_message_reaction=reaction.emoji)
+
+    async def mirror_msg_mod(self, message,
+                             new_message_content: str=None,
+                             delete_message_content: bool=False,
+                             new_message_reaction=None,
+                             delete_message_reaction=None):
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
 
@@ -227,8 +243,12 @@ class ChannelMod:
 
                 if new_message_content:
                     await self.bot.edit_message(dest_message, new_content=new_message_content)
-                else:
+                elif new_message_reaction:
+                    await self.bot.add_reaction(dest_message, new_message_reaction)
+                elif delete_message_content:
                     await self.bot.delete_message(dest_message)
+                elif delete_message_reaction:
+                    await self.bot.remove_reaction(dest_message, delete_message_reaction, dest_message.server.me)
             except Exception as ex:
                 print('Failed to mirror message edit from ',
                       channel.id, 'to', dest_channel_id, ':', ex)
