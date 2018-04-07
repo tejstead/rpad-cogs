@@ -3,6 +3,7 @@ import asyncio
 import io
 import logging
 import os
+import time
 import traceback
 
 import aiohttp
@@ -18,6 +19,9 @@ from .rpadutils import CogSettings, ReportableError
 log = logging.getLogger("red.admin")
 
 INACTIVE = '_inactive'
+
+# Three hour cooldown
+ATTRIBUTION_TIME_SECONDS = 60 * 60 * 3
 
 
 class ChannelMod:
@@ -164,9 +168,13 @@ class ChannelMod:
         if not mirrored_channels:
             return
 
-        attribution_required = self.settings.get_last_spoke(channel.id) != message.author.id
-        if attribution_required:
-            self.settings.set_last_spoke(channel.id, message.author.id)
+        last_spoke, last_spoke_timestamp = self.settings.get_last_spoke(channel.id)
+        last_spoke_time = datetime.utcfromtimestamp(
+            last_spoke_timestamp) if last_spoke_timestamp else datetime.utcnow()
+        attribution_required = last_spoke != message.author.id
+        attribution_required |= (
+            now_time - last_spoke_time).total_seconds() > ATTRIBUTION_TIME_SECONDS
+        self.settings.set_last_spoke(channel.id, message.author.id)
 
         attachment_bytes = None
         if message.attachments:
@@ -325,10 +333,13 @@ class ChannelModSettings(CogSettings):
         return self.mirrored_channels().get(source_channel, {}).get('channels', [])
 
     def get_last_spoke(self, source_channel: str):
-        return self.mirrored_channels().get(source_channel, {}).get('last_spoke', None)
+        spoke_values = self.mirrored_channels().get(source_channel, {})
+        return (spoke_values.get('last_spoke', None), spoke_values.get('last_spoke_timestamp', None))
 
     def set_last_spoke(self, source_channel: str, last_spoke: str):
-        self.mirrored_channels().get(source_channel)['last_spoke'] = last_spoke
+        spoke_values = self.mirrored_channels().get(source_channel)
+        spoke_values['last_spoke'] = last_spoke
+        spoke_values['last_spoke_timestamp'] = time.time()
         self.save_settings()
 
     def add_mirrored_channel(self, source_channel: str, dest_channel: str):
