@@ -169,8 +169,9 @@ class ChannelMod:
             return
 
         last_spoke, last_spoke_timestamp = self.settings.get_last_spoke(channel.id)
+        now_time = datetime.utcnow()
         last_spoke_time = datetime.utcfromtimestamp(
-            last_spoke_timestamp) if last_spoke_timestamp else datetime.utcnow()
+            last_spoke_timestamp) if last_spoke_timestamp else now_time
         attribution_required = last_spoke != message.author.id
         attribution_required |= (
             now_time - last_spoke_time).total_seconds() > ATTRIBUTION_TIME_SECONDS
