@@ -204,9 +204,22 @@ def makePlainRequest(file_url):
     return data.decode('utf-8')
 
 
+async def makeAsyncPlainRequest(file_url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(file_url) as resp:
+            return await resp.text()
+
+
 def makeCachedPlainRequest2(file_path, file_url, expiry_secs):
     if shouldDownload(file_path, expiry_secs):
         resp = makePlainRequest(file_url)
+        writePlainFile(file_path, resp)
+    return readPlainFile(file_path)
+
+
+async def makeAsyncCachedPlainRequest(file_path, file_url, expiry_secs):
+    if shouldDownload(file_path, expiry_secs):
+        resp = await makeAsyncPlainRequest(file_url)
         writePlainFile(file_path, resp)
     return readPlainFile(file_path)
 
