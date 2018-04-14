@@ -181,13 +181,28 @@ class PadGuide2(object):
             Attribute.Dark: 'd',
         }
 
+        # Monsters who exist only in na have the same na/jp id but differing monster_no
+        na_only = [x for x in self.database._monster_map.values() if x.monster_no !=
+                   x.monster_no_na and x.monster_no_na == x.monster_no_jp]
+
+        na_only_base_no = [x.monster_no for x in na_only]
+        na_only_server_no = [x.monster_no_na for x in na_only]
+
         with open(ATTR_EXPORT_PATH, 'w') as csvfile:
             writer = csv.writer(csvfile, delimiter=',', lineterminator='\n')
             for m in self.database._monster_map.values():
                 attr1 = attr_short_prefix_map[m.attr1]
                 attr2 = attr_short_prefix_map[m.attr2] if m.attr2 else ''
-                writer.writerow([m.monster_no_na, 'na', attr1, attr2])
-                writer.writerow([m.monster_no_jp, 'jp', attr1, attr2])
+                if m.monster_no in na_only_base_no:
+                    # Writes stuff like voltron
+                    writer.writerow([m.monster_no_na, 'na', attr1, attr2])
+                elif m.monster_no_jp in na_only_server_no:
+                    # Writes stuff like crows
+                    writer.writerow([m.monster_no_jp, 'jp', attr1, attr2])
+                else:
+                    # writes everything else
+                    writer.writerow([m.monster_no_na, 'na', attr1, attr2])
+                    writer.writerow([m.monster_no_jp, 'jp', attr1, attr2])
 
     def _csv_to_tuples(self, file_path: str):
         # Loads a two-column CSV into a dict.
