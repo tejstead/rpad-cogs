@@ -264,7 +264,7 @@ class PadInfo:
 
         return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed)
 
-    async def _do_evolistenu(self, ctx, sm):
+    async def _do_evolistmenu(self, ctx, sm):
         monsters = sm.alt_evos
         monsters.sort(key=lambda m: m.monster_no)
 
@@ -275,9 +275,9 @@ class PadInfo:
             if m == sm:
                 starting_menu_emoji = emoji
 
-        return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed)
+        return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed, timeout=60)
 
-    async def _do_menu(self, ctx, starting_menu_emoji, emoji_to_embed):
+    async def _do_menu(self, ctx, starting_menu_emoji, emoji_to_embed, timeout=30):
         if starting_menu_emoji not in emoji_to_embed:
             # Selected menu wasn't generated for this monster
             return EMBED_NOT_GENERATED
@@ -286,7 +286,7 @@ class PadInfo:
         emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
 
         try:
-            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=30)
+            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=timeout)
             if result_msg and result_embed:
                 # Message is finished but not deleted, clear the footer
                 result_embed.set_footer(text=discord.Embed.Empty)
@@ -327,7 +327,7 @@ class PadInfo:
         """Monster info (for all monsters in the evo tree)"""
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            await self._do_evolistenu(ctx, m)
+            await self._do_evolistmenu(ctx, m)
         else:
             await self.bot.say(self.makeFailureMsg(err))
 
