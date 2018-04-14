@@ -871,6 +871,7 @@ AWAKENING_NAME_MAP_RPAD = {
     'Auto-Recover': 'misc_autoheal',
     'Recover Bind': 'misc_bindclear',
     'Enhanced Combo': 'misc_comboboost',
+    'Super Enhanced Combo': 'misc_super_comboboost',
     'Guard Break': 'misc_guardbreak',
     'Multi Boost': 'misc_multiboost',
     'Additional Attack': 'misc_extraattack',
