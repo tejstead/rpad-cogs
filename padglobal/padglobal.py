@@ -551,6 +551,8 @@ class PadGlobal:
             return name, MP_BUY_MSG
         elif monster.farmable_evo:
             return name, FARMABLE_MSG
+        elif check_simple_tree(monster):
+            return name, SIMPLE_TREE_MSG
         else:
             await self.bot.say(inline('No which info for {}'.format(name)))
             return None, None
@@ -919,6 +921,19 @@ class PadGlobal:
     def term_to_monster_name(self, term):
         nm, _, _ = lookup_named_monster(term)
         return nm.group_computed_basename.title()
+
+
+def check_simple_tree(monster):
+    attr1 = monster.attr1
+    active_skill = monster.active_skill
+    for m in monster.alt_evos:
+        if m.attr1 != attr1 or m.active_skill != active_skill:
+            return False
+        if m.is_equip:
+            return False
+        if 'awoken' in m.name_na.lower():
+            return False
+    return True
 
 
 def check_folders():
