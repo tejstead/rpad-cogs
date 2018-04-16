@@ -6,6 +6,7 @@ import json
 import os
 from time import time
 import traceback
+import urllib.parse
 
 import aiohttp
 import discord
@@ -22,8 +23,24 @@ from .rpadutils import Menu, char_to_emoji
 from .utils.chat_formatting import *
 
 
-SUMMARY_SHEET = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQI-NBN3IUemNXq4rJ-pHce_Y5HXpnJnYwmujpIO0ClC3vXhs6YmwqYzEacFlknWQ7BEojhDJac-sY-/pub?gid=907773684&single=true&output=csv'
-EFFECTS_SHEET = ''
+SUMMARY_SHEET = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMTAgyvB0UQOOVZn1SL64LC3x9aoGg-5bRgF5fPj77wW3O21tfOP17Wmprjq72iHrIgKvy8-QC-UGF/pub?output=csv'
+PIC_URL = 'https://storage.googleapis.com/mirubot-chronomagia/cards/{}.png'
+
+
+class CmCard(object):
+    def __init__(self, csv_row):
+        row = [x.strip() for x in csv_row]
+        self.name = row[0]
+        self.name_clean = clean_name_for_query(self.name)
+        self.rarity = row[1]
+        self.monspell = row[2]
+        self.cost = row[3]
+        self.type1 = row[4]
+        self.type2 = row[5]
+        self.atk = row[6]
+        self.defn = row[7]
+        self.atkeff = row[8]
+        self.cardeff = row[10]
 
 
 class ChronoMagia:
@@ -33,6 +50,9 @@ class ChronoMagia:
         self.bot = bot
         self.settings = ChronoMagiaSettings("chronomagia")
         self.card_data = []
+        self.menu = Menu(bot)
+        self.id_emoji = '\N{INFORMATION SOURCE}'
+        self.pic_emoji = '\N{FRAME WITH PICTURE}'
 
     async def reload_cm_task(self):
         await self.bot.wait_until_ready()
@@ -58,6 +78,8 @@ class ChronoMagia:
             if not row or not row[0].strip():
                 # Ignore empty rows
                 continue
+            if len(row) < 11:
+                print('bad row: ', row)
             self.card_data.append(CmCard(row))
 
     @commands.command(pass_context=True)
@@ -68,31 +90,68 @@ class ChronoMagia:
             await self.bot.say(inline('query must be at least 3 characters'))
             return
 
-        c = None
         names_to_card = {x.name_clean: x for x in self.card_data}
         matches = list(filter(lambda x: x.startswith(query), names_to_card.keys()))
         if not matches:
             matches = difflib.get_close_matches(query, names_to_card.keys(), n=1, cutoff=.6)
 
-        if not matches:
-            await self.bot.say(inline('no matches'))
-            return
-
-        c = names_to_card[matches[0]]
-        msg = '{} : {} {}'.format(c.name, c.rarity, c.monspell)
-        type_text = ''
-        if c.monspell == 'Spell':
-            pass
-        elif c.type2:
-            type_text = '{}/{} '.format(c.type1, c.type2)
+        if matches:
+            await self.do_menu(ctx, names_to_card[matches[0]])
         else:
-            type_text = '{} '.format(c.type1)
-        msg += '\n{}Cost:{} Atk:{} Def:{}'.format(type_text, c.cost, c.atk, c.defn)
+            await self.bot.say(inline('no matches'))
+
+    async def do_menu(self, ctx, c):
+        emoji_to_embed = OrderedDict()
+        emoji_to_embed[self.id_emoji] = make_embed(c)
+        emoji_to_embed[self.pic_emoji] = make_img_embed(c)
+        return await self._do_menu(ctx, self.id_emoji, emoji_to_embed)
+
+    async def _do_menu(self, ctx, starting_menu_emoji, emoji_to_embed):
+        remove_emoji = self.menu.emoji['no']
+        emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
+
+        try:
+            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=20)
+            if result_msg and result_embed:
+                # Message is finished but not deleted, clear the footer
+                result_embed.set_footer(text=discord.Embed.Empty)
+                await self.bot.edit_message(result_msg, embed=result_embed)
+        except Exception as ex:
+            print('Menu failure', ex)
+
+
+def make_base_embed(c: CmCard):
+    embed = discord.Embed()
+    embed.title = c.name
+    embed.set_footer(text='Requester may click the reactions below to switch tabs')
+    return embed
+
+
+def make_embed(c: CmCard):
+    embed = make_base_embed(c)
+
+    embed.add_field(
+        name=c.monspell, value='{}\nCost {}'.format(c.rarity, c.cost), inline=True)
+    if c.monspell == 'Monster':
+        mtype = '\n{}/{} '.format(c.type1, c.type2) if c.type2 else '{} '.format(c.type1)
+        embed.add_field(name=mtype, value='Atk {}\nDef {}'.format(c.atk, c.defn), inline=True)
         if c.atkeff:
-            msg += ' AtkEff:{}'.format(c.atkeff)
-        cardeff = c.cardeff or 'No effect'
-        msg += '\nEffect: {}'.format(cardeff)
-        await self.bot.say(box(msg))
+            embed.add_field(name='Attack Effect', value=c.atkeff, inline=False)
+
+        if c.cardeff:
+            embed.add_field(name='Effect', value=c.cardeff, inline=False)
+    else:
+        embed.add_field(name='Effect', value=c.cardeff, inline=True)
+
+    return embed
+
+
+def make_img_embed(c: CmCard):
+    embed = make_base_embed(c)
+    url = PIC_URL.format(urllib.parse.quote(c.name))
+    print(url)
+    embed.set_image(url=url)
+    return embed
 
 
 def clean_name_for_query(name: str):
@@ -103,22 +162,6 @@ class ChronoMagiaSettings(CogSettings):
     def make_default_settings(self):
         config = {}
         return config
-
-
-class CmCard(object):
-    def __init__(self, csv_row):
-        row = [x.strip() for x in csv_row]
-        self.name = row[0]
-        self.name_clean = clean_name_for_query(self.name)
-        self.rarity = row[1]
-        self.monspell = row[2]
-        self.cost = row[3]
-        self.type1 = row[4]
-        self.type2 = row[5]
-        self.atk = row[6]
-        self.defn = row[7]
-        self.atkeff = row[8]
-        self.cardeff = row[9]
 
 
 def setup(bot):
