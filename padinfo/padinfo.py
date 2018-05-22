@@ -692,12 +692,18 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
 
     embed.add_field(name=info_row_1, value=info_row_2)
 
-    stats_row_1 = 'Weighted {}'.format(m.weighted_stats)
-    stats_row_2 = '**HP** {}\n**ATK** {}\n**RCV** {}'.format(m.hp, m.atk, m.rcv)
+    if m.limitbreak_stats:
+        def lb(x): return int(m.limitbreak_stats * x)
+        stats_row_1 = 'Weighted {} | LB {}'.format(m.weighted_stats, lb(m.weighted_stats))
+        stats_row_2 = '**HP** {} ({})\n**ATK** {} ({})\n**RCV** {} ({})'.format(
+            m.hp, lb(m.hp), m.atk, lb(m.atk), m.rcv, lb(m.rcv))
+    else:
+        stats_row_1 = 'Weighted {}'.format(m.weighted_stats)
+        stats_row_2 = '**HP** {}\n**ATK** {}\n**RCV** {}'.format(m.hp, m.atk, m.rcv)
     embed.add_field(name=stats_row_1, value=stats_row_2)
 
     awakenings_row = ''
-    for a in m.awakenings:
+    for idx, a in enumerate(m.awakenings):
         a = a.get_name()
         mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a, a)
         mapped_awakening = match_emoji(emoji_list, mapped_awakening)
@@ -705,7 +711,11 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
         if mapped_awakening is None:
             mapped_awakening = AWAKENING_NAME_MAP.get(a, a)
 
-        awakenings_row += ' {}'.format(mapped_awakening)
+        # Wrap superawakenings to the next line
+        if len(m.awakenings) - idx == m.superawakening_count:
+            awakenings_row += '\n{}'.format(mapped_awakening)
+        else:
+            awakenings_row += ' {}'.format(mapped_awakening)
 
     awakenings_row = awakenings_row.strip()
 
