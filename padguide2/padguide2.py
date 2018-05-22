@@ -40,11 +40,14 @@ JSON_FILE_PATTERN = 'data/padguide2/{}.json'
 CSV_FILE_PATTERN = 'data/padguide2/{}.csv'
 ATTR_EXPORT_PATH = 'data/padguide2/card_data.csv'
 
-GROUP_BASENAMES_OVERRIDES_SHEET = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid=2070615818&single=true&output=csv'
-NICKNAME_OVERRIDES_SHEET = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid=0&single=true&output=csv'
+SHEETS_PATTERN = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid={}&single=true&output=csv'
+GROUP_BASENAMES_OVERRIDES_SHEET = SHEETS_PATTERN.format('2070615818')
+NICKNAME_OVERRIDES_SHEET = SHEETS_PATTERN.format('0')
+MONSTERDATA_OVERRIDES_SHEET = SHEETS_PATTERN.format('1055881548')
 
 NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames')
 BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
+MONSTERDATA_FILE_PATTERN = CSV_FILE_PATTERN.format('monsterdata')
 
 
 class PadGuide2(object):
@@ -149,6 +152,7 @@ class PadGuide2(object):
     async def reload_config_files(self):
         os.remove(NICKNAME_FILE_PATTERN)
         os.remove(BASENAME_FILE_PATTERN)
+        os.remove(MONSTERDATA_FILE_PATTERN)
         await self.download_and_refresh_nicknames()
 
     async def download_and_refresh_nicknames(self):
@@ -166,7 +170,11 @@ class PadGuide2(object):
             if k.isdigit():
                 self.basename_overrides[int(k)].add(v.lower())
 
+        monsterdata_overrides = self._csv_to_tuples(MONSTERDATA_FILE_PATTERN, 7)
+        self.monsterdata_overrides = {int(x[0]): x for x in monsterdata_overrides if x[0].isdigit()}
+
         self.database = PgRawDatabase()
+        self.database.update_with_overrides(self.monsterdata_overrides)
         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
 
         self.write_monster_attr_data()
@@ -204,21 +212,23 @@ class PadGuide2(object):
                     writer.writerow([m.monster_no_na, 'na', attr1, attr2])
                     writer.writerow([m.monster_no_jp, 'jp', attr1, attr2])
 
-    def _csv_to_tuples(self, file_path: str):
-        # Loads a two-column CSV into a dict.
+    def _csv_to_tuples(self, file_path: str, cols: int=2):
+        # Loads a two-column CSV into an array of tuples.
         results = []
         with open(file_path, encoding='utf-8') as f:
             file_reader = csv.reader(f, delimiter=',')
             for row in file_reader:
                 if len(row) < 2:
                     continue
-                key = row[0].strip()
-                value = row[1].strip()
 
-                if not (len(key) and len(value)):
+                data = [None] * cols
+                for i in range(0, min(cols, len(row))):
+                    data[i] = row[i].strip()
+
+                if not len(data[0]):
                     continue
 
-                results.append([key, value])
+                results.append(data)
         return results
 
     async def _download_files(self):
@@ -246,10 +256,12 @@ class PadGuide2(object):
                 await rpadutils.async_cached_padguide_request(endpoint, result_file, time_ms=three_weeks_ago)
 
         overrides_expiry_secs = 1 * 60 * 60
-        rpadutils.makeCachedPlainRequest2(
+        await rpadutils.makeAsyncCachedPlainRequest(
             NICKNAME_FILE_PATTERN, NICKNAME_OVERRIDES_SHEET, overrides_expiry_secs)
-        rpadutils.makeCachedPlainRequest2(
+        await rpadutils.makeAsyncCachedPlainRequest(
             BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, overrides_expiry_secs)
+        await rpadutils.makeAsyncCachedPlainRequest(
+            MONSTERDATA_FILE_PATTERN, MONSTERDATA_OVERRIDES_SHEET, overrides_expiry_secs)
 
     @commands.group(pass_context=True)
     @checks.is_owner()
@@ -331,6 +343,22 @@ class PgRawDatabase(object):
             for server in m.server_actives:
                 self._server_to_rotating_skillups[server].append(m)
 
+    def update_with_overrides(self, monsterdata_overrides):
+        for m_id_na, data in monsterdata_overrides.items():
+            m_no = self.normalize_monster_no_na(m_id_na)
+            m = self.getMonster(m_no)
+            print('for', m_id_na, 'got', m.name_na)
+
+            if data[2].replace('.', '', 1).isdigit():
+                m.limitbreak_stats = float(data[2])
+            if data[3].isdigit():
+                m.superawakening_count = int(data[3])
+
+            if data[4] and m.active_skill:
+                m.active_skill.desc = data[4]
+            if data[5] and m.leader_skill:
+                m.leader_skill.desc = data[5]
+
     def _load(self, itemtype):
         if self._skip_load:
             return {}
@@ -354,6 +382,9 @@ class PgRawDatabase(object):
         return item
 
     def normalize_monster_no_na(self, monster_no_na: int):
+        if monster_no_na > 10000:
+            # Allows crows to be referenced
+            return monster_no_na - 10000
         return self.monster_no_na_to_monster_no[monster_no_na]
 
     def all_monsters(self):
@@ -957,6 +988,10 @@ class PgMonster(PgItem):
         # Monsters start off pointing to themselves as the base, this will
         # change once the MonsterGroups are computed.
         self.base_monster = self
+
+        # Data populated via override
+        self.limitbreak_stats = None
+        self.superawakening_count = 0
 
     def key(self):
         return self.monster_no

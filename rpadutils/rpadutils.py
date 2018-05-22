@@ -210,13 +210,6 @@ async def makeAsyncPlainRequest(file_url):
             return await resp.text()
 
 
-def makeCachedPlainRequest2(file_path, file_url, expiry_secs):
-    if shouldDownload(file_path, expiry_secs):
-        resp = makePlainRequest(file_url)
-        writePlainFile(file_path, resp)
-    return readPlainFile(file_path)
-
-
 async def makeAsyncCachedPlainRequest(file_path, file_url, expiry_secs):
     if shouldDownload(file_path, expiry_secs):
         resp = await makeAsyncPlainRequest(file_url)
