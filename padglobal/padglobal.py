@@ -867,7 +867,7 @@ class PadGlobal:
 
         return msg
 
-    @padglobal.command(pass_context=True)
+    @commands.command(pass_context=True)
     async def guideto(self, ctx, to_user: discord.Member, *, term: str):
         """Send a user a dungeon/leader guide entry.
 
