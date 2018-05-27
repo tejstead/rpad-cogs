@@ -23,7 +23,7 @@ from .rpadutils import Menu, char_to_emoji
 from .utils.chat_formatting import *
 
 
-SUMMARY_SHEET = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMTAgyvB0UQOOVZn1SL64LC3x9aoGg-5bRgF5fPj77wW3O21tfOP17Wmprjq72iHrIgKvy8-QC-UGF/pub?output=csv'
+SUMMARY_SHEET = 'https://drive.google.com/open?id=1jOCGsZTY72W9_kvKxfqQ3HyJw_aCLo3Y'
 PIC_URL = 'https://storage.googleapis.com/mirubot-chronomagia/cards/{}.png'
 
 
@@ -39,8 +39,8 @@ class CmCard(object):
         self.type2 = row[5]
         self.atk = row[6]
         self.defn = row[7]
-        self.atkeff = row[8]
-        self.cardeff = row[10]
+        self.atkeff = row[9]
+        self.cardeff = row[11]
 
 
 class ChronoMagia:
@@ -139,9 +139,9 @@ def make_embed(c: CmCard):
             embed.add_field(name='Attack Effect', value=c.atkeff, inline=False)
 
         if c.cardeff:
-            embed.add_field(name='Effect', value=c.cardeff, inline=False)
+            embed.add_field(name='Card Effect', value=c.cardeff, inline=False)
     else:
-        embed.add_field(name='Effect', value=c.cardeff, inline=True)
+        embed.add_field(name='Card Effect', value=c.cardeff, inline=True)
 
     return embed
 
