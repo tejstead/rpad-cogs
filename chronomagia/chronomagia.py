@@ -23,7 +23,7 @@ from .rpadutils import Menu, char_to_emoji
 from .utils.chat_formatting import *
 
 
-SUMMARY_SHEET = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSBNQby6E3HeT0jWS3ysJFirbEToUIws5Bi6y4cclnF_uCbZE3VDxvTtUGq5t-NOvez4mmoi2As8ZX0/pub?gid=369378413&single=true&output=csv'
+SUMMARY_SHEET = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQsO9Xi9cKaUQWPvDjjIKpHotZ036LCTN66PuNoQwvb8qZi4LmEUEOYmHDyqUJUzghI28aPrQHfRSYd/pub?gid=1488138129&single=true&output=csv'
 PIC_URL = 'https://storage.googleapis.com/mirubot-chronomagia/cards/{}.png'
 
 
