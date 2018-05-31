@@ -1040,6 +1040,8 @@ class PgMonster(PgItem):
         self.farmable = len(self.drop_dungeons) > 0
         self.farmable_evo = self.farmable
 
+        self.awakenings.sort(key=lambda x: x.order)
+
         if self.assist_setting == 1:
             self.is_inheritable = True
         elif self.assist_setting == 2:
