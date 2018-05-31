@@ -809,7 +809,10 @@ class PgEvolutionMaterial(PgItem):
         target_monster = self.evolution.to_monster
         # TODO: this is unsorted
         target_monster.mats_for_evo.append(self.fodder_monster)
-        self.fodder_monster.material_of.append(target_monster)
+
+        # Prevent issues if a monster is a mat for the same monster repeatedly (gunma, stones)
+        if target_monster not in self.fodder_monster.material_of:
+            self.fodder_monster.material_of.append(target_monster)
 
 
 # monsterAddInfoList.jsp
