@@ -347,7 +347,6 @@ class PgRawDatabase(object):
         for m_id_na, data in monsterdata_overrides.items():
             m_no = self.normalize_monster_no_na(m_id_na)
             m = self.getMonster(m_no)
-            print('for', m_id_na, 'got', m.name_na)
 
             if data[2].replace('.', '', 1).isdigit():
                 m.limitbreak_stats = float(data[2])
