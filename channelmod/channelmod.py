@@ -204,8 +204,11 @@ class ChannelMod:
                 if attachment_bytes:
                     dest_message = await self.bot.send_file(dest_channel, attachment_bytes, filename=filename, content=message.content)
                     attachment_bytes.seek(0)
-                else:
+                elif message.content:
                     dest_message = await self.bot.send_message(dest_channel, message.content)
+                else:
+                    print('Failed to mirror message from ', channel.id, 'no action to take')
+
                 self.settings.add_mirrored_message(
                     channel.id, message.id, dest_channel.id, dest_message.id)
             except Exception as ex:

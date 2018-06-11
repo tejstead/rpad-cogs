@@ -835,7 +835,7 @@ class PadGlobal:
 
         nm, _, _ = lookup_named_monster(term)
         if nm is None:
-            return None, None, 'No dungeon monster or matched that query'
+            return None, None, 'No dungeon or monster matched that query'
 
         name = nm.group_computed_basename.title()
         definition = self.settings.leaderGuide().get(str(nm.base_monster_no), None)
