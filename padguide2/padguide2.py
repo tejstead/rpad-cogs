@@ -49,6 +49,8 @@ NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames')
 BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
 MONSTERDATA_FILE_PATTERN = CSV_FILE_PATTERN.format('monsterdata')
 
+CUSTOM_GUERRILLA_DATA = 'https://storage.googleapis.com/mirubot/paddata/merged/guerrilla_data.json'
+
 
 class PadGuide2(object):
     def __init__(self, bot):
@@ -263,6 +265,9 @@ class PadGuide2(object):
         await rpadutils.makeAsyncCachedPlainRequest(
             MONSTERDATA_FILE_PATTERN, MONSTERDATA_OVERRIDES_SHEET, overrides_expiry_secs)
 
+        await rpadutils.makeAsyncCachedPlainRequest(
+            JSON_FILE_PATTERN.format('guerrilla_data'), CUSTOM_GUERRILLA_DATA, quick_expiry_secs)
+
     @commands.group(pass_context=True)
     @checks.is_owner()
     async def padguide2(self, ctx):
@@ -303,7 +308,11 @@ class PgRawDatabase(object):
         self._monster_info_map = self._load(PgMonsterInfo)
         self._monster_price_map = self._load(PgMonsterPrice)
         self._series_map = self._load(PgSeries)
+
+        # Temporary
         self._scheduled_event_map = self._load(PgScheduledEvent)
+        self._cscheduled_event_map = self._load(CustomScheduledEvent)
+
         self._skill_leader_data_map = self._load(PgSkillLeaderData)
         self._skill_map = self._load(PgSkill)
         self._skill_rotation_map = self._load(PgSkillRotation)
@@ -390,13 +399,19 @@ class PgRawDatabase(object):
         """Exported for access to the full monster list."""
         return list(self._monster_map.values())
 
+    def all_dungeons(self):
+        """Exported for access to the full dungeon list."""
+        return list(self._dungeon_map.values())
+
     def all_egg_instances(self):
         """Exported for access to the full egg machine list."""
         return list(self._egg_instance_map.values())
 
     def all_scheduled_events(self):
         """Exported for access to event list."""
-        return list(self._scheduled_event_map.values())
+        se = list(self._scheduled_event_map.values())
+        se.extend(list(self._cscheduled_event_map.values()))
+        return se
 
     def rotating_skillups(self, server: str):
         """Gets monsters used as rotating skillups for the specified server"""
@@ -595,6 +610,7 @@ class PgAwakening(PgItem):
     def get_name(self):
         return self.skill.name
 
+
 # dungeonList.jsp
 # {
 #     "APP_VERSION": "",
@@ -612,8 +628,6 @@ class PgAwakening(PgItem):
 #     "TDT_SEQ": "10",
 #     "TSTAMP": "1373289123410"
 # },
-
-
 class PgDungeon(PgItem):
     @staticmethod
     def file_name():
@@ -624,6 +638,7 @@ class PgDungeon(PgItem):
         self.dungeon_seq = int(item['DUNGEON_SEQ'])
         self.dungeon_type = int(item['DUNGEON_TYPE'])
         self.name = item['NAME_US']
+        self.name_jp = item['NAME_JP']
         # TODO: load tdt type
         self.tdt_seq = int_or_none(item['TDT_SEQ'])
         self.show_yn = item["SHOW_YN"]
@@ -1783,11 +1798,67 @@ class PgScheduledEvent(PgItem):
         return self.schedule_seq
 
     def deleted(self):
-        return self.server == 'KR'
+        # Temporary deleting guerrillas in favor of custom scheduled event
+        return self.server == 'KR' or self.group is not None
 
     def load(self, database: PgRawDatabase):
         self.dungeon = database.getDungeon(self.dungeon_seq)
         self.event = database.getEvent(self.event_seq) if self.event_seq != '0' else None
+
+
+# {
+#     "dungeon_name": "\u30d8\u30e9\uff1d\u30c9\u30e9\u30b4\u30f3 \u964d\u81e8\uff01",
+#     "end_timestamp": 1529046000,
+#     "group": "A",
+#     "server": "JP",
+#     "start_timestamp": 1529042400
+# }
+class CustomScheduledEvent(PgItem):
+    cur_id = 1
+
+    @staticmethod
+    def file_name():
+        return 'guerrilla_data'
+
+    def __init__(self, item):
+        super().__init__()
+        self.cschedule_seq = CustomScheduledEvent.cur_id
+        CustomScheduledEvent.cur_id += 1
+        self.dungeon_name = item['dungeon_name']
+        self.server = normalizeServer(item['server'])
+        self.group = item['group'].upper()
+        self.start_timestamp = item['start_timestamp']
+        self.end_timestamp = item['end_timestamp']
+
+        tz = pytz.UTC
+        self.open_datetime = datetime.fromtimestamp(self.start_timestamp, pytz.UTC)
+        self.close_datetime = datetime.fromtimestamp(self.end_timestamp, pytz.UTC)
+
+    def key(self):
+        return self.cschedule_seq
+
+    def load(self, database: PgRawDatabase):
+        self.event_type = 3  # Guerrilla
+        self.event = None  # No events for now
+        self.dungeon = None
+        for dungeon in database.all_dungeons():
+            if self.dungeon_name in (dungeon.name, dungeon.name_jp):
+                self.dungeon = dungeon
+                break
+
+        if self.dungeon is None:
+            self.dungeon = PgDungeon({
+                'DUNGEON_SEQ': '0',
+                'DUNGEON_TYPE': '0',
+                'NAME_US': self.dungeon_name,
+                'NAME_JP': self.dungeon_name,
+                'TDT_SEQ': '',
+                'SHOW_YN': 'Y',
+            })
+
+    def to_pg_scheduled_event(self):
+        return PgScheduledEvent({
+        })
 
 
 # {
