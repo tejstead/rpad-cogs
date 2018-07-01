@@ -20,6 +20,7 @@ import re
 import time
 import traceback
 
+import aiohttp
 import discord
 from discord.ext import commands
 from enum import Enum
@@ -48,8 +49,6 @@ MONSTERDATA_OVERRIDES_SHEET = SHEETS_PATTERN.format('1055881548')
 NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames')
 BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
 MONSTERDATA_FILE_PATTERN = CSV_FILE_PATTERN.format('monsterdata')
-
-CUSTOM_GUERRILLA_DATA = 'https://storage.googleapis.com/mirubot/paddata/merged/guerrilla_data.json'
 
 
 class PadGuide2(object):
@@ -243,19 +242,20 @@ class PadGuide2(object):
         general_dummy_file = DUMMY_FILE_PATTERN.format('general')
         download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, standard_expiry_secs)
 
-        for type in self._standard_refresh:
-            endpoint = type.file_name()
-            result_file = JSON_FILE_PATTERN.format(endpoint)
-            if download_all or rpadutils.should_download(result_file, standard_expiry_secs):
-                await rpadutils.async_cached_padguide_request(endpoint, result_file)
+        async with aiohttp.ClientSession() as client_session:
+            for type in self._standard_refresh:
+                endpoint = type.file_name()
+                result_file = JSON_FILE_PATTERN.format(endpoint)
+                if download_all or rpadutils.should_download(result_file, standard_expiry_secs):
+                    await rpadutils.async_cached_padguide_request(client_session, endpoint, result_file)
 
-        for type in self._quick_refresh:
-            cur_time = int(round(time.time() * 1000))
-            three_weeks_ago = cur_time - 3 * 7 * 24 * 60 * 60 * 1000
-            endpoint = type.file_name()
-            result_file = JSON_FILE_PATTERN.format(endpoint)
-            if download_all or rpadutils.should_download(result_file, quick_expiry_secs):
-                await rpadutils.async_cached_padguide_request(endpoint, result_file, time_ms=three_weeks_ago)
+            for type in self._quick_refresh:
+                cur_time = int(round(time.time() * 1000))
+                three_weeks_ago = cur_time - 3 * 7 * 24 * 60 * 60 * 1000
+                endpoint = type.file_name()
+                result_file = JSON_FILE_PATTERN.format(endpoint)
+                if download_all or rpadutils.should_download(result_file, quick_expiry_secs):
+                    await rpadutils.async_cached_padguide_request(client_session, endpoint, result_file, time_ms=three_weeks_ago)
 
         overrides_expiry_secs = 1 * 60 * 60
         await rpadutils.makeAsyncCachedPlainRequest(
@@ -264,9 +264,6 @@ class PadGuide2(object):
             BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, overrides_expiry_secs)
         await rpadutils.makeAsyncCachedPlainRequest(
             MONSTERDATA_FILE_PATTERN, MONSTERDATA_OVERRIDES_SHEET, overrides_expiry_secs)
-
-        await rpadutils.makeAsyncCachedPlainRequest(
-            JSON_FILE_PATTERN.format('guerrilla_data'), CUSTOM_GUERRILLA_DATA, quick_expiry_secs)
 
     @commands.group(pass_context=True)
     @checks.is_owner()
@@ -308,11 +305,7 @@ class PgRawDatabase(object):
         self._monster_info_map = self._load(PgMonsterInfo)
         self._monster_price_map = self._load(PgMonsterPrice)
         self._series_map = self._load(PgSeries)
-
-        # Temporary
         self._scheduled_event_map = self._load(PgScheduledEvent)
-        self._cscheduled_event_map = self._load(CustomScheduledEvent)
-
         self._skill_leader_data_map = self._load(PgSkillLeaderData)
         self._skill_map = self._load(PgSkill)
         self._skill_rotation_map = self._load(PgSkillRotation)
@@ -410,7 +403,6 @@ class PgRawDatabase(object):
     def all_scheduled_events(self):
         """Exported for access to event list."""
         se = list(self._scheduled_event_map.values())
-        se.extend(list(self._cscheduled_event_map.values()))
         return se
 
     def rotating_skillups(self, server: str):
@@ -1761,104 +1753,34 @@ class PgScheduledEvent(PgItem):
         super().__init__()
         self.schedule_seq = int(item['SCHEDULE_SEQ'])
 
-        self.close_date_str = item['CLOSE_DATE']
-        self.close_hr_str = item['CLOSE_HOUR']
-        self.close_min_str = item['CLOSE_MINUTE']
-        self.close_weekday = int(item['CLOSE_WEEKDAY'])
+        self.open_timestamp = int(item['OPEN_TIMESTAMP'])
+        self.close_timestamp = int(item['CLOSE_TIMESTAMP'])
 
         self.dungeon_seq = int(item['DUNGEON_SEQ'])
         self.event_seq = int(item['EVENT_SEQ'])
         self.event_type = int(item['EVENT_TYPE'])
 
-        self.open_date_str = item['OPEN_DATE']
-        self.open_hr_str = item['OPEN_HOUR']
-        self.open_min_str = item['OPEN_MINUTE']
-        self.open_weekday = int(item['OPEN_WEEKDAY'])
-
         self.server = normalizeServer(item['SERVER'])
-
-        self.server_open_date_str = item['SERVER_OPEN_DATE']
-        self.server_open_hr_str = item['SERVER_OPEN_HOUR']
 
         self.team_data = int_or_none(item['TEAM_DATA'])
         self.url = item['URL']
 
         self.group = chr(ord('a') + self.team_data).upper() if self.team_data is not None else None
 
-        open_time_str = '{} {}:{}'.format(
-            self.open_date_str, self.open_hr_str, self.open_min_str)
-        close_time_str = '{} {}:{}'.format(
-            self.close_date_str, self.close_hr_str, self.close_min_str)
-
-        tz = pytz.UTC
-        self.open_datetime = datetime.strptime(open_time_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
-        self.close_datetime = datetime.strptime(close_time_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+        self.open_datetime = datetime.utcfromtimestamp(
+            self.open_timestamp).replace(tzinfo=pytz.UTC)
+        self.close_datetime = datetime.utcfromtimestamp(
+            self.close_timestamp).replace(tzinfo=pytz.UTC)
 
     def key(self):
         return self.schedule_seq
 
     def deleted(self):
-        # Temporary deleting guerrillas in favor of custom scheduled event
-        return self.server == 'KR' or self.group is not None
+        return self.server == 'KR'
 
     def load(self, database: PgRawDatabase):
         self.dungeon = database.getDungeon(self.dungeon_seq)
         self.event = database.getEvent(self.event_seq) if self.event_seq != '0' else None
-
-
-# {
-#     "dungeon_name": "\u30d8\u30e9\uff1d\u30c9\u30e9\u30b4\u30f3 \u964d\u81e8\uff01",
-#     "end_timestamp": 1529046000,
-#     "group": "A",
-#     "server": "JP",
-#     "start_timestamp": 1529042400
-# }
-class CustomScheduledEvent(PgItem):
-    cur_id = 1
-
-    @staticmethod
-    def file_name():
-        return 'guerrilla_data'
-
-    def __init__(self, item):
-        super().__init__()
-        self.cschedule_seq = CustomScheduledEvent.cur_id
-        CustomScheduledEvent.cur_id += 1
-        self.dungeon_name = item['dungeon_name']
-        self.server = normalizeServer(item['server'])
-        self.group = item['group'].upper()
-        self.start_timestamp = item['start_timestamp']
-        self.end_timestamp = item['end_timestamp']
-
-        tz = pytz.UTC
-        self.open_datetime = datetime.fromtimestamp(self.start_timestamp, pytz.UTC)
-        self.close_datetime = datetime.fromtimestamp(self.end_timestamp, pytz.UTC)
-
-    def key(self):
-        return self.cschedule_seq
-
-    def load(self, database: PgRawDatabase):
-        self.event_type = 3  # Guerrilla
-        self.event = None  # No events for now
-        self.dungeon = None
-        for dungeon in database.all_dungeons():
-            if self.dungeon_name in (dungeon.name, dungeon.name_jp):
-                self.dungeon = dungeon
-                break
-
-        if self.dungeon is None:
-            self.dungeon = PgDungeon({
-                'DUNGEON_SEQ': '0',
-                'DUNGEON_TYPE': '0',
-                'NAME_US': self.dungeon_name,
-                'NAME_JP': self.dungeon_name,
-                'TDT_SEQ': '',
-                'SHOW_YN': 'Y',
-            })
-
-    def to_pg_scheduled_event(self):
-        return PgScheduledEvent({
-        })
 
 
 # {

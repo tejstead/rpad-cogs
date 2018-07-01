@@ -1,20 +1,25 @@
 import asyncio
+import inspect
+import json
+import os
+from pathlib import Path
+import re
+import time
+import unicodedata
+
+import aiohttp
 from dateutil.tz import gettz
 import dill
 import discord
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound
 from discord.ext.commands import converter
-import inspect
-from pathlib import Path
-import re
-import time
-import unicodedata
+import pytz
 
+import backoff
 from cogs.utils.chat_formatting import *
 
 from .utils.dataIO import fileIO
-from .utils.padguide_api import *
 
 
 class RpadUtils:
@@ -177,15 +182,25 @@ def checkPadguideCacheFile(cache_file, expiry_secs):
     return False
 
 
-async def async_cached_padguide_request(endpoint, result_file, time_ms=0):
+async def async_cached_padguide_request(client_session, endpoint, result_file, time_ms=0):
     """Make a request to the PadGuide API.
 
     The endpoint is the JSP file name on the PadGuide API.
     The result_file is the place to store the resulting file.
     The time_ms is the time since update to pull for. Set to 0 for all time. Cannot be 0 for events.
     """
-    resp = await async_padguide_ts_request(time_ms, endpoint)
+    resp = await async_padguide_ts_request(client_session, time_ms, endpoint)
     writeJsonFile(result_file, resp)
+
+
+@backoff.on_exception(backoff.expo, aiohttp.ClientError, max_time=60)
+async def async_padguide_ts_request(client_session, time_ms, endpoint):
+    # Temporary hack
+    endpoint = endpoint.replace('.jsp', '')
+    STORAGE_URL = 'https://storage.googleapis.com/mirubot/paddata/padguide/{}.json'
+    url = STORAGE_URL.format(endpoint)
+    async with client_session.get(url) as resp:
+        return await resp.json()
 
 
 def writePlainFile(file_path, text_data):
