@@ -30,7 +30,6 @@ from .utils.dataIO import fileIO
 
 
 SUPPORTED_SERVERS = ["NA", "JP", "FAKE"]
-#SUPPORTED_SERVERS = ["NA", "JP", "FAKE"]
 
 
 class PadEvents:
@@ -144,14 +143,14 @@ class PadEvents:
                 raise ex
         print("done check_started")
 
-    @commands.group(pass_context=True, no_pm=True)
+    @commands.group(pass_context=True)
     @checks.mod_or_permissions(manage_server=True)
     async def padevents(self, ctx):
         """PAD event tracking"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 
-    @padevents.command(name="testevent", pass_context=True, no_pm=True)
+    @padevents.command(name="testevent", pass_context=True)
     @checks.is_owner()
     async def _testevent(self, ctx, server):
         server = normalizeServer(server)
