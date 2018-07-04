@@ -91,9 +91,17 @@ class ChronoMagia:
             return
 
         names_to_card = {x.name_clean: x for x in self.card_data}
+
+        # Check if the card name starts with the query
         matches = list(filter(lambda x: x.startswith(query), names_to_card.keys()))
+
+        # Find a card that closely matches the query
         if not matches:
             matches = difflib.get_close_matches(query, names_to_card.keys(), n=1, cutoff=.6)
+
+        # Find a card that contains the query text
+        if not matches:
+            matches = list(filter(lambda x: query in x, names_to_card.keys()))
 
         if matches:
             await self.do_menu(ctx, names_to_card[matches[0]])
