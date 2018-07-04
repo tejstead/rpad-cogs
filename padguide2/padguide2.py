@@ -567,6 +567,7 @@ class PgAttribute(PgItem):
 # awokenSkillList
 # {
 #     "DEL_YN": "N",
+#     "IS_SUPER": "1",
 #     "MONSTER_NO": "661",
 #     "ORDER_IDX": "1",
 #     "TMA_SEQ": "1",
@@ -585,6 +586,7 @@ class PgAwakening(PgItem):
         self.deleted_yn = item['DEL_YN']  # Either Y(discard) or N.
         self.monster_no = int(item['MONSTER_NO'])  # PgMonster id - monster this belongs to
         self.order = int(item['ORDER_IDX'])  # display order
+        self.is_super = item.get('IS_SUPER', '0') == '1'
 
         self.skill = None  # type: PgSkill  # The awakening skill
         self.monster = None  # type: PgMonster # The monster the awakening belongs to
@@ -1043,7 +1045,6 @@ class PgMonster(PgItem):
         self.history_us = monster_info.history_us
 
         monster_price = database.getMonsterPrice(self.monster_no)
-        # Hack until monster price is populated
         self.sell_mp = monster_price.sell_mp if monster_price else 0
         self.buy_mp = monster_price.buy_mp if monster_price else 0
         self.in_mpshop = self.buy_mp > 0
@@ -1054,6 +1055,7 @@ class PgMonster(PgItem):
         self.farmable_evo = self.farmable
 
         self.awakenings.sort(key=lambda x: x.order)
+        self.superawakening_count = sum(int(a.is_super) for a in self.awakenings)
 
         if self.assist_setting == 1:
             self.is_inheritable = True
