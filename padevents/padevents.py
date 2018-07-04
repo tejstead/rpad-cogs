@@ -733,6 +733,7 @@ def cleanDungeonNames(name):
     name = name.replace('Gods-Awakening Materials Descended', "Awoken Mats")
     name = name.replace('Orb move time 4 sec', '4s move time')
     name = name.replace('Awakening Materials Descended', 'Awkn Mats')
+    name = name.replace('Awakening Material', 'Awkn Mats')
     name = name.replace("Star Treasure Thieves' Den", 'STTD')
     name = name.replace('Ruins of the Star Vault', 'Star Vault')
     return name
