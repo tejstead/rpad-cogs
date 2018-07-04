@@ -195,8 +195,6 @@ async def async_cached_padguide_request(client_session, endpoint, result_file, t
 
 @backoff.on_exception(backoff.expo, aiohttp.ClientError, max_time=60)
 async def async_padguide_ts_request(client_session, time_ms, endpoint):
-    # Temporary hack
-    endpoint = endpoint.replace('.jsp', '')
     STORAGE_URL = 'https://storage.googleapis.com/mirubot/paddata/padguide/{}.json'
     url = STORAGE_URL.format(endpoint)
     async with client_session.get(url) as resp:
