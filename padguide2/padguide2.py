@@ -128,7 +128,8 @@ class PadGuide2(object):
             self.database = PgRawDatabase()
             self._is_ready.set()
             print('Finished initial PadGuide2 load with existing database')
-        except:
+        except ex:
+            print(ex)
             print('Initial PadGuide2 database load failed, waiting for download')
 
         while self == self.bot.get_cog('PadGuide2'):
@@ -248,6 +249,8 @@ class PadGuide2(object):
                 result_file = JSON_FILE_PATTERN.format(endpoint)
                 if download_all or rpadutils.should_download(result_file, standard_expiry_secs):
                     await rpadutils.async_cached_padguide_request(client_session, endpoint, result_file)
+                    # Sleep to avoid overwhelming with requests
+                    await asyncio.sleep(1)
 
             for type in self._quick_refresh:
                 cur_time = int(round(time.time() * 1000))
@@ -509,7 +512,7 @@ class PgItem(object):
                 self.load(database)
             except Exception as ex:
                 self._loading_error = False
-                print('Error occurred while loading item', ex)
+                print('Error occurred while loading item')
                 print(type(self), 'key=', self.key())
                 traceback.print_exc()
 
@@ -533,7 +536,7 @@ class Attribute(Enum):
     Dark = 5
 
 
-# attributeList.jsp
+# attributeList
 # {
 #     "ORDER_IDX": "2",
 #     "TA_NAME_JP": "\u6c34",
@@ -545,7 +548,7 @@ class Attribute(Enum):
 class PgAttribute(PgItem):
     @staticmethod
     def file_name():
-        return 'attributeList.jsp'
+        return 'attributeList'
 
     def __init__(self, item):
         super().__init__()
@@ -561,7 +564,7 @@ class PgAttribute(PgItem):
         pass
 
 
-# awokenSkillList.jsp
+# awokenSkillList
 # {
 #     "DEL_YN": "N",
 #     "MONSTER_NO": "661",
@@ -573,7 +576,7 @@ class PgAttribute(PgItem):
 class PgAwakening(PgItem):
     @staticmethod
     def file_name():
-        return 'awokenSkillList.jsp'
+        return 'awokenSkillList'
 
     def __init__(self, item):
         super().__init__()
@@ -603,7 +606,7 @@ class PgAwakening(PgItem):
         return self.skill.name
 
 
-# dungeonList.jsp
+# dungeonList
 # {
 #     "APP_VERSION": "",
 #     "COMMENT_JP": "",
@@ -623,7 +626,7 @@ class PgAwakening(PgItem):
 class PgDungeon(PgItem):
     @staticmethod
     def file_name():
-        return 'dungeonList.jsp'
+        return 'dungeonList'
 
     def __init__(self, item):
         super().__init__()
@@ -646,7 +649,7 @@ class PgDungeon(PgItem):
         pass
 
 
-# dungeonMonsterDropList.jsp
+# dungeonMonsterDropList
 # {
 #     "MONSTER_NO": "3427",
 #     "ORDER_IDX": "20",
@@ -659,7 +662,7 @@ class PgDungeon(PgItem):
 class PgDungeonMonsterDrop(PgItem):
     @staticmethod
     def file_name():
-        return 'dungeonMonsterDropList.jsp'
+        return 'dungeonMonsterDropList'
 
     def __init__(self, item):
         super().__init__()
@@ -683,7 +686,7 @@ class PgDungeonMonsterDrop(PgItem):
         self.dungeon_monster = database.getDungeonMonster(self.tdm_seq)
 
 
-# dungeonMonsterList.jsp
+# dungeonMonsterList
 # {
 #     "AMOUNT": "1",
 #     "ATK": "9810",
@@ -705,7 +708,7 @@ class PgDungeonMonsterDrop(PgItem):
 class PgDungeonMonster(PgItem):
     @staticmethod
     def file_name():
-        return 'dungeonMonsterList.jsp'
+        return 'dungeonMonsterList'
 
     def __init__(self, item):
         super().__init__()
@@ -735,7 +738,7 @@ class EvoType(Enum):
     UuvoReincarnated = 2
 
 
-# evolutionList.jsp
+# evolutionList
 # {
 #     "APP_VERSION": "",
 #     "COMMENT_JP": "",
@@ -750,7 +753,7 @@ class EvoType(Enum):
 class PgEvolution(PgItem):
     @staticmethod
     def file_name():
-        return 'evolutionList.jsp'
+        return 'evolutionList'
 
     def __init__(self, item):
         super().__init__()
@@ -778,7 +781,7 @@ class PgEvolution(PgItem):
                 self.from_monster.evo_to.append(self.to_monster)
 
 
-# evoMaterialList.jsp
+# evoMaterialList
 # {
 #     "MONSTER_NO": "153",
 #     "ORDER_IDX": "1",
@@ -789,7 +792,7 @@ class PgEvolution(PgItem):
 class PgEvolutionMaterial(PgItem):
     @staticmethod
     def file_name():
-        return 'evoMaterialList.jsp'
+        return 'evoMaterialList'
 
     def __init__(self, item):
         super().__init__()
@@ -821,7 +824,7 @@ class PgEvolutionMaterial(PgItem):
             self.fodder_monster.material_of.append(target_monster)
 
 
-# monsterAddInfoList.jsp
+# monsterAddInfoList
 # {
 #     "EXTRA_VAL1": "1",
 #     "EXTRA_VAL2": "",
@@ -839,7 +842,7 @@ class PgMonsterAddInfo(PgItem):
 
     @staticmethod
     def file_name():
-        return 'monsterAddInfoList.jsp'
+        return 'monsterAddInfoList'
 
     def __init__(self, item):
         super().__init__()
@@ -854,7 +857,7 @@ class PgMonsterAddInfo(PgItem):
         pass
 
 
-# monsterInfoList.jsp
+# monsterInfoList
 # {
 #     "FODDER_EXP": "675.0",
 #     "HISTORY_JP": "[2016-12-16] \u65b0\u898f\u8ffd\u52a0",
@@ -876,7 +879,7 @@ class PgMonsterInfo(PgItem):
 
     @staticmethod
     def file_name():
-        return 'monsterInfoList.jsp'
+        return 'monsterInfoList'
 
     def __init__(self, item):
         super().__init__()
@@ -894,7 +897,7 @@ class PgMonsterInfo(PgItem):
         self.series = database.getSeries(self.tsr_seq)
 
 
-# monsterList.jsp
+# monsterList
 # {
 #     "APP_VERSION": "0.0",
 #     "ATK_MAX": "1985",
@@ -934,7 +937,7 @@ class PgMonsterInfo(PgItem):
 class PgMonster(PgItem):
     @staticmethod
     def file_name():
-        return 'monsterList.jsp'
+        return 'monsterList'
 
     def __init__(self, item):
         super().__init__()
@@ -1040,8 +1043,9 @@ class PgMonster(PgItem):
         self.history_us = monster_info.history_us
 
         monster_price = database.getMonsterPrice(self.monster_no)
-        self.sell_mp = monster_price.sell_mp
-        self.buy_mp = monster_price.buy_mp
+        # Hack until monster price is populated
+        self.sell_mp = monster_price.sell_mp if monster_price else 0
+        self.buy_mp = monster_price.buy_mp if monster_price else 0
         self.in_mpshop = self.buy_mp > 0
         self.mp_evo = self.in_mpshop
 
@@ -1260,7 +1264,7 @@ class MonsterGroup(object):
             m.mp_evo = mp_evo
 
 
-# monsterPriceList.jsp
+# monsterPriceList
 # {
 #     "BUY_PRICE": "0",
 #     "MONSTER_NO": "3577",
@@ -1272,7 +1276,7 @@ class MonsterGroup(object):
 class PgMonsterPrice(PgItem):
     @staticmethod
     def file_name():
-        return 'monsterPriceList.jsp'
+        return 'monsterPriceList'
 
     def __init__(self, item):
         super().__init__()
@@ -1287,7 +1291,7 @@ class PgMonsterPrice(PgItem):
         pass
 
 
-# seriesList.jsp
+# seriesList
 # {
 #     "DEL_YN": "N",
 #     "NAME_JP": "\u308a\u3093",
@@ -1300,7 +1304,7 @@ class PgMonsterPrice(PgItem):
 class PgSeries(PgItem):
     @staticmethod
     def file_name():
-        return 'seriesList.jsp'
+        return 'seriesList'
 
     def __init__(self, item):
         super().__init__()
@@ -1314,13 +1318,15 @@ class PgSeries(PgItem):
         return self.tsr_seq
 
     def deleted(self):
-        return self.deleted_yn == 'Y'
+        return False
+        # Temporary
+#         return self.deleted_yn == 'Y'
 
     def load(self, database: PgRawDatabase):
         pass
 
 
-# skillList.jsp
+# skillList
 # {
 #     "MAG_ATK": "0.0",
 #     "MAG_HP": "0.0",
@@ -1349,7 +1355,7 @@ class PgSeries(PgItem):
 class PgSkill(PgItem):
     @staticmethod
     def file_name():
-        return 'skillList.jsp'
+        return 'skillList'
 
     def __init__(self, item):
         super().__init__()
@@ -1373,7 +1379,7 @@ class PgSkill(PgItem):
         pass
 
 
-# skillLeaderDataList.jsp
+# skillLeaderDataList
 #
 # PgSkillLeaderData
 # 4 pipe delimited fields, each field is a condition
@@ -1412,7 +1418,7 @@ class PgSkillLeaderData(PgItem):
 
     @staticmethod
     def file_name():
-        return 'skillLeaderDataList.jsp'
+        return 'skillLeaderDataList'
 
     def __init__(self, item):
         super().__init__()
@@ -1451,7 +1457,7 @@ class PgSkillLeaderData(PgItem):
         return self.hp, self.atk, self.rcv, self.resist
 
 
-# skillRotationList.jsp
+# skillRotationList
 # {
 #     "MONSTER_NO": "915",
 #     "SERVER": "JP",
@@ -1462,7 +1468,7 @@ class PgSkillLeaderData(PgItem):
 class PgSkillRotation(PgItem):
     @staticmethod
     def file_name():
-        return 'skillRotationList.jsp'
+        return 'skillRotationList'
 
     def __init__(self, item):
         super().__init__()
@@ -1482,7 +1488,7 @@ class PgSkillRotation(PgItem):
         self.monster = database.getMonster(self.monster_no)
 
 
-# skillRotationListList.jsp
+# skillRotationListList
 # {
 #     "ROTATION_DATE": "2016-12-14",
 #     "STATUS": "0",
@@ -1494,7 +1500,7 @@ class PgSkillRotation(PgItem):
 class PgSkillRotationDated(PgItem):
     @staticmethod
     def file_name():
-        return 'skillRotationListList.jsp'
+        return 'skillRotationListList'
 
     def __init__(self, item):
         super().__init__()
@@ -1518,7 +1524,7 @@ class PgSkillRotationDated(PgItem):
             self.skill_rotation.monster.rotating_skillups.append(self)
 
 
-# typeList.jsp
+# typeList
 # {
 #     "ORDER_IDX": "2",
 #     "TSTAMP": "1375363406092",
@@ -1530,7 +1536,7 @@ class PgSkillRotationDated(PgItem):
 class PgType(PgItem):
     @staticmethod
     def file_name():
-        return 'typeList.jsp'
+        return 'typeList'
 
     def __init__(self, item):
         super().__init__()
@@ -1568,7 +1574,7 @@ class RemRowType(Enum):
     divider = 1
 
 
-# eggTitleList.jsp
+# eggTitleList
 #       {
 #            "DEL_YN": "N",
 #            "END_DATE": "2016-10-24 07:59:00",
@@ -1584,7 +1590,7 @@ class RemRowType(Enum):
 class PgEggInstance(PgItem):
     @staticmethod
     def file_name():
-        return 'eggTitleList.jsp'
+        return 'eggTitleList'
 
     def __init__(self, item):
         super().__init__()
@@ -1635,7 +1641,7 @@ class PgEggInstance(PgItem):
 #         self.monster = database.getMonster(self.monster_no)
 
 
-# eggMonsterList.jsp
+# eggMonsterList
 #        {
 #            "DEL_YN": "Y",
 #            "MONSTER_NO": "120",
@@ -1647,7 +1653,7 @@ class PgEggInstance(PgItem):
 class PgEggMonster(PgItem):
     @staticmethod
     def file_name():
-        return 'eggMonsterList.jsp'
+        return 'eggMonsterList'
 
     def __init__(self, item):
         super().__init__()
@@ -1670,7 +1676,7 @@ class PgEggMonster(PgItem):
             self.egg_instance.egg_monsters.append(self)
 
 
-# eggTitleNameList.jsp
+# eggTitleNameList
 #        {
 #            "DEL_YN": "N",
 #            "LANGUAGE": "US",
@@ -1682,7 +1688,7 @@ class PgEggMonster(PgItem):
 class PgEggName(PgItem):
     @staticmethod
     def file_name():
-        return 'eggTitleNameList.jsp'
+        return 'eggTitleNameList'
 
     def __init__(self, item):
         super().__init__()
@@ -1747,7 +1753,7 @@ def normalizeServer(server):
 class PgScheduledEvent(PgItem):
     @staticmethod
     def file_name():
-        return 'scheduleList.jsp'
+        return 'scheduleList'
 
     def __init__(self, item):
         super().__init__()
@@ -1793,7 +1799,7 @@ class PgScheduledEvent(PgItem):
 class PgEvent(PgItem):
     @staticmethod
     def file_name():
-        return 'eventList.jsp'
+        return 'eventList'
 
     def __init__(self, item):
         super().__init__()
