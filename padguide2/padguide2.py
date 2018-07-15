@@ -1004,7 +1004,7 @@ class PgMonster(PgItem):
         self.base_monster = self
 
         # Data populated via override
-        self.limitbreak_stats = float_or_none(item['LIMIT_MULT'])
+        self.limitbreak_stats = 1 + float(item['LIMIT_MULT']) / 100 if item['LIMIT_MULT'] else None
         self.superawakening_count = 0
 
     def key(self):
