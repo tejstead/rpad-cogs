@@ -128,7 +128,7 @@ class PadGuide2(object):
             self.database = PgRawDatabase()
             self._is_ready.set()
             print('Finished initial PadGuide2 load with existing database')
-        except ex:
+        except Exception as ex:
             print(ex)
             print('Initial PadGuide2 database load failed, waiting for download')
 
@@ -1004,7 +1004,7 @@ class PgMonster(PgItem):
         self.base_monster = self
 
         # Data populated via override
-        self.limitbreak_stats = None
+        self.limitbreak_stats = float_or_none(item['LIMIT_MULT'])
         self.superawakening_count = 0
 
     def key(self):
@@ -1827,7 +1827,11 @@ def make_roma_subname(name_jp):
 
 
 def int_or_none(maybe_int: str):
-    return int(maybe_int) if len(maybe_int) else None
+    return int(maybe_int) if maybe_int else None
+
+
+def float_or_none(maybe_float: str):
+    return float(maybe_float) if maybe_float else None
 
 
 def empty_index():
