@@ -1133,6 +1133,7 @@ class MonsterSearchHelper(object):
             txt = txt.replace('orbs', ' ')
             txt = txt.replace('orb', ' ')
             txt = txt.replace('critical poison', 'mortal')
+            txt = txt.replace('mortal poison', 'mortal')
             txt = txt.replace('jammers', 'jammer')
             txt = txt.replace('5', 'fire water wood light dark')
             txt = txt.replace('fr', 'fire')
