@@ -397,7 +397,7 @@ class PadInfo:
         return [e for s in self.bot.servers if s.id in server_ids for e in s.emojis]
 
     def makeFailureMsg(self, err):
-        msg = 'Lookup failed: ' + err + '.\n'
+        msg = 'Lookup failed: {}.\n'.format(err)
         msg += 'Try one of <id>, <name>, [argbld]/[rgbld] <name>. Unexpected results? Use ^helpid for more info.'
         return box(msg)
 
@@ -692,7 +692,7 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
 
     embed.add_field(name=info_row_1, value=info_row_2)
 
-    if m.limitbreak_stats:
+    if m.limitbreak_stats and m.limitbreak_stats > 1:
         def lb(x): return int(m.limitbreak_stats * x)
         stats_row_1 = 'Weighted {} | LB {}'.format(m.weighted_stats, lb(m.weighted_stats))
         stats_row_2 = '**HP** {} ({})\n**ATK** {} ({})\n**RCV** {} ({})'.format(
