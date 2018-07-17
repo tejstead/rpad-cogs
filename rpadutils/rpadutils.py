@@ -8,6 +8,7 @@ import time
 import unicodedata
 
 import aiohttp
+import backoff
 from dateutil.tz import gettz
 import dill
 import discord
@@ -16,7 +17,6 @@ from discord.ext.commands import CommandNotFound
 from discord.ext.commands import converter
 import pytz
 
-import backoff
 from cogs.utils.chat_formatting import *
 
 from .utils.dataIO import fileIO
@@ -194,6 +194,7 @@ async def async_cached_padguide_request(client_session, endpoint, result_file, t
 
 
 @backoff.on_exception(backoff.expo, aiohttp.ClientError, max_time=60)
+@backoff.on_exception(backoff.expo, aiohttp.DisconnectedError, max_time=60)
 async def async_padguide_ts_request(client_session, time_ms, endpoint):
     STORAGE_URL = 'https://storage.googleapis.com/mirubot/paddata/padguide/{}.json'
     url = STORAGE_URL.format(endpoint)
