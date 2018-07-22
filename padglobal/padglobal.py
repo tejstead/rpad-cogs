@@ -505,6 +505,10 @@ class PadGlobal:
         e.x. ^padglobal addglossary "never dathena" NA will never get dathena
         """
         term = term.lower()
+        definition = clean_global_mentions(definition)
+        definition = definition.replace(u'\u200b', '')
+        definition = replace_emoji_names_with_code(self._get_emojis(), definition)
+
         op = 'EDITED' if term in self.settings.glossary() else 'ADDED'
         self.settings.addGlossary(term, definition)
         await self.bot.say("PAD glossary term successfully {}.".format(op))
