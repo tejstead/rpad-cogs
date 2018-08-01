@@ -505,33 +505,23 @@ class PadSearch:
         await self.bot.whisper(box(HELP_MSG))
 
     @commands.command(pass_context=True)
-    #async def search(self, ctx, *, filter_spec: str):
-    async def search(self, ctx, first_query: str, second_query: str = None, third_query: str = None, *, bad = None):
-
-        def testQuery(string):
+    async def search(self, ctx, *, filter_spec: str):
+      
+"""Searches for monsters based on a filter you specify.
+        Use ^helpsearch for more info.
+        """
+        try:
+            config = self._make_search_config(filter_spec)
+        except Exception as ex:
+            # Try to correct for missing closing tag
             try:
-                return self._make_search_config(string)
-            except Exception as ex:
-                # Try to correct for missing closing tag
-                try:
-                    return self._make_search_config(string + ')')
-                except:
-                    # If it still failed, raise the original exception
-                    raise ex
-
-        config1 = testQuery(first_query)
-        if second_query != None:
-            config2 = testQuery(second_query)
-            if third_query != None:
-                config3 = testQuery(third_query)
-        
+                config = self._make_search_config(filter_spec + ')')
+            except:
+                # If it still failed, raise the original exception
+                raise ex
         pg_cog = self.bot.get_cog('PadGuide2')
         monsters = pg_cog.database.all_monsters()
-        matched_monsters = list(filter(config1.check_filters, monsters))
-        if second_query != None:
-            matched_monsters = list(filter(config2.check_filters, matched_monsters))
-            if third_query != None:
-                matched_monsters = list(filter(config3.check_filters, matched_monsters))
+        matched_monsters = list(filter(config.check_filters, monsters))
 
         #Removing entry with names that have gems in it
         rmvGemFilter = 'remove( gem)'
