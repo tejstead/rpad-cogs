@@ -17,7 +17,7 @@ HELP_MSG = """
 ^search <specification string>
 
 Colors can be any of:
-  fire water wood light dark 
+  fire water wood light dark
 Additionally, orb colors can be any of:
   heart jammer poison mortal
 
@@ -369,7 +369,7 @@ class SearchConfig(object):
             self.filters.append(lambda m: m.farmable_evo)
 
         if self.haste:
-            text = 'charge allies\' skill by {}'.format(self.haste)
+            text = "charge allies' skill by {}".format(self.haste)
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
         if self.inheritable:
@@ -505,7 +505,6 @@ class PadSearch:
 
     @commands.command(pass_context=True)
     async def search(self, ctx, *, filter_spec: str):
-      
         """Searches for monsters based on a filter you specify.
         Use ^helpsearch for more info.
         """
@@ -524,7 +523,7 @@ class PadSearch:
 
         #Removing entry with names that have gems in it
         rmvGemFilter = 'remove( gem)'
-        rmvGemQuery = testQuery(rmvGemFilter)
+        rmvGemQuery = self._make_search_config(rmvGemFilter)
         matched_monsters = list(filter(rmvGemQuery.check_filters, matched_monsters))
         
         matched_monsters.sort(key=lambda m: m.monster_no_na, reverse=True)
