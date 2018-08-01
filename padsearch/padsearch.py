@@ -522,9 +522,8 @@ class PadSearch:
         matched_monsters = list(filter(config.check_filters, monsters))
 
         #Removing entry with names that have gems in it
-        rmvGemFilter = 'remove( gem)'
-        rmvGemQuery = self._make_search_config(rmvGemFilter)
-        matched_monsters = list(filter(rmvGemQuery.check_filters, matched_monsters))
+        rmvGemFilter = self._make_search_config('remove( gem)')
+        matched_monsters = list(filter(rmvGemFilter.check_filters, matched_monsters))
         
         matched_monsters.sort(key=lambda m: m.monster_no_na, reverse=True)
 
