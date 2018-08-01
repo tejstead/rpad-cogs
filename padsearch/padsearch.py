@@ -492,7 +492,6 @@ class SearchConfig(object):
             raise rpadutils.ReportableError('You set {} more than once'.format(given_type))
         return new_value
 
-    
 class PadSearch:
     """PAD data searching."""
 
@@ -507,7 +506,7 @@ class PadSearch:
     @commands.command(pass_context=True)
     async def search(self, ctx, *, filter_spec: str):
       
-"""Searches for monsters based on a filter you specify.
+        """Searches for monsters based on a filter you specify.
         Use ^helpsearch for more info.
         """
         try:
