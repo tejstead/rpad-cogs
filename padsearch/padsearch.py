@@ -30,6 +30,7 @@ Single instance filters
 * inheritable : Can be inherited
 * shuffle     : Board shuffle (aka refresh)
 * unlock      : Orb unlock
+* delay(n)    : Delay enemies by n
 
 Multiple instance filters 
 * active(str)     : Active skill name/description
@@ -41,9 +42,8 @@ Multiple instance filters
 * name(str)       : Monster name 
 * row(color)      : Creates a row of a color
 * type(str)       : Monster type
+* convert(c1, c2) : Convert from color 1 to color 2, accepts any as entry as well
 
-Coming soon: 
-* convert(c1, c2) : Convert from color 1 to color 2
 """
 
 COLORS = [
@@ -110,6 +110,7 @@ def split_csv_orbcolors(value):
 
 
 COLOR_REPLACEMENTS = {
+    'any': '',
     'red': 'fire',
     'r': 'fire',
     'blue': 'water',
@@ -182,6 +183,9 @@ class PadSearchLexer(object):
         'TYPE',
         'SHUFFLE',
         'UNLOCK',
+        'DELAY',
+        'REMOVE',
+        'CONVERT',
     ]
 
     def t_ACTIVE(self, t):
@@ -197,7 +201,7 @@ class PadSearchLexer(object):
         return t
 
     def t_CD(self, t):
-        r'cd\(\d\)'
+        r'cd\(\d+\)'
         t.value = clean_name(t.value, 'cd')
         t.value = int(t.value)
         return t
@@ -225,7 +229,7 @@ class PadSearchLexer(object):
         return t
 
     def t_HASTE(self, t):
-        r'haste\(\d\)'
+        r'haste\(\d+\)'
         t.value = clean_name(t.value, 'haste')
         t.value = int(t.value)
         return t
@@ -264,6 +268,26 @@ class PadSearchLexer(object):
         r'unlock(\(\))?'
         return t
 
+    def t_DELAY(self, t):
+        r'delay\(\d+\)'
+        t.value = clean_name(t.value, 'delay')
+        t.value = int(t.value)
+        return t
+
+    def t_REMOVE(self, t):
+        r'remove\([a-zA-Z0-9 ]+\)'
+        t.value = t.value.replace('remove', '').strip('()')
+        return t
+    
+    def t_CONVERT(self, t):
+        r'convert\([a-zA-z, ]+\)'
+        t.value = clean_name(t.value, 'convert')
+        i = t.value.split(',')
+        i[0]= replace_named_color(i[0]).lower()
+        i[1] = replace_named_color(i[1]).lower()
+        t.value = i
+        return t
+    
     t_ignore = ' \t\n'
 
     def t_error(self, t):
@@ -284,6 +308,7 @@ class SearchConfig(object):
         self.inheritable = None
         self.shuffle = None
         self.unlock = None
+        self.delay = None
 
         self.active = []
         self.board = []
@@ -294,6 +319,8 @@ class SearchConfig(object):
         self.name = []
         self.row = []
         self.types = []
+        self.remove = []
+        self.convert = []
 
         for tok in iter(lexer.token, None):
             type = tok.type
@@ -304,6 +331,7 @@ class SearchConfig(object):
             self.inheritable = self.setIfType('INHERITABLE', type, self.inheritable, value)
             self.shuffle = self.setIfType('SHUFFLE', type, self.shuffle, value)
             self.unlock = self.setIfType('UNLOCK', type, self.unlock, value)
+            self.delay = self.setIfType('DELAY', type, self.delay, value)
 
             if type == 'ACTIVE':
                 self.active.append(value)
@@ -326,6 +354,10 @@ class SearchConfig(object):
                     raise rpadutils.ReportableError(
                         'Unexpected type {}, expected one of {}'.format(value, TYPES))
                 self.types.append(value)
+            if type == 'REMOVE':
+                self.remove.append(value)
+            if type == 'CONVERT':
+                self.convert.append(value)
 
         self.filters = list()
 
@@ -337,20 +369,28 @@ class SearchConfig(object):
             self.filters.append(lambda m: m.farmable_evo)
 
         if self.haste:
-            text = 'charge by {}'.format(self.haste)
+            text = "charge allies' skill by {}".format(self.haste)
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
         if self.inheritable:
             self.filters.append(lambda m: m.is_inheritable)
 
         if self.shuffle:
-            text = 'switch orbs'
+            text = 'replace all'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
         if self.unlock:
             text = 'removes lock'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
+        if self.delay:
+            text = 'delay enemies for {}'.format(self.delay)
+            self.filters.append(lambda m, t=text: t in m.search.active_desc)
+
+        if self.convert:
+            text = '{} orbs to '.format(self.convert[0][0]) + '{}'.format((self.convert)[0][1])
+            self.filters.append(lambda m, t=text: t in m.search.active_desc)
+        
         # Multiple
         if self.active:
             filters = []
@@ -420,8 +460,16 @@ class SearchConfig(object):
                 filters.append(lambda m, t=text: t in m.search.types)
             self.filters.append(self.or_filters(filters))
 
+        if self.remove:
+            filters = []
+            for ft in self.remove:
+                text = ft.lower()
+                filters.append(lambda m, t=text: t not in m.search.name)
+            self.filters.append(self.or_filters(filters))
+
         if not self.filters:
             raise rpadutils.ReportableError('You need to specify at least one filter')
+
 
     def check_filters(self, m):
         for f in self.filters:
@@ -444,7 +492,6 @@ class SearchConfig(object):
             raise rpadutils.ReportableError('You set {} more than once'.format(given_type))
         return new_value
 
-
 class PadSearch:
     """PAD data searching."""
 
@@ -459,7 +506,6 @@ class PadSearch:
     @commands.command(pass_context=True)
     async def search(self, ctx, *, filter_spec: str):
         """Searches for monsters based on a filter you specify.
-
         Use ^helpsearch for more info.
         """
         try:
@@ -471,10 +517,14 @@ class PadSearch:
             except:
                 # If it still failed, raise the original exception
                 raise ex
-
         pg_cog = self.bot.get_cog('PadGuide2')
         monsters = pg_cog.database.all_monsters()
         matched_monsters = list(filter(config.check_filters, monsters))
+
+        #Removing entry with names that have gems in it
+        rmvGemFilter = self._make_search_config('remove( gem)')
+        matched_monsters = list(filter(rmvGemFilter.check_filters, matched_monsters))
+        
         matched_monsters.sort(key=lambda m: m.monster_no_na, reverse=True)
 
         msg = 'Matched {} monsters'.format(len(matched_monsters))
