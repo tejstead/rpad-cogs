@@ -1119,8 +1119,10 @@ class MonsterSearchHelper(object):
         self.active_desc = replace_colors(self.active_desc)
 
         self.board_change = []
-        self.convert_from = []
-        self.convert_to = []
+        self.convert_from1 = []
+        self.convert_to1 = []
+        self.convert_from2 = []
+        self.convert_to2 = []
         self.row_convert = []
         self.column_convert = []
 
