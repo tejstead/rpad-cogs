@@ -15,10 +15,12 @@ from .utils.chat_formatting import box, inline
 
 HELP_MSG = """
 ^search <specification string>
+
 Colors can be any of:
   fire water wood light dark
 Additionally, orb colors can be any of:
   heart jammer poison mortal
+
 Options which take multiple colors should be comma-separated.
 Single instance filters
 * cd(n)       : Min cd <= n
