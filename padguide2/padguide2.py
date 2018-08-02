@@ -1123,6 +1123,8 @@ class MonsterSearchHelper(object):
         self.convert_to1 = []
         self.convert_from2 = []
         self.convert_to2 = []
+        self.convert_from3 = []
+        self.convert_to3 = []
         self.row_convert = []
         self.column_convert = []
 
@@ -1190,8 +1192,26 @@ class MonsterSearchHelper(object):
         if not convert_done and 'change ' in active_desc and not 'all orbs to' in active_desc:
             txt = strip_prev_clause(active_desc, 'change ')
             
-            if 'change ' in txt:                            #Check for double orb changer
+            #Check for double orb changer
+            if 'change ' in txt:
                 txt2 = strip_prev_clause(txt, 'change ')
+                
+                #Check for triple orb changer
+                if 'change ' in txt2:
+                    txt3 = strip_prev_clause(txt2, 'change ')
+                    txt3 = strip_next_clause(txt3, ' orbs to ')
+                    convert_from3 = txt3.split(', ')
+                    for colors in range(0,len(convert_from3)):
+                        self.convert_from3.append(convert_from3[colors].lower())
+                    txt3 = strip_prev_clause(txt, ' orbs to ')
+                    txt3 = strip_prev_clause(txt3, ' orbs to ')
+                    txt3 = strip_prev_clause(txt3, ' orbs to ')
+                    txt3 = strip_next_clause(txt3, ' orbs')
+                    convert_to3 = txt3.split(', ')
+                    for colors in range(0,len(convert_to3)):
+                        self.convert_to3.append(convert_to3[colors].lower())
+                        
+                #Continue with double orb changer    
                 txt2 = strip_next_clause(txt2, ' orbs to ')
                 convert_from2 = txt2.split(', ')
                 for colors in range(0,len(convert_from2)):
@@ -1202,7 +1222,7 @@ class MonsterSearchHelper(object):
                 convert_to2 = txt2.split(', ')
                 for colors in range(0,len(convert_to2)):
                     self.convert_to2.append(convert_to2[colors].lower())
-                    
+            #Continue with single orb changer        
             txt = strip_next_clause(txt, ' orbs to ')
             convert_from1 = txt.split(', ')
             for colors in range(0,len(convert_from1)):
