@@ -1187,15 +1187,29 @@ class MonsterSearchHelper(object):
 
         if not convert_done and 'change ' in active_desc and not 'all orbs' in active_desc:
             txt = strip_prev_clause(active_desc, 'change ')
-            txt = strip_next_clause(txt, ' orbs to')
-            convert_from = txt.split(', ')
-            for colors in range(0,len(convert_from)):
-                self.convert_from.append(convert_from[colors].lower())
+            
+            if 'change ' in txt:                            #Check for double orb changer
+                txt2 = strip_prev_clause(txt, 'change ')
+                txt2 = strip_next_clause(txt2, ' orbs to ')
+                convert_from2 = txt2.split(', ')
+                for colors in range(0,len(convert_from2)):
+                    self.convert_from2.append(convert_from2[colors].lower())
+                txt2 = strip_prev_clause(txt, ' orbs to ')
+                txt2 = strip_prev_clause(txt2, ' orbs to ')
+                txt2 = strip_next_clause(txt2, ' orbs')
+                convert_to2 = txt2.split(', ')
+                for colors in range(0,len(convert_to2)):
+                    self.convert_to2.append(convert_to2[colors].lower())
+                    
+            txt = strip_next_clause(txt, ' orbs to ')
+            convert_from1 = txt.split(', ')
+            for colors in range(0,len(convert_from1)):
+                self.convert_from1.append(convert_from1[colors].lower())
             txt = strip_prev_clause(active_desc, ' orbs to ')
             txt = strip_next_clause(txt, ' orbs')
-            convert_to = txt.split(', ')
-            for colors in range(0,len(convert_to)):
-                self.convert_to.append(convert_to[colors].lower())
+            convert_to1 = txt.split(', ')
+            for colors in range(0,len(convert_to1)):
+                self.convert_to1.append(convert_to1[colors].lower())
 
 
 class MonsterGroup(object):
