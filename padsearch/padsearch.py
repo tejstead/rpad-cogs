@@ -556,7 +556,7 @@ class PadSearch:
         await self.bot.whisper(box(HELP_MSG))
 
     @commands.command(pass_context=True)
-    async def search(self, ctx, *, filter_spec: str, timeout=30):
+    async def search(self, ctx, *, filter_spec: str):
         """Searches for monsters based on a filter you specify.
         Use ^helpsearch for more info.
         """
