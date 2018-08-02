@@ -3,6 +3,11 @@ import math
 
 import discord
 from discord.ext import commands
+from ply import lex, yaccimport json
+import math
+
+import discord
+from discord.ext import commands
 from ply import lex, yacc
 from png import itertools
 
@@ -430,8 +435,8 @@ class SearchConfig(object):
             text_from = self.convert[0][0]
             text_to = self.convert[0][1]
             self.filters.append(lambda m,
-                                tf=text_from,
-                                tt=text_to:
+                                       tf=text_from,
+                                       tt=text_to:
                                 (tf in m.search.convert_from1 and tt in m.search.convert_to1) or
                                 (tf in m.search.convert_from2 and tt in m.search.convert_to2))
 
