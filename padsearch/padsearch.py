@@ -3,13 +3,6 @@ import math
 
 import discord
 from discord.ext import commands
-from ply import lex, yaccimport
-
-json
-import math
-
-import discord
-from discord.ext import commands
 from ply import lex, yacc
 from png import itertools
 
