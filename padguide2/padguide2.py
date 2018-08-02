@@ -241,13 +241,13 @@ class PadGuide2(object):
 
         # Use a dummy file to proxy for the entire database being out of date
         general_dummy_file = DUMMY_FILE_PATTERN.format('general')
-        download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, standard_expiry_secs)
+        download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, quick_expiry_secs)
 
         async with aiohttp.ClientSession() as client_session:
             for type in self._standard_refresh:
                 endpoint = type.file_name()
                 result_file = JSON_FILE_PATTERN.format(endpoint)
-                if download_all or rpadutils.should_download(result_file, standard_expiry_secs):
+                if download_all or rpadutils.should_download(result_file, quick_expiry_secs):
                     await rpadutils.async_cached_padguide_request(client_session, endpoint, result_file)
                     # Sleep to avoid overwhelming with requests
                     await asyncio.sleep(1)
