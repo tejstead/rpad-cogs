@@ -29,7 +29,7 @@ Single instance filters
 * unlock      : Orb unlock
 * delay(n)    : Delay enemies by n
 * attabsorb   : Attribute Absorb shield null
-* absorbnull  : Damage Abasorb shield null
+* absorbnull  : Damage Absorb shield null
 * combo(n)    : Increase combo count by n
 
 Multiple instance filters 
@@ -607,11 +607,6 @@ class PadSearch:
             return
 
         await self.bot.say(box(json.dumps(m.search, indent=2, default=lambda o: o.__dict__)))
-
-    def get_emojis(self):
-        server_ids = self.settings.emojiServers()
-        return [e for s in self.bot.servers if s.id in server_ids for e in s.emojis]
-
 
 def setup(bot):
     n = PadSearch(bot)
