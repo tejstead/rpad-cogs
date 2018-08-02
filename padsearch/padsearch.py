@@ -588,7 +588,6 @@ class PadSearch:
         for m in matched_monsters:
             msg[int(n/10)] += '\n\tNo. {} {}'.format(m.monster_no_na, m.name_na)
             n += 1
-
             
         await self.bot.say(box(msg[0]))
 
