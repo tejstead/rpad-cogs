@@ -34,6 +34,7 @@ Single instance filters
 * attabsorb   : Attribute Absorb shield null
 * absorbnull  : Damage Absorb shield null
 * combo(n)    : Increase combo count by n
+* shield(n)   : Reduce damage received by n%
 
 Multiple instance filters 
 * active(str)     : Active skill name/description
