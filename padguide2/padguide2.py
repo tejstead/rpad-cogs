@@ -1185,7 +1185,7 @@ class MonsterSearchHelper(object):
 
         convert_done = self.board_change or self.row_convert or self.column_convert
 
-        if not convert_done and 'change ' in active_desc and not 'all orbs' in active_desc:
+        if not convert_done and 'change ' in active_desc and not 'all orbs to' in active_desc:
             txt = strip_prev_clause(active_desc, 'change ')
             
             if 'change ' in txt:                            #Check for double orb changer
