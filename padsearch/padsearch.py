@@ -3,7 +3,9 @@ import math
 
 import discord
 from discord.ext import commands
-from ply import lex, yaccimport json
+from ply import lex, yaccimport
+
+json
 import math
 
 import discord
@@ -17,7 +19,6 @@ from . import rpadutils
 from .utils import checks
 from .utils.chat_formatting import box, inline
 
-
 HELP_MSG = """
 ^search <specification string>
 
@@ -25,7 +26,7 @@ Colors can be any of:
   fire water wood light dark
 Additionally, orb colors can be any of:
   heart jammer poison mortal
-  
+
 Options which take multiple colors should be comma-separated.
 
 Single instance filters
@@ -90,6 +91,7 @@ ORB_TYPES = [
     'poison',
     'mortal',
 ]
+
 
 def assert_color(value):
     value = replace_named_color(value)
@@ -289,12 +291,12 @@ class PadSearchLexer(object):
         r'remove\([a-zA-Z0-9 ]+\)'
         t.value = t.value.replace('remove', '').strip('()')
         return t
-    
+
     def t_CONVERT(self, t):
         r'convert\([a-zA-z, ]+\)'
         t.value = clean_name(t.value, 'convert')
         i = t.value.split(',')
-        i[0]= replace_named_color(i[0]).lower()
+        i[0] = replace_named_color(i[0]).lower()
         i[1] = replace_named_color(i[1]).lower()
         t.value = i
         return t
@@ -319,7 +321,7 @@ class PadSearchLexer(object):
         t.value = t.value.strip('%')
         t.value = int(t.value)
         return t
-    
+
     t_ignore = ' \t\n'
 
     def t_error(self, t):
@@ -435,11 +437,10 @@ class SearchConfig(object):
             text_from = self.convert[0][0]
             text_to = self.convert[0][1]
             self.filters.append(lambda m,
-                                       tf=text_from,
-                                       tt=text_to:
-                                (tf in m.search.convert_from1 and tt in m.search.convert_to1) or
-                                (tf in m.search.convert_from2 and tt in m.search.convert_to2))
-
+                                       tf = text_from,
+                                       tt = text_to:
+                                (tf in m.self.search.convert_from1 and tt in m.self.search.convert_to1) or
+                                (tf in m.self.search.convert_from2 and tt in m.self.search.convert_to2))
         if self.absorbnull:
             text = 'damage absorb shield'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
@@ -451,7 +452,7 @@ class SearchConfig(object):
         if self.shield:
             text = 'damage taken by {}%'.format(self.shield)
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
-        
+
         # Multiple
         if self.active:
             filters = []
@@ -531,7 +532,6 @@ class SearchConfig(object):
         if not self.filters:
             raise rpadutils.ReportableError('You need to specify at least one filter')
 
-
     def check_filters(self, m):
         for f in self.filters:
             if not f(m):
@@ -544,6 +544,7 @@ class SearchConfig(object):
                 if f(m):
                     return True
             return False
+
         return fn
 
     def setIfType(self, expected_type, given_type, current_value, new_value):
@@ -552,6 +553,7 @@ class SearchConfig(object):
         if current_value is not None:
             raise rpadutils.ReportableError('You set {} more than once'.format(given_type))
         return new_value
+
 
 class PadSearch:
     """PAD data searching."""
@@ -582,22 +584,22 @@ class PadSearch:
         monsters = pg_cog.database.all_monsters()
         matched_monsters = list(filter(config.check_filters, monsters))
 
-        #Removing entry with names that have gems in it
+        # Removing entry with names that have gems in it
         rmvGemFilter = self._make_search_config('remove( gem)')
         matched_monsters = list(filter(rmvGemFilter.check_filters, matched_monsters))
-        
+
         matched_monsters.sort(key=lambda m: m.monster_no_na, reverse=True)
 
         msg = []
-        for page in range(0,int(len(matched_monsters)/10)+1):
+        for page in range(0, int(len(matched_monsters) / 10) + 1):
             msg.append('Matched {} monsters'.format(len(matched_monsters)))
             if len(matched_monsters) > 10:
-                msg[page] += ' (limited to 10)'#  Page {}'.format(page+1)
+                msg[page] += ' (limited to 10)'  # Page {}'.format(page+1)
         n = 0
         for m in matched_monsters:
-            msg[int(n/10)] += '\n\tNo. {} {}'.format(m.monster_no_na, m.name_na)
+            msg[int(n / 10)] += '\n\tNo. {} {}'.format(m.monster_no_na, m.name_na)
             n += 1
-            
+
         await self.bot.say(box(msg[0]))
 
     def _make_search_config(self, input):
@@ -617,6 +619,10 @@ class PadSearch:
 
         await self.bot.say(box(json.dumps(m.search, indent=2, default=lambda o: o.__dict__)))
 
+
 def setup(bot):
     n = PadSearch(bot)
     bot.add_cog(n)
+
+
+
