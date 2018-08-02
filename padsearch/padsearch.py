@@ -22,6 +22,7 @@ Additionally, orb colors can be any of:
   heart jammer poison mortal
 
 Options which take multiple colors should be comma-separated.
+
 Single instance filters
 * cd(n)       : Min cd <= n
 * farmable    : Obtainable outside REM
