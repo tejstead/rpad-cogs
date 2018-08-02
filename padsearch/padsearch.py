@@ -433,7 +433,8 @@ class SearchConfig(object):
                                        tf = text_from,
                                        tt = text_to:
                                 (tf in m.search.convert_from1 and tt in m.search.convert_to1) or
-                                (tf in m.search.convert_from2 and tt in m.search.convert_to2))
+                                (tf in m.search.convert_from2 and tt in m.search.convert_to2) or
+                                (tf in m.search.convert_from3 and tt in m.search.convert_to3))
         if self.absorbnull:
             text = 'damage absorb shield'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
