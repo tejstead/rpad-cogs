@@ -429,7 +429,6 @@ class SearchConfig(object):
         if self.convert:
             text_from = self.convert[0][0]
             text_to = self.convert[0][1]
-            self.filters.append(lambda m,
                                 tf=text_from,
                                 tt=text_to:
                                 (tf in m.search.convert_from1 and tt in m.search.convert_to1) or
