@@ -15,14 +15,11 @@ from .utils.chat_formatting import box, inline
 
 HELP_MSG = """
 ^search <specification string>
-
 Colors can be any of:
   fire water wood light dark
 Additionally, orb colors can be any of:
   heart jammer poison mortal
-
 Options which take multiple colors should be comma-separated.
-
 Single instance filters
 * cd(n)       : Min cd <= n
 * farmable    : Obtainable outside REM
@@ -31,6 +28,9 @@ Single instance filters
 * shuffle     : Board shuffle (aka refresh)
 * unlock      : Orb unlock
 * delay(n)    : Delay enemies by n
+* attabsorb   : Attribute Absorb shield null
+* absorbnull  : Damage Abasorb shield null
+* combo(n)    : Increase combo count by n
 
 Multiple instance filters 
 * active(str)     : Active skill name/description
@@ -43,7 +43,6 @@ Multiple instance filters
 * row(color)      : Creates a row of a color
 * type(str)       : Monster type
 * convert(c1, c2) : Convert from color 1 to color 2, accepts any as entry as well
-
 """
 
 COLORS = [
@@ -82,7 +81,6 @@ ORB_TYPES = [
     'poison',
     'mortal',
 ]
-
 
 def assert_color(value):
     value = replace_named_color(value)
@@ -186,6 +184,10 @@ class PadSearchLexer(object):
         'DELAY',
         'REMOVE',
         'CONVERT',
+        'COMBO',
+        'ABSORBNULL',
+        'ATTABSORB',
+        'SHIELD',
     ]
 
     def t_ACTIVE(self, t):
@@ -287,6 +289,27 @@ class PadSearchLexer(object):
         i[1] = replace_named_color(i[1]).lower()
         t.value = i
         return t
+
+    def t_COMBO(self, t):
+        r'combo\(\d+\)'
+        t.value = clean_name(t.value, 'combo')
+        t.value = int(t.value)
+        return t
+
+    def t_ABSORBNULL(self, t):
+        r'absorbnull(\(\))?'
+        return t
+
+    def t_ATTABSORB(self, t):
+        r'attabsorb(\(\))?'
+        return t
+
+    def t_SHIELD(self, t):
+        r'shield\(\d+[\d%]\)'
+        t.value = clean_name(t.value, 'shield')
+        t.value = t.value.strip('%')
+        t.value = int(t.value)
+        return t
     
     t_ignore = ' \t\n'
 
@@ -309,6 +332,10 @@ class SearchConfig(object):
         self.shuffle = None
         self.unlock = None
         self.delay = None
+        self.combo = None
+        self.absorbnull = None
+        self.attabsorb = None
+        self.shield = None
 
         self.active = []
         self.board = []
@@ -332,6 +359,10 @@ class SearchConfig(object):
             self.shuffle = self.setIfType('SHUFFLE', type, self.shuffle, value)
             self.unlock = self.setIfType('UNLOCK', type, self.unlock, value)
             self.delay = self.setIfType('DELAY', type, self.delay, value)
+            self.combo = self.setIfType('COMBO', type, self.combo, value)
+            self.absorbnull = self.setIfType('ABSORBNULL', type, self.absorbnull, value)
+            self.attabsorb = self.setIfType('ATTABSORB', type, self.attabsorb, value)
+            self.shield = self.setIfType('SHIELD', type, self.shield, value)
 
             if type == 'ACTIVE':
                 self.active.append(value)
@@ -387,8 +418,29 @@ class SearchConfig(object):
             text = 'delay enemies for {}'.format(self.delay)
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
+        if self.combo:
+            text = 'increase combo count by {}'.format(self.combo)
+            self.filters.append(lambda m, t=text: t in m.search.active_desc)
+
         if self.convert:
-            text = '{} orbs to '.format(self.convert[0][0]) + '{}'.format((self.convert)[0][1])
+            text_from = self.convert[0][0]
+            text_to = self.convert[0][1]
+            self.filters.append(lambda m,
+                                tf=text_from,
+                                tt=text_to:
+                                tf in m.search.convert_from and
+                                tt in m.search.convert_to)
+
+        if self.absorbnull:
+            text = 'damage absorb shield'
+            self.filters.append(lambda m, t=text: t in m.search.active_desc)
+
+        if self.attabsorb:
+            text = 'att. absorb shield'
+            self.filters.append(lambda m, t=text: t in m.search.active_desc)
+
+        if self.shield:
+            text = 'damage taken by {}%'.format(self.shield)
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
         
         # Multiple
@@ -504,7 +556,7 @@ class PadSearch:
         await self.bot.whisper(box(HELP_MSG))
 
     @commands.command(pass_context=True)
-    async def search(self, ctx, *, filter_spec: str):
+    async def search(self, ctx, *, filter_spec: str, timeout=30):
         """Searches for monsters based on a filter you specify.
         Use ^helpsearch for more info.
         """
@@ -527,15 +579,18 @@ class PadSearch:
         
         matched_monsters.sort(key=lambda m: m.monster_no_na, reverse=True)
 
-        msg = 'Matched {} monsters'.format(len(matched_monsters))
-        if len(matched_monsters) > 10:
-            msg += ' (limited to 10)'
-            matched_monsters = matched_monsters[0:10]
-
+        msg = []
+        for page in range(0,int(len(matched_monsters)/10)+1):
+            msg.append('Matched {} monsters'.format(len(matched_monsters)))
+            if len(matched_monsters) > 10:
+                msg[page] += ' (limited to 10)'#  Page {}'.format(page+1)
+        n = 0
         for m in matched_monsters:
-            msg += '\n\tNo. {} {}'.format(m.monster_no_na, m.name_na)
+            msg[int(n/10)] += '\n\tNo. {} {}'.format(m.monster_no_na, m.name_na)
+            n += 1
 
-        await self.bot.say(box(msg))
+            
+        await self.bot.say(box(msg[0]))
 
     def _make_search_config(self, input):
         lexer = PadSearchLexer().build()
@@ -553,6 +608,10 @@ class PadSearch:
             return
 
         await self.bot.say(box(json.dumps(m.search, indent=2, default=lambda o: o.__dict__)))
+
+    def get_emojis(self):
+        server_ids = self.settings.emojiServers()
+        return [e for s in self.bot.servers if s.id in server_ids for e in s.emojis]
 
 
 def setup(bot):
