@@ -20,7 +20,7 @@ Colors can be any of:
   fire water wood light dark
 Additionally, orb colors can be any of:
   heart jammer poison mortal
-
+  
 Options which take multiple colors should be comma-separated.
 
 Single instance filters
@@ -32,9 +32,9 @@ Single instance filters
 * unlock      : Orb unlock
 * delay(n)    : Delay enemies by n
 * attabsorb   : Attribute Absorb shield null
-* absorbnull  : Damage Absorb shield null
+* absorbnull  : Damage Abasorb shield null
 * combo(n)    : Increase combo count by n
-* shield(n)   : Reduce damage received by n%
+* shield(n)   : Reduce damage taken by n%
 
 Multiple instance filters 
 * active(str)     : Active skill name/description
@@ -429,9 +429,9 @@ class SearchConfig(object):
         if self.convert:
             text_from = self.convert[0][0]
             text_to = self.convert[0][1]
-            self.filters.append(lambda m, 
-                                tf = text_from,
-                                tt = text_to:
+            self.filters.append(lambda m,
+                                tf=text_from,
+                                tt=text_to:
                                 (tf in m.search.convert_from1 and tt in m.search.convert_to1) or
                                 (tf in m.search.convert_from2 and tt in m.search.convert_to2))
 
