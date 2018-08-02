@@ -1119,7 +1119,8 @@ class MonsterSearchHelper(object):
         self.active_desc = replace_colors(self.active_desc)
 
         self.board_change = []
-        self.orb_convert = defaultdict(list)
+        self.convert_from = []
+        self.convert_to = []
         self.row_convert = []
         self.column_convert = []
 
@@ -1184,55 +1185,17 @@ class MonsterSearchHelper(object):
 
         convert_done = self.board_change or self.row_convert or self.column_convert
 
-        change_txt = 'change'
-        if not convert_done and change_txt in active_desc and 'orb' in active_desc:
-            txt = strip_prev_clause(active_desc, change_txt)
-            txt = txt.lstrip('s ')
-            # This fucks up triple orb changes like DQXQ
-            txt = strip_next_clause(txt, ';')
-            txt = strip_next_clause(txt, '+')
-            txt = strip_next_clause(txt, '(')
-            txt = strip_next_clause(txt, '.')
-
-            # fix an inconsistency where they use 'and' in place of ,
-            # to split orb converts
-            txt = txt.replace('orbs and ', ', ')
-
-            # fix an inconsistency where they use '&' in place of ,
-            # to split orb converts
-            for t in ['fire', 'water', 'wood', 'light', 'dark', 'jammer', 'poison', 'heal']:
-                txt = txt.replace('to {} & '.format(t), 'to {}, '.format(t))
-                txt = txt.replace('to {} and '.format(t), 'to {}, '.format(t))
-
-            parts = []
-            while ' to ' in txt:
-                to_idx = txt.find(' to ')
-                second_part_idx = txt.find(',', to_idx)
-                if second_part_idx < 0:
-                    break
-                parts.append(txt[:second_part_idx])
-                txt = txt[second_part_idx:].strip()
-
-            if ' to ' in txt:
-                parts.append(txt)
-
-            for part in parts:
-                part = part.replace('&', ' ')
-                part = part.replace(',', ' ')
-                part = part.replace('and', ' ')
-                part = part.replace('orbs', ' ')
-
-                sub_parts = part.split('to')
-                source_orbs = color_txt_to_list(sub_parts[0])
-                dest_orbs = color_txt_to_list(sub_parts[1])
-
-                if len(dest_orbs) > 1:
-                    print('error on skill:', self.active_desc, ' -> ', part)
-                    print(parts)
-
-                for so in source_orbs:
-                    for do in dest_orbs:
-                        self.orb_convert[so].append(do)
+        if not convert_done and 'change ' in active_desc and not 'all orbs' in active_desc:
+            txt = strip_prev_clause(active_desc, 'change ')
+            txt = strip_next_clause(txt, ' orbs to')
+            convert_from = txt.split(', ')
+            for colors in range(0,len(convert_from)):
+                self.convert_from.append(convert_from[colors].lower())
+            txt = strip_prev_clause(active_desc, ' orbs to ')
+            txt = strip_next_clause(txt, ' orbs')
+            convert_to = txt.split(', ')
+            for colors in range(0,len(convert_to)):
+                self.convert_to.append(convert_to[colors].lower())
 
 
 class MonsterGroup(object):
