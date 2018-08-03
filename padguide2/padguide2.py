@@ -1200,6 +1200,9 @@ class MonsterSearchHelper(object):
                 if len(sub_parts) > 1:
                     source_orbs = color_txt_to_list(sub_parts[0])
                     dest_orbs = color_txt_to_list(sub_parts[1])
+                    if len(dest_orbs) > 1:
+                    print('error on skill:', self.active_desc, ' -> ', part)
+                    print(parts)
                     for so in source_orbs:
                         for do in dest_orbs:
                             self.orb_convert[so].append(do)
