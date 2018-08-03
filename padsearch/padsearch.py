@@ -123,6 +123,9 @@ COLOR_REPLACEMENTS = {
     'd': 'dark',
     'heart': 'heal',
     'h': 'heal',
+    'p': 'poison',
+    'mp': 'mortal poison',
+    'j': 'jammer',
 }
 
 
@@ -432,9 +435,8 @@ class SearchConfig(object):
             self.filters.append(lambda m,
                                        tf = text_from,
                                        tt = text_to:
-                                (tf in m.search.convert_from1 and tt in m.search.convert_to1) or
-                                (tf in m.search.convert_from2 and tt in m.search.convert_to2) or
-                                (tf in m.search.convert_from3 and tt in m.search.convert_to3))
+                                tf in m.search.orb_convert.keys() and
+                                tt in m.search.orb_convert[tf])
         if self.absorbnull:
             text = 'damage absorb shield'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
@@ -612,6 +614,7 @@ class PadSearch:
             return
 
         await self.bot.say(box(json.dumps(m.search, indent=2, default=lambda o: o.__dict__)))
+
 
 def setup(bot):
     n = PadSearch(bot)
