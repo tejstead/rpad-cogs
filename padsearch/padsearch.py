@@ -124,8 +124,10 @@ COLOR_REPLACEMENTS = {
     'heart': 'heal',
     'h': 'heal',
     'p': 'poison',
-    'mp': 'mortal poison',
+    'mp': 'mortalpoison',
     'j': 'jammer',
+    'bo': 'bomb',
+    'o': 'bomb',
 }
 
 
