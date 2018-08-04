@@ -1125,22 +1125,10 @@ class MonsterSearchHelper(object):
 
         def color_txt_to_list(txt):
             txt = txt.replace(',', ' ')
-            txt = txt.replace('&', ' ')
-            txt = txt.replace('and', ' ')
-            txt = txt.replace('+', ' ')
-            txt = txt.replace('att.', ' ')
-            txt = txt.replace('colors', ' ')
             txt = txt.replace('orbs', ' ')
             txt = txt.replace('orb', ' ')
-            txt = txt.replace('critical poison', 'mortalpoison')
             txt = txt.replace('mortal poison', 'mortalpoison')
             txt = txt.replace('jammers', 'jammer')
-            txt = txt.replace('5', 'fire water wood light dark')
-            txt = txt.replace('fr', 'fire')
-            txt = txt.replace('wt', 'water')
-            txt = txt.replace('wd', 'wood')
-            txt = txt.replace('lt', 'light')
-            txt = txt.replace('dk', 'dark')
             txt = txt.strip()
             return txt.split()
 
