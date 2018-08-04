@@ -433,8 +433,8 @@ class SearchConfig(object):
             text_from = self.convert[0][0] if self.convert[0][0] else ''
             text_to = self.convert[0][1] if self.convert[0][1] else ''
             self.filters.append(lambda m,
-                                        tf = text_from,
-                                        tt = text_to:
+                                       tf = text_from,
+                                       tt = text_to:
                                 (tf in m.search.orb_convert.keys()) if tf else True and
                                 (tt in m.search.orb_convert[tf]) if tt else True)
             
