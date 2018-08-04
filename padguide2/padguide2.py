@@ -1124,6 +1124,7 @@ class MonsterSearchHelper(object):
         self.column_convert = []
 
         def color_txt_to_list(txt):
+            txt = txt.replace('and', ' ')
             txt = txt.replace(',', ' ')
             txt = txt.replace('orbs', ' ')
             txt = txt.replace('orb', ' ')
