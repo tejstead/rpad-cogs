@@ -350,7 +350,6 @@ class PadSearchLexer(object):
         t.value = int(t.value)
         return t
 
-
     t_ignore = ' \t\n'
 
     def t_error(self, t):
