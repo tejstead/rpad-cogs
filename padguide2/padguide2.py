@@ -1121,8 +1121,6 @@ class MonsterSearchHelper(object):
             self.rcv = m.rcv if m.rcv else None
             self.weighted_stats = m.weighted_stats if m.weighted_stats else None
 
-        self.limitbreak_stats = m.limitbreak_stats if m.limitbreak_stats else None
-
         self.types = m.types
 
         def replace_colors(text: str):
