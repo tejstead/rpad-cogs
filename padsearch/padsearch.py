@@ -23,6 +23,10 @@ Additionally, orb colors can be any of:
 Options which take multiple colors should be comma-separated.
 
 Single instance filters
+* hp(n)       : Max HP >= n
+* atk(n)      : Max ATK >= n
+* rcv(n)      : Max RCV >= n
+* weighted(n) : Weighted stat >= n
 * cd(n)       : Min cd <= n
 * farmable    : Obtainable outside REM
 * haste(n)    : Skill cds reduced by n
@@ -195,6 +199,10 @@ class PadSearchLexer(object):
         'ABSORBNULL',
         'ATTABSORB',
         'SHIELD',
+        'HP',
+        'ATK',
+        'RCV',
+        'WEIGHTED',
     ]
 
     def t_ACTIVE(self, t):
@@ -318,6 +326,30 @@ class PadSearchLexer(object):
         t.value = int(t.value)
         return t
 
+    def t_ATK(self, t):
+        r'atk\(\d+\)'
+        t.value = clean_name(t.value, 'atk')
+        t.value = int(t.value)
+        return t
+
+    def t_HP(self, t):
+        r'hp\(\d+\)'
+        t.value = clean_name(t.value, 'hp')
+        t.value = int(t.value)
+        return t
+
+    def t_RCV(self, t):
+        r'rcv\(\d+\)'
+        t.value = clean_name(t.value, 'rcv')
+        t.value = int(t.value)
+        return t
+
+    def t_WEIGHTED(self, t):
+        r'weighted\(\d+\)'
+        t.value = clean_name(t.value, 'weighted')
+        t.value = int(t.value)
+        return t
+
     t_ignore = ' \t\n'
 
     def t_error(self, t):
@@ -343,6 +375,10 @@ class SearchConfig(object):
         self.absorbnull = None
         self.attabsorb = None
         self.shield = None
+        self.hp = None
+        self.atk = None
+        self.rcv = None
+        self.weighted = None
 
         self.active = []
         self.board = []
@@ -370,6 +406,10 @@ class SearchConfig(object):
             self.absorbnull = self.setIfType('ABSORBNULL', type, self.absorbnull, value)
             self.attabsorb = self.setIfType('ATTABSORB', type, self.attabsorb, value)
             self.shield = self.setIfType('SHIELD', type, self.shield, value)
+            self.atk = self.setIfType('ATK', type, self.atk, value)
+            self.hp = self.setIfType('HP', type, self.hp, value)
+            self.rcv = self.setIfType('RCV', type, self.rcv, value)
+            self.weighted = self.setIfType('WEIGHTED', type, self.weighted, value)
 
             if type == 'ACTIVE':
                 self.active.append(value)
@@ -433,13 +473,13 @@ class SearchConfig(object):
             text_from = self.convert[0][0]
             text_to = self.convert[0][1]
             self.filters.append(lambda m,
-                                        tt = text_to,
-                                        tf = text_from:
+                                       tt=text_to,
+                                       tf=text_from:
                                 [tt] in m.search.orb_convert.values() if text_from == 'any' else
                                 (tf in m.search.orb_convert.keys() if text_to == 'any' else
                                  (tf in m.search.orb_convert.keys() and
                                   tt in m.search.orb_convert[tf])))
-            
+
         if self.absorbnull:
             text = 'damage absorb shield'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
@@ -451,6 +491,18 @@ class SearchConfig(object):
         if self.shield:
             text = 'damage taken by {}%'.format(self.shield)
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
+
+        if self.atk:
+            self.filters.append(lambda m: m.search.atk and m.search.atk >= self.atk)
+
+        if self.hp:
+            self.filters.append(lambda m: m.search.hp and m.search.hp >= self.hp)
+
+        if self.rcv:
+            self.filters.append(lambda m: m.search.rcv and m.search.rcv >= self.rcv)
+
+        if self.weighted:
+            self.filters.append(lambda m: m.search.weighted_stats and m.search.weighted_stats >= self.weighted)
 
         # Multiple
         if self.active:
