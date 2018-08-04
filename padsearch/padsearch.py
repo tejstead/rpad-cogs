@@ -18,7 +18,7 @@ HELP_MSG = """
 Colors can be any of:
   fire water wood light dark
 Additionally, orb colors can be any of:
-  heart jammer poison mortal and o for bomb
+  heart jammer poison mortal
 
 Options which take multiple colors should be comma-separated.
 
@@ -112,7 +112,6 @@ def split_csv_orbcolors(value):
 
 
 COLOR_REPLACEMENTS = {
-    'any': '',
     'red': 'fire',
     'r': 'fire',
     'blue': 'water',
@@ -124,9 +123,8 @@ COLOR_REPLACEMENTS = {
     'heart': 'heal',
     'h': 'heal',
     'p': 'poison',
-    'mortal': 'mortalpoison',
+    'mp': 'mortal poison',
     'j': 'jammer',
-    'o': 'bomb',
 }
 
 
@@ -431,13 +429,14 @@ class SearchConfig(object):
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
         if self.convert:
-            text_from = self.convert[0][0]
-            text_to = self.convert[0][1]
+            text_from = self.convert[0][0] if self.convert[0][0] != 'any' else ''
+            text_to = self.convert[0][1] if self.convert[0][1] != 'any' else ''
             self.filters.append(lambda m,
-                                       tf = text_from,
-                                       tt = text_to:
-                                tf in m.search.orb_convert.keys() and
-                                tt in m.search.orb_convert[tf])
+                                        tf = text_from,
+                                        tt = text_to:
+                                (tf in m.search.orb_convert.keys()) if tf != '' else True and
+                                (tt in m.search.orb_convert[tf]) if tt != ''else True)
+            
         if self.absorbnull:
             text = 'damage absorb shield'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
