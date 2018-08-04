@@ -124,6 +124,7 @@ COLOR_REPLACEMENTS = {
     'h': 'heal',
     'p': 'poison',
     'mp': 'mortalpoison',
+    'mortal': 'mortalpoison',
     'j': 'jammer',
     'o': 'bomb',
 }
