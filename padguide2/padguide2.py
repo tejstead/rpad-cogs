@@ -241,13 +241,13 @@ class PadGuide2(object):
 
         # Use a dummy file to proxy for the entire database being out of date
         general_dummy_file = DUMMY_FILE_PATTERN.format('general')
-        download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, standard_expiry_secs)
+        download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, quick_expiry_secs)
 
         async with aiohttp.ClientSession() as client_session:
             for type in self._standard_refresh:
                 endpoint = type.file_name()
                 result_file = JSON_FILE_PATTERN.format(endpoint)
-                if download_all or rpadutils.should_download(result_file, standard_expiry_secs):
+                if download_all or rpadutils.should_download(result_file, quick_expiry_secs):
                     await rpadutils.async_cached_padguide_request(client_session, endpoint, result_file)
                     # Sleep to avoid overwhelming with requests
                     await asyncio.sleep(1)
@@ -1125,22 +1125,10 @@ class MonsterSearchHelper(object):
 
         def color_txt_to_list(txt):
             txt = txt.replace(',', ' ')
-            txt = txt.replace('&', ' ')
-            txt = txt.replace('and', ' ')
-            txt = txt.replace('+', ' ')
-            txt = txt.replace('att.', ' ')
-            txt = txt.replace('colors', ' ')
             txt = txt.replace('orbs', ' ')
             txt = txt.replace('orb', ' ')
-            txt = txt.replace('critical poison', 'mortal')
-            txt = txt.replace('mortal poison', 'mortal')
+            txt = txt.replace('mortal poison', 'mortalpoison')
             txt = txt.replace('jammers', 'jammer')
-            txt = txt.replace('5', 'fire water wood light dark')
-            txt = txt.replace('fr', 'fire')
-            txt = txt.replace('wt', 'water')
-            txt = txt.replace('wd', 'wood')
-            txt = txt.replace('lt', 'light')
-            txt = txt.replace('dk', 'dark')
             txt = txt.strip()
             return txt.split()
 
@@ -1156,6 +1144,7 @@ class MonsterSearchHelper(object):
             if next_clause_start_idx >= 0:
                 txt = txt[:next_clause_start_idx]
             return txt
+        
 
         active_desc = self.active_desc
         active_desc = active_desc.replace(' rows ', ' row ')
@@ -1184,55 +1173,27 @@ class MonsterSearchHelper(object):
 
         convert_done = self.board_change or self.row_convert or self.column_convert
 
-        change_txt = 'change'
+        change_txt = 'change '
         if not convert_done and change_txt in active_desc and 'orb' in active_desc:
-            txt = strip_prev_clause(active_desc, change_txt)
-            txt = txt.lstrip('s ')
-            # This fucks up triple orb changes like DQXQ
-            txt = strip_next_clause(txt, ';')
-            txt = strip_next_clause(txt, '+')
-            txt = strip_next_clause(txt, '(')
-            txt = strip_next_clause(txt, '.')
-
-            # fix an inconsistency where they use 'and' in place of ,
-            # to split orb converts
-            txt = txt.replace('orbs and ', ', ')
-
-            # fix an inconsistency where they use '&' in place of ,
-            # to split orb converts
-            for t in ['fire', 'water', 'wood', 'light', 'dark', 'jammer', 'poison', 'heal']:
-                txt = txt.replace('to {} & '.format(t), 'to {}, '.format(t))
-                txt = txt.replace('to {} and '.format(t), 'to {}, '.format(t))
-
-            parts = []
-            while ' to ' in txt:
-                to_idx = txt.find(' to ')
-                second_part_idx = txt.find(',', to_idx)
-                if second_part_idx < 0:
-                    break
-                parts.append(txt[:second_part_idx])
-                txt = txt[second_part_idx:].strip()
-
-            if ' to ' in txt:
-                parts.append(txt)
-
+            txt = active_desc
+            parts = re.split('\Wand\W|;\W',txt)
+            for i in range(0,len(parts)):
+                if change_txt in parts[i]:
+                    parts[i] = strip_prev_clause(parts[i], change_txt)
+                else:
+                    parts[i] = ''
+                        
             for part in parts:
-                part = part.replace('&', ' ')
-                part = part.replace(',', ' ')
-                part = part.replace('and', ' ')
-                part = part.replace('orbs', ' ')
-
-                sub_parts = part.split('to')
-                source_orbs = color_txt_to_list(sub_parts[0])
-                dest_orbs = color_txt_to_list(sub_parts[1])
-
-                if len(dest_orbs) > 1:
+                sub_parts = part.split(' to ')
+                if len(sub_parts) > 1:
+                    source_orbs = color_txt_to_list(sub_parts[0])
+                    dest_orbs = color_txt_to_list(sub_parts[1])
+                    if len(dest_orbs) > 1:
                     print('error on skill:', self.active_desc, ' -> ', part)
                     print(parts)
-
-                for so in source_orbs:
-                    for do in dest_orbs:
-                        self.orb_convert[so].append(do)
+                    for so in source_orbs:
+                        for do in dest_orbs:
+                            self.orb_convert[so].append(do)
 
 
 class MonsterGroup(object):
