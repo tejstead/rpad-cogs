@@ -18,7 +18,7 @@ HELP_MSG = """
 Colors can be any of:
   fire water wood light dark
 Additionally, orb colors can be any of:
-  heart jammer poison mortal
+  heart jammer poison mortal and bomb
 
 Options which take multiple colors should be comma-separated.
 
@@ -123,8 +123,9 @@ COLOR_REPLACEMENTS = {
     'heart': 'heal',
     'h': 'heal',
     'p': 'poison',
-    'mp': 'mortal poison',
+    'mp': 'mortalpoison',
     'j': 'jammer',
+    'o': 'bomb',
 }
 
 
