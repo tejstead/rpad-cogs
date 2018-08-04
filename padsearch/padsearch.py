@@ -432,20 +432,13 @@ class SearchConfig(object):
         if self.convert:
             text_from = self.convert[0][0]
             text_to = self.convert[0][1]
-            if text_from == 'any':
-                self.filters.append(lambda m,
-                                            tt = text_to:
-                                    [tt] in m.search.orb_convert.values())
-            elif text_to == 'any':
-                self.filters.append(lambda m,
-                                            tf = text_from:
-                                    tf in m.search.orb_convert.keys())
-            else:
-                self.filters.append(lambda m,
-                                            tf = text_from,
-                                            tt = text_to:
-                                    tf in m.search.orb_convert.keys() and
-                                    tt in m.search.orb_convert[tf])
+            self.filters.append(lambda m,
+                                        tt = text_to,
+                                        tf = text_from:
+                                [tt] in m.search.orb_convert.values() if text_from == 'any' else
+                                (tf in m.search.orb_convert.keys() if text_to == 'any' else
+                                 (tf in m.search.orb_convert.keys() and
+                                  tt in m.search.orb_convert[tf])))
             
         if self.absorbnull:
             text = 'damage absorb shield'
