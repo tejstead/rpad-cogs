@@ -430,8 +430,8 @@ class SearchConfig(object):
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
         if self.convert:
-            text_from = self.convert[0][0] if self.convert[0][0] else ''
-            text_to = self.convert[0][1] if self.convert[0][1] else ''
+            text_from = self.convert[0][0] if self.convert[0][0] != 'any' else ''
+            text_to = self.convert[0][1] if self.convert[0][1] != 'any' else ''
             self.filters.append(lambda m,
                                        tf = text_from,
                                        tt = text_to:
