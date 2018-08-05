@@ -1152,7 +1152,6 @@ class MonsterSearchHelper(object):
             if next_clause_start_idx >= 0:
                 txt = txt[:next_clause_start_idx]
             return txt
-        
 
         active_desc = self.active_desc
         active_desc = active_desc.replace(' rows ', ' row ')
@@ -1168,16 +1167,18 @@ class MonsterSearchHelper(object):
             self.board_change = color_txt_to_list(txt)
 
         txt = active_desc
-        row_to_txt = 'row to'
-        while row_to_txt in txt:
-            txt = strip_prev_clause(txt, row_to_txt)
-            self.row_convert.append(txt.split()[0].strip())
+        if 'row' in txt:
+            parts = re.split('\Wand\W|;\W', txt)
+            for i in range(0, len(parts)):
+                if 'row' in parts[i]:
+                    self.row_convert.append(strip_next_clause(strip_prev_clause(parts[i], 'to '), ' orbs'))
 
         txt = active_desc
-        column_to_txt = 'column to'
-        while column_to_txt in txt:
-            txt = strip_prev_clause(txt, column_to_txt)
-            self.column_convert.append(txt.split()[0].strip())
+        if 'column' in txt:
+            parts = re.split('\Wand\W|;\W', txt)
+            for i in range(0, len(parts)):
+                if 'column' in parts[i]:
+                    self.column_convert.append(strip_next_clause(strip_prev_clause(parts[i], 'to '), ' orbs'))
 
         convert_done = self.board_change or self.row_convert or self.column_convert
 
@@ -1186,10 +1187,7 @@ class MonsterSearchHelper(object):
             txt = active_desc
             parts = re.split('\Wand\W|;\W',txt)
             for i in range(0,len(parts)):
-                if change_txt in parts[i]:
-                    parts[i] = strip_prev_clause(parts[i], change_txt)
-                else:
-                    parts[i] = ''
+                parts[i] = strip_prev_clause(parts[i], change_txt) if change_txt in parts[i] else ''
                         
             for part in parts:
                 sub_parts = part.split(' to ')
