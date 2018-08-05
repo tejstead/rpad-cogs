@@ -1108,6 +1108,13 @@ class MonsterSearchHelper(object):
 
         self.color = [m.attr1.name.lower()]
         self.hascolor = [c.name.lower() for c in [m.attr1, m.attr2] if c]
+        
+        self.limitbreak_stats = m.limitbreak_stats or 1
+        
+        self.hp = m.hp * self.limitbreak_stats
+        self.atk = m.atk * self.limitbreak_stats
+        self.rcv = m.rcv * self.limitbreak_stats
+        self.weighted_stats = m.weighted_stats * self.limitbreak_stats
 
         self.types = m.types
 
