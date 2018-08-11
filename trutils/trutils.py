@@ -696,7 +696,7 @@ class TrUtils:
             await self.bot.say(inline("I'm unable to deliver your message. Sorry."))
         else:
             await self.bot.say(inline("Your message has been sent."
-                                      " Join the Miru Server to see any responses."
+                                      " Join the Miru Server to see any responses (^miruserver)."
                                       " Abusing this feature will result in a blacklist."))
 
     @commands.command(pass_context=True, no_pm=True)
