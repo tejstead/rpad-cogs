@@ -44,7 +44,6 @@ ATTR_EXPORT_PATH = 'data/padguide2/card_data.csv'
 SHEETS_PATTERN = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid={}&single=true&output=csv'
 GROUP_BASENAMES_OVERRIDES_SHEET = SHEETS_PATTERN.format('2070615818')
 NICKNAME_OVERRIDES_SHEET = SHEETS_PATTERN.format('0')
-MONSTERDATA_OVERRIDES_SHEET = SHEETS_PATTERN.format('1055881548')
 
 NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames')
 BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
@@ -172,11 +171,7 @@ class PadGuide2(object):
             if k.isdigit():
                 self.basename_overrides[int(k)].add(v.lower())
 
-        monsterdata_overrides = self._csv_to_tuples(MONSTERDATA_FILE_PATTERN, 7)
-        self.monsterdata_overrides = {int(x[0]): x for x in monsterdata_overrides if x[0].isdigit()}
-
         self.database = PgRawDatabase()
-        self.database.update_with_overrides(self.monsterdata_overrides)
         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
 
         self.write_monster_attr_data()
@@ -347,21 +342,6 @@ class PgRawDatabase(object):
         for m in self._monster_map.values():
             for server in m.server_actives:
                 self._server_to_rotating_skillups[server].append(m)
-
-    def update_with_overrides(self, monsterdata_overrides):
-        for m_id_na, data in monsterdata_overrides.items():
-            m_no = self.normalize_monster_no_na(m_id_na)
-            m = self.getMonster(m_no)
-
-            if data[2].replace('.', '', 1).isdigit():
-                m.limitbreak_stats = float(data[2])
-            if data[3].isdigit():
-                m.superawakening_count = int(data[3])
-
-            if data[4] and m.active_skill:
-                m.active_skill.desc = data[4]
-            if data[5] and m.leader_skill:
-                m.leader_skill.desc = data[5]
 
     def _load(self, itemtype):
         if self._skip_load:
