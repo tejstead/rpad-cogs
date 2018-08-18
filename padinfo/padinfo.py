@@ -927,6 +927,9 @@ AWAKENING_NAME_MAP_RPAD = {
     'L-Shape Damage Reduction': 'l_shield',
     'Enhance when HP is below 50%': 'attack_boost_low',
     'Enhance when HP is above 80%': 'attack_boost_high',
+    'Combo Orb': 'orb_combo',
+    'Skill Voice': 'misc_voice',
+    'Dungeon Bonus': 'misc_dungeonbonus',
 }
 
 AWAKENING_NAME_MAP = {
