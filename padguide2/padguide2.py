@@ -47,7 +47,6 @@ NICKNAME_OVERRIDES_SHEET = SHEETS_PATTERN.format('0')
 
 NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames')
 BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
-MONSTERDATA_FILE_PATTERN = CSV_FILE_PATTERN.format('monsterdata')
 
 
 class PadGuide2(object):
@@ -153,7 +152,6 @@ class PadGuide2(object):
     async def reload_config_files(self):
         os.remove(NICKNAME_FILE_PATTERN)
         os.remove(BASENAME_FILE_PATTERN)
-        os.remove(MONSTERDATA_FILE_PATTERN)
         await self.download_and_refresh_nicknames()
 
     async def download_and_refresh_nicknames(self):
@@ -260,8 +258,6 @@ class PadGuide2(object):
             NICKNAME_FILE_PATTERN, NICKNAME_OVERRIDES_SHEET, overrides_expiry_secs)
         await rpadutils.makeAsyncCachedPlainRequest(
             BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, overrides_expiry_secs)
-        await rpadutils.makeAsyncCachedPlainRequest(
-            MONSTERDATA_FILE_PATTERN, MONSTERDATA_OVERRIDES_SHEET, overrides_expiry_secs)
 
     @commands.group(pass_context=True)
     @checks.is_owner()
