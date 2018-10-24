@@ -1823,7 +1823,7 @@ class MonsterIndex(object):
         }
 
         self.series_to_prefix_map = {
-            130: ['halloween'],
+            130: ['halloween', 'hw', 'h'],
             136: ['xmas', 'christmas'],
             125: ['summer', 'beach'],
             114: ['school', 'academy', 'gakuen'],
