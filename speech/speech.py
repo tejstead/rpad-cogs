@@ -113,7 +113,7 @@ class Speech:
             while not audio_player.is_done():
                 await asyncio.sleep(0.01)
 
-            await voice_client.disconnect
+            await voice_client.disconnect()
             self.busy = False
 
             return True
