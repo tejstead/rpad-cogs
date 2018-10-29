@@ -150,6 +150,35 @@ class Donations:
             await self.bot.send_message(ripper, '{} asked me to send you this:\n{}'.format(ctx.message.author.name, insult))
 
     @commands.command(pass_context=True)
+    async def vcinsultripper(self, ctx):
+        """Fuck ripper (verbally)"""
+        user_id = ctx.message.author.id
+        if user_id not in self.settings.donors():
+            await self.bot.say(inline('Donor-only command'))
+            return
+
+        ripper_id = '123529484476350467'
+        ripper = ctx.message.server.get_member(ripper_id)
+
+        if ripper is None:
+            await self.bot.say(inline('Ripper must be in this server to use this command'))
+
+        voice = ripper.voice
+        channel = voice.voice_channel
+        if channel is None:
+            await self.bot.say(inline('Ripper must be in a voice channel on this server to use this command'))
+            return
+
+        insult = random.choice(self.insults_list)
+        speech_cog = self.bot.get_cog('Speech')
+        if not speech_cog:
+            await self.bot.say(inline('Speech seems to be offline'))
+            return
+
+        await self.bot.say(ripper.mention + ' ' + insult)
+        await speech_cog.speak(channel, 'Hey Ripper, ' + insult)
+
+    @commands.command(pass_context=True)
     async def plsno(self, ctx):
         """I am merciful (donor only)."""
         user_id = ctx.message.author.id
