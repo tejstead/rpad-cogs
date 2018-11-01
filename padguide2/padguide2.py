@@ -1084,9 +1084,9 @@ class MonsterSearchHelper(object):
 
         self.color = [m.attr1.name.lower()]
         self.hascolor = [c.name.lower() for c in [m.attr1, m.attr2] if c]
-        
+
         self.limitbreak_stats = m.limitbreak_stats or 1
-        
+
         self.hp = m.hp * self.limitbreak_stats
         self.atk = m.atk * self.limitbreak_stats
         self.rcv = m.rcv * self.limitbreak_stats
@@ -1881,9 +1881,10 @@ class MonsterIndex(object):
             prefixes.add('chibi')
 
         lower_name = m.name_na.lower()
-        awoken = lower_name.startswith('awoken') or '覚醒' in lower_name or '極醒' in lower_name
+        awoken = lower_name.startswith('awoken') or '覚醒' in lower_name
         revo = lower_name.startswith('reincarnated') or '転生' in lower_name
-        awoken_or_revo_or_equip = awoken or revo or m.is_equip
+        mega = lower_name.startswith('mega woken') or '極醒' in lower_name
+        awoken_or_revo_or_equip_or_mega = awoken or revo or m.is_equip or mega
 
         # These clauses need to be separate to handle things like 'Awoken Thoth' which are
         # actually Evos but have awoken in the name
@@ -1895,15 +1896,20 @@ class MonsterIndex(object):
             prefixes.add('revo')
             prefixes.add('reincarnated')
 
+        if mega:
+            prefixes.add('mega')
+            prefixes.add('mega awoken')
+            prefixes.add('awoken')
+
         # Prefixes for evo type
         if m.cur_evo_type == EvoType.Base:
             prefixes.add('base')
         elif m.cur_evo_type == EvoType.Evo:
             prefixes.add('evo')
-        elif m.cur_evo_type == EvoType.UvoAwoken and not awoken_or_revo_or_equip:
+        elif m.cur_evo_type == EvoType.UvoAwoken and not awoken_or_revo_or_equip_or_mega:
             prefixes.add('uvo')
             prefixes.add('uevo')
-        elif m.cur_evo_type == EvoType.UuvoReincarnated and not awoken_or_revo_or_equip:
+        elif m.cur_evo_type == EvoType.UuvoReincarnated and not awoken_or_revo_or_equip_or_mega:
             prefixes.add('uuvo')
             prefixes.add('uuevo')
 
