@@ -10,10 +10,13 @@ from __main__ import user_allowed, send_cmd_help
 
 from . import rpadutils
 from .utils import checks
-from .utils.chat_formatting import box, inline
+from .utils.chat_formatting import box, inline, pagify
+
 
 HELP_MSG = """
 ^search <specification string>
+
+To get more than 10 results, include the word 'all' in your search.
 
 Colors can be any of:
   fire water wood light dark
@@ -178,6 +181,7 @@ def board_filter(colors):
 class PadSearchLexer(object):
     tokens = [
         'ACTIVE',
+        'ALL',
         'BOARD',
         'CD',
         'COLOR',
@@ -209,6 +213,10 @@ class PadSearchLexer(object):
         r'active\(.+?\)'
         t.value = clean_name(t.value, 'active')
         t.value = replace_colors_in_text(t.value)
+        return t
+
+    def t_ALL(self, t):
+        r'all(\(\))?'
         return t
 
     def t_BOARD(self, t):
@@ -364,6 +372,7 @@ class PadSearchLexer(object):
 class SearchConfig(object):
 
     def __init__(self, lexer):
+        self.all = False
         self.cd = None
         self.farmable = None
         self.haste = None
@@ -395,6 +404,7 @@ class SearchConfig(object):
         for tok in iter(lexer.token, None):
             type = tok.type
             value = tok.value
+            self.all |= type == 'ALL'
             self.cd = self.setIfType('CD', type, self.cd, value)
             self.farmable = self.setIfType('FARMABLE', type, self.farmable, value)
             self.haste = self.setIfType('HASTE', type, self.haste, value)
@@ -473,8 +483,8 @@ class SearchConfig(object):
             text_from = self.convert[0][0]
             text_to = self.convert[0][1]
             self.filters.append(lambda m,
-                                       tt=text_to,
-                                       tf=text_from:
+                                tt=text_to,
+                                tf=text_from:
                                 [tt] in m.search.orb_convert.values() if text_from == 'any' else
                                 (tf in m.search.orb_convert.keys() if text_to == 'any' else
                                  (tf in m.search.orb_convert.keys() and
@@ -502,7 +512,8 @@ class SearchConfig(object):
             self.filters.append(lambda m: m.search.rcv and m.search.rcv >= self.rcv)
 
         if self.weighted:
-            self.filters.append(lambda m: m.search.weighted_stats and m.search.weighted_stats >= self.weighted)
+            self.filters.append(
+                lambda m: m.search.weighted_stats and m.search.weighted_stats >= self.weighted)
 
         # Multiple
         if self.active:
@@ -641,17 +652,30 @@ class PadSearch:
 
         matched_monsters.sort(key=lambda m: m.monster_no_na, reverse=True)
 
-        msg = []
-        for page in range(0, int(len(matched_monsters) / 10) + 1):
-            msg.append('Matched {} monsters'.format(len(matched_monsters)))
-            if len(matched_monsters) > 10:
-                msg[page] += ' (limited to 10)'  # Page {}'.format(page+1)
-        n = 0
-        for m in matched_monsters:
-            msg[int(n / 10)] += '\n\tNo. {} {}'.format(m.monster_no_na, m.name_na)
-            n += 1
+        msg = 'Matched {} monsters'.format(len(matched_monsters))
+        dm_required = False
+        if len(matched_monsters) > 10:
+            if not config.all:
+                msg += " (limited to 10, use 'all' to get more)"
+                matched_monsters = matched_monsters[0:10]
+            else:
+                dm_required = True
+                header = msg
 
-        await self.bot.say(box(msg[0]))
+            if len(matched_monsters) > 200:
+                msg += " (limited to 200)"
+                matched_monsters = matched_monsters[0:200]
+
+        for m in matched_monsters:
+            msg += '\n\tNo. {} {}'.format(m.monster_no_na, m.name_na)
+
+        if dm_required:
+            header += '\nList too long to display; sent via DM'
+            await self.bot.say(box(header))
+            for page in pagify(msg):
+                await self.bot.whisper(box(page))
+        else:
+            await self.bot.say(box(msg))
 
     def _make_search_config(self, input):
         lexer = PadSearchLexer().build()
@@ -674,6 +698,3 @@ class PadSearch:
 def setup(bot):
     n = PadSearch(bot)
     bot.add_cog(n)
-
-
-
