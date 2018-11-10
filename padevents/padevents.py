@@ -2,11 +2,9 @@ import asyncio
 from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
-from dateutil import tz
 import http.client
 import json
 import os
-import pytz
 import re
 import threading
 import time
@@ -14,12 +12,14 @@ import time
 import traceback
 import urllib.parse
 
-from enum import Enum
-
-from __main__ import user_allowed, send_cmd_help
+from dateutil import tz
 import discord
 from discord.ext import commands
+from enum import Enum
 import prettytable
+import pytz
+
+from __main__ import user_allowed, send_cmd_help
 
 from . import padguide2
 from .rpadutils import *
@@ -291,12 +291,8 @@ class PadEvents:
         if len(etc_events) > 0:
             msg += "\n\n" + self.makeActiveOutput('Etc Events', etc_events)
 
-#         tech_events = all_etc_events.withDungeonType(DungeonType.Technical).withNameContains('legendary').itemsByCloseTime()
-#         if len(etc_events) > 0:
-#             msg += "\n\n" + self.makeActiveOutput('Technical Events', tech_events)
-
-        active_guerrilla_events = active_events.withType(
-            EventType.Guerrilla).items()
+        # Old-style guerrillas
+        active_guerrilla_events = active_events.withType(EventType.Guerrilla).items()
         if len(active_guerrilla_events) > 0:
             msg += "\n\n" + \
                 self.makeActiveGuerrillaOutput('Active Guerrillas', active_guerrilla_events)
@@ -305,28 +301,17 @@ class PadEvents:
         if len(guerrilla_events) > 0:
             msg += "\n\n" + self.makeFullGuerrillaOutput('Guerrilla Events', guerrilla_events)
 
-        week_events = available_events.withType(EventType.Week).items()
-        if len(week_events):
-            msg += "\n\n" + "Found " + str(len(week_events)) + " unexpected week events!"
-
-        special_week_events = available_events.withType(
-            EventType.SpecialWeek).items()
-        if len(special_week_events):
-            msg += "\n\n" + "Found " + str(len(special_week_events)) + \
-                " unexpected special week events!"
-
-        active_guerrilla_new_events = active_events.withType(
-            EventType.GuerrillaNew).items()
-        if len(active_guerrilla_new_events) > 0:
+        # New-style guerrillas
+        active_guerrilla_events = active_events.withType(EventType.SpecialWeek).items()
+        if len(active_guerrilla_events) > 0:
             msg += "\n\n" + \
-                self.makeActiveGuerrillaOutput('Active New Guerrillas', active_guerrilla_new_events)
+                self.makeActiveGuerrillaOutput('Active Guerrillas', active_guerrilla_events)
 
-        guerrilla_new_events = pending_events.withType(
-            EventType.GuerrillaNew).items()
-        if len(guerrilla_new_events) > 0:
+        guerrilla_events = pending_events.withType(EventType.SpecialWeek).items()
+        if len(guerrilla_events) > 0:
             msg += "\n\n" + \
-                self.makeFullGuerrillaOutput('New Guerrilla Events',
-                                             guerrilla_new_events, new_guerrilla=True)
+                self.makeFullGuerrillaOutput(
+                    'Guerrilla Events', guerrilla_events, starter_guerilla=True)
 
         # clean up long headers
         msg = msg.replace('-------------------------------------', '-----------------------')
@@ -366,13 +351,13 @@ class PadEvents:
             tbl.add_row([e.name_and_modifier, e.group, e.endFromNowFullMin().strip()])
         return tbl.get_string()
 
-    def makeFullGuerrillaOutput(self, table_name, event_list, new_guerrilla=False):
+    def makeFullGuerrillaOutput(self, table_name, event_list, starter_guerilla=False):
         events_by_name = defaultdict(list)
         for e in event_list:
             events_by_name[e.name_and_modifier].append(e)
 
         rows = list()
-        grps = ["A", "B", "C"] if new_guerrilla else ["A", "B", "C", "D", "E"]
+        grps = ["RED", "BLUE", "GREEN"] if starter_guerilla else ["A", "B", "C", "D", "E"]
         for name, events in events_by_name.items():
             events = sorted(events, key=lambda e: e.open_datetime)
             events_by_group = defaultdict(list)
@@ -427,7 +412,7 @@ class PadEvents:
 
         events = EventList(self.events)
         events = events.withServer(server)
-        events = events.withType(EventType.Guerrilla)
+        events = events.inType([EventType.Guerrilla, EventType.SpecialWeek])
 
         active_events = events.activeOnly().itemsByOpenTime(reverse=True)
         pending_events = events.pendingOnly().itemsByOpenTime(reverse=True)
@@ -590,10 +575,11 @@ class Event:
         return self.server + "," + self.group + "," + fmtTime(self.startPst()) + "," + fmtTime(self.startEst()) + "," + self.startFromNow()
 
     def toPartialEvent(self, pe):
+        group = self.group.replace('RED', 'R').replace('BLUE', 'U').replace('GREEN', 'G')
         if self.is_started():
-            return self.group + " " + self.endFromNow() + "   " + self.name_and_modifier
+            return group + " " + self.endFromNow() + "   " + self.name_and_modifier
         else:
-            return self.group + " " + fmtTimeShort(self.startPst()) + " " + fmtTimeShort(self.startEst()) + " " + self.startFromNow() + " " + self.name_and_modifier
+            return group + " " + fmtTimeShort(self.startPst()) + " " + fmtTimeShort(self.startEst()) + " " + self.startFromNow() + " " + self.name_and_modifier
 
 
 class EventList:
@@ -611,6 +597,9 @@ class EventList:
 
     def withType(self, event_type):
         return self.withFunc(lambda e: e.event_type == event_type)
+
+    def inType(self, event_types):
+        return self.withFunc(lambda e: e.event_type in event_types)
 
     def withDungeonType(self, dungeon_type, exclude=False):
         return self.withFunc(lambda e: e.dungeon_type == dungeon_type, exclude)

@@ -1147,24 +1147,26 @@ class MonsterSearchHelper(object):
             parts = re.split('\Wand\W|;\W', txt)
             for i in range(0, len(parts)):
                 if 'row' in parts[i]:
-                    self.row_convert.append(strip_next_clause(strip_prev_clause(parts[i], 'to '), ' orbs'))
+                    self.row_convert.append(strip_next_clause(
+                        strip_prev_clause(parts[i], 'to '), ' orbs'))
 
         txt = active_desc
         if 'column' in txt:
             parts = re.split('\Wand\W|;\W', txt)
             for i in range(0, len(parts)):
                 if 'column' in parts[i]:
-                    self.column_convert.append(strip_next_clause(strip_prev_clause(parts[i], 'to '), ' orbs'))
+                    self.column_convert.append(strip_next_clause(
+                        strip_prev_clause(parts[i], 'to '), ' orbs'))
 
         convert_done = self.board_change or self.row_convert or self.column_convert
 
         change_txt = 'change '
         if not convert_done and change_txt in active_desc and 'orb' in active_desc:
             txt = active_desc
-            parts = re.split('\Wand\W|;\W',txt)
-            for i in range(0,len(parts)):
+            parts = re.split('\Wand\W|;\W', txt)
+            for i in range(0, len(parts)):
                 parts[i] = strip_prev_clause(parts[i], change_txt) if change_txt in parts[i] else ''
-                        
+
             for part in parts:
                 sub_parts = part.split(' to ')
                 if len(sub_parts) > 1:
@@ -1714,7 +1716,12 @@ class PgScheduledEvent(PgItem):
         self.team_data = int_or_none(item['TEAM_DATA'])
         self.url = item['URL']
 
-        self.group = chr(ord('a') + self.team_data).upper() if self.team_data is not None else None
+        self.group = None
+        if self.team_data is not None:
+            if self.event_type == EventType.EventTypeGuerrilla.value:
+                self.group = chr(ord('a') + self.team_data).upper()
+            elif self.event_type == EventType.EventTypeSpecialWeek.value:
+                self.group = ['RED', 'BLUE', 'GREEN'][self.team_data]
 
         self.open_datetime = datetime.utcfromtimestamp(
             self.open_timestamp).replace(tzinfo=pytz.UTC)
