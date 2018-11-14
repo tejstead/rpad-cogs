@@ -1,12 +1,13 @@
 from collections import defaultdict
 import csv
 import difflib
-import discord
-from discord.ext import commands
 import io
 import os
-import prettytable
 import re
+
+import discord
+from discord.ext import commands
+import prettytable
 
 from __main__ import user_allowed, send_cmd_help
 
@@ -825,6 +826,9 @@ class PadGlobal:
     @commands.command(pass_context=True, aliases=["guides"])
     async def guide(self, ctx, *, term: str=None):
         """Shows Leader and Dungeon guide entries."""
+        if await self._check_disabled(ctx):
+            return
+
         if term is None:
             await self.send_guide()
             return
@@ -881,6 +885,9 @@ class PadGlobal:
 
         ^guideto @tactical_retreat osc10
         """
+        if await self._check_disabled(ctx):
+            return
+
         term, text, err = self.get_guide_text(term)
         if text is None:
             await self.bot.say(inline(err))
