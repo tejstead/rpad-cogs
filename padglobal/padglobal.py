@@ -121,7 +121,9 @@ class PadGlobal:
     async def _check_disabled(self, ctx):
         """If the server is disabled, print a warning and return True"""
         if self.settings.checkDisabled(ctx):
-            await self.bot.say(inline(DISABLED_MSG))
+            msg = await self.bot.say(inline(DISABLED_MSG))
+            await asyncio.sleep(3)
+            await self.bot.delete_messasge(msg)
             return True
         return False
 
@@ -922,7 +924,7 @@ class PadGlobal:
 
         op = 'EDITED' if name in self.settings.leaderGuide() else 'ADDED'
         self.settings.addLeaderGuide(name, definition)
-        await self.bot.say("PAD which info successfully {}.".format(op))
+        await self.bot.say("PAD leader guide info successfully {}.".format(op))
 
     @padglobal.command(pass_context=True)
     async def rmleaderguide(self, ctx, monster_id: int):
