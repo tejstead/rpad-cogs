@@ -5,7 +5,6 @@ from collections import defaultdict
 import csv
 from datetime import datetime
 from datetime import timedelta
-from dateutil import tz
 import difflib
 import http.client
 import io
@@ -13,23 +12,24 @@ from itertools import groupby
 import json
 from operator import itemgetter
 import os
-import pytz
 import re
-from setuptools.command.alias import alias
 import sys
 import threading
 import time
 import traceback
 import urllib.parse
 
-from enum import Enum
-
-from __main__ import user_allowed, send_cmd_help
+from dateutil import tz
 import discord
 from discord.ext import commands
+from enum import Enum
 import prettytable
+import pytz
 import romkan
+from setuptools.command.alias import alias
 import unidecode
+
+from __main__ import user_allowed, send_cmd_help
 
 from . import padguide2
 from .rpadutils import *
@@ -693,7 +693,7 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
     embed.add_field(name=info_row_1, value=info_row_2)
 
     if m.limitbreak_stats and m.limitbreak_stats > 1:
-        def lb(x): return int(m.limitbreak_stats * x)
+        def lb(x): return int(round(m.limitbreak_stats * x))
         stats_row_1 = 'Weighted {} | LB {}'.format(m.weighted_stats, lb(m.weighted_stats))
         stats_row_2 = '**HP** {} ({})\n**ATK** {} ({})\n**RCV** {} ({})'.format(
             m.hp, lb(m.hp), m.atk, lb(m.atk), m.rcv, lb(m.rcv))
