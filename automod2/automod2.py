@@ -219,51 +219,62 @@ class AutoMod2:
         within the the lookback window (currently 5), all those messages are deleted.
 
         Set to 0 to clear.
+
+        Set to -1 to enable image only.
         """
         self.settings.setImageLimit(ctx, limit)
         if limit == 0:
             await self.bot.say(inline('Limit cleared'))
+        elif limit == -1:
+            await self.bot.say(inline('I will only allow images in this channel'))
         else:
             await self.bot.say(inline('I will delete excess images in this channel'))
 
     async def mod_message_images(self, message):
         if message.author.id == self.bot.user.id or message.channel.is_private:
             return
-
         ctx = CtxWrapper(message, self.bot)
         image_limit = self.settings.getImageLimit(ctx)
         if image_limit == 0:
             return
+        elif image_limit > 0:
+            if mod_or_perms(ctx, manage_messages=True):
+                return
 
-        if mod_or_perms(ctx, manage_messages=True):
-            return
+            key = (message.channel.id, message.author.id)
+            self.channel_user_logs[key].append(message)
 
-        key = (message.channel.id, message.author.id)
-        self.channel_user_logs[key].append(message)
+            user_logs = self.channel_user_logs[key]
+            count = 0
+            for m in user_logs:
+                count += linked_img_count(m)
+            if count <= image_limit:
+                return
 
-        user_logs = self.channel_user_logs[key]
-        count = 0
-        for m in user_logs:
-            count += linked_img_count(m)
-        if count <= image_limit:
-            return
+            for m in list(user_logs):
+                if linked_img_count(m) > 0:
+                    try:
+                        await self.bot.delete_message(m)
+                    except:
+                        pass
+                    try:
+                        user_logs.remove(m)
+                    except:
+                        pass
 
-        for m in list(user_logs):
-            if linked_img_count(m) > 0:
-                try:
-                    await self.bot.delete_message(m)
-                except:
-                    pass
-                try:
-                    user_logs.remove(m)
-                except:
-                    pass
-
-        msg = m.author.mention + inline(' Upload multiple images to an imgur gallery #endimagespam')
-        alert_msg = await self.bot.send_message(message.channel, msg)
-        await asyncio.sleep(10)
-        await self.bot.delete_message(alert_msg)
-
+            msg = m.author.mention + inline(' Upload multiple images to an imgur gallery #endimagespam')
+            alert_msg = await self.bot.send_message(message.channel, msg)
+            await asyncio.sleep(10)
+            await self.bot.delete_message(alert_msg)
+        else:
+            if mod_or_perms(ctx, manage_messages=True):
+                return
+            if len(message.embeds) or len(message.attachments):
+                return
+            msg_template = box('Your message in {} was deleted for not containing an image')
+            msg = msg_template.format(message.channel.name)
+            await self.deleteAndReport(message, msg)
+                
     async def mod_message_edit(self, before, after):
         await self.mod_message(after)
 
