@@ -1,22 +1,21 @@
-import os
-import time
-
-from __main__ import set_cog
-from __main__ import user_allowed, send_cmd_help
 import asyncio
 from collections import defaultdict
+import datetime
+import http.client
+import json
+import os
+import random
+import re
+import time
+import traceback
+
 import discord
 from discord.ext import commands
 from enum import Enum
+
+from __main__ import set_cog
+from __main__ import user_allowed, send_cmd_help
 from google.cloud import vision
-import http.client
-import json
-import logging
-import random
-import re
-import threading
-import traceback
-import urllib.parse
 
 from .rpadutils import *
 from .rpadutils import CogSettings
@@ -717,6 +716,36 @@ class TrUtils:
         except Exception as ex:
             await self.bot.say(inline('Error: failed to alter role'))
 
+    @commands.command(pass_context=True)
+    @checks.is_owner()
+    async def trackuser(self, ctx, user: discord.User=None):
+        """Track/untrack a user, list track info."""
+        if user:
+            if user.id in self.settings.trackedUsers().keys():
+                self.settings.rmTrackedUser(user.id)
+                await self.bot.say(inline('No longer tracking user'))
+            else:
+                self.settings.addTrackedUser(user.id)
+                await self.bot.say(inline('Tracking user'))
+                for server in self.bot.servers:
+                    member = server.get_member(user.id)
+                    if member and str(member.status) != 'offline':
+                        self.settings.updateTrackedUser(user.id)
+                        await self.bot.say(inline('User currently online'))
+                        break
+        else:
+            msg = 'Tracked users:\n'
+            for user_id, track_info in self.settings.trackedUsers().items():
+                user = await self.bot.get_user_info(user_id)
+                user_name = user.name if user else user_id
+                msg += '\t{} : {}'.format(user_name, json.dumps(track_info, sort_keys=True))
+
+            await self.bot.say(box(msg))
+
+    async def on_trackuser_update(self, old_member: discord.Member, new_member: discord.Member):
+        if new_member and str(new_member.status) != 'offline' and new_member.id in self.settings.trackedUsers():
+            self.settings.updateTrackedUser(new_member.id)
+
 
 def setup(bot):
     print('trutils bot setup')
@@ -725,6 +754,7 @@ def setup(bot):
     bot.add_listener(n.on_imgcopy_edit_message, "on_message_edit")
     bot.add_listener(n.on_imgblacklist_message, "on_message")
     bot.add_listener(n.on_imgblacklist_edit_message, "on_message_edit")
+    bot.add_listener(n.on_trackuser_update, "on_member_update")
     bot.add_cog(n)
     print('done adding trutils bot')
 
@@ -733,6 +763,7 @@ class TrUtilsSettings(CogSettings):
     def make_default_settings(self):
         config = {
             'servers': {},
+            'tracked_users': {},
         }
         return config
 
@@ -793,4 +824,22 @@ class TrUtilsSettings(CogSettings):
 
     def setFeedbackChannel(self, channel_id: str):
         self.bot_settings['feedback_channel'] = channel_id
+        self.save_settings()
+
+    def curtimestr(self):
+        return datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+
+    def trackedUsers(self):
+        return self.bot_settings['tracked_users']
+
+    def addTrackedUser(self, user_id):
+        self.trackedUsers()[user_id] = {'last_seen': 'never', 'tracked_on': self.curtimestr()}
+        self.save_settings()
+
+    def updateTrackedUser(self, user_id):
+        self.trackedUsers()[user_id]['last_seen'] = self.curtimestr()
+        self.save_settings()
+
+    def rmTrackedUser(self, user_id):
+        self.trackedUsers().pop(user_id)
         self.save_settings()
