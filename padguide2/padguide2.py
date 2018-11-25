@@ -42,6 +42,7 @@ JSON_FILE_PATTERN = 'data/padguide2/{}.json'
 CSV_FILE_PATTERN = 'data/padguide2/{}.csv'
 ATTR_EXPORT_PATH = 'data/padguide2/card_data.csv'
 NAMES_EXPORT_PATH = 'data/padguide2/computed_names.json'
+BASENAMES_EXPORT_PATH = 'data/padguide2/base_names.json'
 
 SHEETS_PATTERN = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid={}&single=true&output=csv'
 GROUP_BASENAMES_OVERRIDES_SHEET = SHEETS_PATTERN.format('2070615818')
@@ -183,6 +184,16 @@ class PadGuide2(object):
             results[name] = int(rpadutils.get_pdx_id(nm))
 
         with open(NAMES_EXPORT_PATH, 'w', encoding='utf-8') as f:
+            json.dump(results, f, sort_keys=True)
+
+        results = {}
+        for nm in self.index.all_monsters:
+            entry = {'bn': list(nm.group_basenames)}
+            if nm.extra_nicknames:
+                entry['nn'] = list(nm.extra_nicknames)
+            results[int(rpadutils.get_pdx_id(nm))] = entry
+
+        with open(BASENAMES_EXPORT_PATH, 'w', encoding='utf-8') as f:
             json.dump(results, f, sort_keys=True)
 
     def write_monster_attr_data(self):
