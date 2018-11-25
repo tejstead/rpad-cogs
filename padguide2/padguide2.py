@@ -14,6 +14,7 @@ from datetime import datetime
 from datetime import timedelta
 import difflib
 from itertools import groupby
+import json
 from operator import itemgetter
 import os
 import re
@@ -40,6 +41,7 @@ DUMMY_FILE_PATTERN = 'data/padguide2/{}.dummy'
 JSON_FILE_PATTERN = 'data/padguide2/{}.json'
 CSV_FILE_PATTERN = 'data/padguide2/{}.csv'
 ATTR_EXPORT_PATH = 'data/padguide2/card_data.csv'
+NAMES_EXPORT_PATH = 'data/padguide2/computed_names.json'
 
 SHEETS_PATTERN = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid={}&single=true&output=csv'
 GROUP_BASENAMES_OVERRIDES_SHEET = SHEETS_PATTERN.format('2070615818')
@@ -173,6 +175,15 @@ class PadGuide2(object):
         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
 
         self.write_monster_attr_data()
+        self.write_monster_computed_names()
+
+    def write_monster_computed_names(self):
+        results = {}
+        for name, nm in self.index.all_entries.items():
+            results[name] = int(rpadutils.get_pdx_id(nm))
+
+        with open(NAMES_EXPORT_PATH, 'w', encoding='utf-8') as f:
+            json.dump(results, f, sort_keys=True)
 
     def write_monster_attr_data(self):
         """Write id,server,attr1,attr2 to be used by the portrait generation process."""
@@ -2113,6 +2124,7 @@ class NamedMonster(object):
         # Hold on to the IDs instead
         self.monster_no = monster.monster_no
         self.monster_no_na = monster.monster_no_na
+        self.monster_no_jp = monster.monster_no_jp
 
         # ID of the root of the tree for this monster
         self.base_monster_no = monster_group.base_monster_no
