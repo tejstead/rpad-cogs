@@ -2,36 +2,21 @@ import asyncio
 from builtins import filter, map
 from collections import OrderedDict
 from collections import defaultdict
-import csv
-from datetime import datetime
-from datetime import timedelta
-import difflib
-import http.client
 import io
-from itertools import groupby
 import json
-from operator import itemgetter
-import os
 import re
-import sys
-import threading
-import time
 import traceback
-import urllib.parse
 
 from dateutil import tz
 import discord
 from discord.ext import commands
 from enum import Enum
 import prettytable
-import pytz
-import romkan
-from setuptools.command.alias import alias
-import unidecode
 
 from __main__ import user_allowed, send_cmd_help
 
 from . import padguide2
+from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
