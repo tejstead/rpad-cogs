@@ -2,6 +2,7 @@ from collections import defaultdict
 import csv
 import difflib
 import io
+import json
 import os
 import re
 
@@ -17,6 +18,8 @@ from .rpadutils import CogSettings
 from .utils import checks
 from .utils.dataIO import dataIO
 
+
+DATA_EXPORT_PATH = 'data/padglobal/padglobal_data.json'
 
 PAD_CMD_HEADER = """
 PAD Global Commands
@@ -77,6 +80,32 @@ class PadGlobal:
 
         global PADGLOBAL_COG
         PADGLOBAL_COG = self
+
+        self._export_data()
+
+    def _export_data(self):
+
+        faq_and_boards = self.settings.faq() + self.settings.boards()
+        general = {k: v for k, v in self.c_commands.items() if k not in faq_and_boards}
+        faq = {k: v for k, v in self.c_commands.items() if k in self.settings.faq()}
+        boards = {k: v for k, v in self.c_commands.items() if k in self.settings.boards()}
+        glossary = self.settings.glossary()
+        which = self.settings.which()
+        dungeon_guide = self.settings.dungeonGuide()
+        leader_guide = self.settings.leaderGuide()
+
+        results = {
+            'general': general,
+            'faq': faq,
+            'boards': boards,
+            'glossary': glossary,
+            'which': which,
+            'dungeon_guide': dungeon_guide,
+            'leader_guide': leader_guide,
+        }
+
+        with open(DATA_EXPORT_PATH, 'w', encoding='utf-8') as f:
+            json.dump(results, f, sort_keys=True, indent=4)
 
     @commands.command(pass_context=True)
     @is_padglobal_admin()
