@@ -575,7 +575,7 @@ class Event:
         return self.server + "," + self.group + "," + fmtTime(self.startPst()) + "," + fmtTime(self.startEst()) + "," + self.startFromNow()
 
     def toPartialEvent(self, pe):
-        group = self.group.replace('RED', 'R').replace('BLUE', 'U').replace('GREEN', 'G')
+        group = self.group.replace('RED', 'R').replace('BLUE', 'B').replace('GREEN', 'G')
         if self.is_started():
             return group + " " + self.endFromNow() + "   " + self.name_and_modifier
         else:
