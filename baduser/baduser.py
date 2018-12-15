@@ -123,19 +123,19 @@ class BadUser:
         for role_id in self.settings.getPunishmentRoles(server.id):
             try:
                 role = get_role_from_id(self.bot, server, role_id)
-                output += '\t' + role.name
+                output += '\n\t' + role.name
             except Exception as e:
-                output += str(e)
+                output += '\n\t' + str(e)
         output += '\nPositive roles:\n'
         for role_id in self.settings.getPositiveRoles(server.id):
             try:
                 role = get_role_from_id(self.bot, server, role_id)
-                output += '\t' + role.name
+                output += '\n\t' + role.name
             except Exception as e:
-                output += str(e)
+                output += '\n\t' + str(e)
 
         output += '\nStrike contents are private'
-        output += '\nStrike existance is ' + \
+        output += '\nStrike existence is ' + \
             ('private' if self.settings.getStrikesPrivate(server.id) else 'public')
 
         await self.bot.say(box(output))
@@ -323,6 +323,10 @@ class BadUser:
         return msg
 
     async def _load_banned_users(self):
+        if true:
+            # This thing is broken
+            return []
+
         ban_file_path = 'data/baduser/global_ban_list.txt'
         url = 'https://bans.discordlist.net/api'
         expiry_secs = 60 * 60 * 24  # one day expiry
@@ -374,15 +378,15 @@ class BadUser:
         update_channel = self.settings.getChannel(member.server.id)
         if update_channel is None:
             return
-        
+
         channel_obj = discord.Object(update_channel)
         strikes = self.settings.countUserStrikes(member.server.id, member.id)
         if strikes:
             msg = 'Hey @here a user with {} strikes just joined the server: {}'.format(
                 strikes, member.mention)
             await self.bot.send_message(channel_obj, msg)
-        
-        local_ban = self.settings.bannedUsers().get(member.id, None) 
+
+        local_ban = self.settings.bannedUsers().get(member.id, None)
         if local_ban:
             msg = 'Hey @here locally banned user {} (for: {}) just joined the server'.format(
                 member.mention, local_ban)
