@@ -323,7 +323,7 @@ class BadUser:
         return msg
 
     async def _load_banned_users(self):
-        if true:
+        if True:
             # This thing is broken
             return []
 
