@@ -95,11 +95,12 @@ class PadEvents:
                             if e.server == gr['server']:
                                 try:
                                     message = box("Server " + e.server + ", group " +
-                                                  e.group + " : " + e.name_and_modifier)
+                                                  e.groupLongName() + " : " + e.name_and_modifier)
                                     channel = self.bot.get_channel(gr['channel_id'])
 
                                     try:
-                                        role_name = '{}_group_{}'.format(e.server, e.group)
+                                        role_name = '{}_group_{}'.format(
+                                            e.server, e.groupLongName())
                                         role = get_role(channel.server.roles, role_name)
                                         if role and role.mentionable:
                                             message = "{} `: {} is starting`".format(
@@ -423,8 +424,8 @@ class PadEvents:
         active_events = list(group_to_active_event.values())
         pending_events = list(group_to_pending_event.values())
 
-        active_events.sort(key=lambda e: e.group)
-        pending_events.sort(key=lambda e: e.group)
+        active_events.sort(key=lambda e: e.group, reverse=True)
+        pending_events.sort(key=lambda e: e.group, reverse=True)
 
         if len(active_events) == 0 and len(pending_events) == 0:
             await self.bot.say("No events available for " + server)
@@ -574,8 +575,14 @@ class Event:
     def toDateStr(self):
         return self.server + "," + self.group + "," + fmtTime(self.startPst()) + "," + fmtTime(self.startEst()) + "," + self.startFromNow()
 
+    def groupShortName(self):
+        return self.group.upper().replace('RED', 'R').replace('BLUE', 'B').replace('GREEN', 'G')
+
+    def groupLongName(self):
+        return self.group.upper()
+
     def toPartialEvent(self, pe):
-        group = self.group.replace('RED', 'R').replace('BLUE', 'B').replace('GREEN', 'G')
+        group = self.groupShortName()
         if self.is_started():
             return group + " " + self.endFromNow() + "   " + self.name_and_modifier
         else:
