@@ -90,7 +90,7 @@ class PadEvents:
                 daily_refresh_servers = set()
                 for e in events:
                     self.started_events.add(e.key)
-                    if e.event_type in [EventType.Guerrilla, EventType.GuerrillaNew]:
+                    if e.event_type in [EventType.Guerrilla, EventType.GuerrillaNew, EventType.SpecialWeek]:
                         for gr in list(self.settings.listGuerrillaReg()):
                             if e.server == gr['server']:
                                 try:
