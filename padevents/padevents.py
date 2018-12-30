@@ -732,4 +732,6 @@ def cleanDungeonNames(name):
     name = name.replace('Awakening Materials', 'Awkn Mats')
     name = name.replace("Star Treasure Thieves' Den", 'STTD')
     name = name.replace('Ruins of the Star Vault', 'Star Vault')
+    name = name.replace('-★6 or lower Enhanced', '')
+    
     return name
