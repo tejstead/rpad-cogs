@@ -64,8 +64,11 @@ class PadGuide2(object):
             PgAttribute,
             PgAwakening,
             PgDungeon,
+            # PgDungeonDamage,
             PgDungeonMonsterDrop,
             PgDungeonMonster,
+            # PgDungeonSkill,
+            # PgDungeonType,
             PgEggInstance,
             PgEggMonster,
             PgEggName,
@@ -81,6 +84,7 @@ class PadGuide2(object):
             PgSkill,
             PgSkillRotation,
             PgSkillRotationDated,
+            # PgSubDungeon,
             PgType,
         ]
 
@@ -311,8 +315,11 @@ class PgRawDatabase(object):
         self._attribute_map = self._load(PgAttribute)
         self._awakening_map = self._load(PgAwakening)
         self._dungeon_map = self._load(PgDungeon)
+        # self._dungeon_damage_map = self._load(PgDungeonDamage)
         self._dungeon_monster_drop_map = self._load(PgDungeonMonsterDrop)
         self._dungeon_monster_map = self._load(PgDungeonMonster)
+        # self._dungeon_skill_map = self._load(PgDungeonSkill)
+        # self._dungeon_type_map = self._load(PgDungeonType)
         self._event_map = self._load(PgEvent)
         self._evolution_map = self._load(PgEvolution)
         self._evolution_material_map = self._load(PgEvolutionMaterial)
@@ -326,6 +333,7 @@ class PgRawDatabase(object):
         self._skill_map = self._load(PgSkill)
         self._skill_rotation_map = self._load(PgSkillRotation)
         self._skill_rotation_dated_map = self._load(PgSkillRotationDated)
+        # self._sub_dungeon_map = self._load(PgSubDungeon)
         self._type_map = self._load(PgType)
 
         self._egg_instance_map = self._load(PgEggInstance)
@@ -420,11 +428,17 @@ class PgRawDatabase(object):
     def getDungeon(self, dungeon_seq: int):
         return self._ensure_loaded(self._dungeon_map.get(dungeon_seq))
 
+#    def getDungeonDamage(self, tds_seq: int):
+#        return self._ensure_loaded(self._dungeon_damage_map.get(tds_seq))
+
     def getDungeonMonsterDrop(self, tdmd_seq: int):
         return self._ensure_loaded(self._dungeon_monster_drop_map.get(tdmd_seq))
 
     def getDungeonMonster(self, tdm_seq: int):
         return self._ensure_loaded(self._dungeon_monster_map.get(tdm_seq))
+
+#    def getDungeonType(self, tdt_seq: int):
+#        return self._ensure_loaded(self._dungeon_type_map.get(tdt_seq))
 
     def getEvent(self, event_seq: int):
         return self._ensure_loaded(self._event_map.get(event_seq))
@@ -468,6 +482,9 @@ class PgRawDatabase(object):
 
     def getSkillRotationDated(self, tsrl_seq: int):
         return self._ensure_loaded(self._skill_rotation_dated_map.get(tsrl_seq))
+
+#    def getSubDungeon(self, tsd_seq: int):
+#        return self._ensure_loaded(self._sub_dungeon_map.get(tsd_seq))
 
     def getTypeName(self, tt_seq: int):
         type = self._ensure_loaded(self._type_map.get(tt_seq))
@@ -632,24 +649,87 @@ class PgDungeon(PgItem):
         super().__init__()
         self.dungeon_seq = int(item['DUNGEON_SEQ'])
         self.dungeon_type = int(item['DUNGEON_TYPE'])
+        # TODO: merge these two, delete DungeonType from padevents
+        self.dungeon_type_value = DungeonType(self.dungeon_type)
         self.name = item['NAME_US']
         self.name_jp = item['NAME_JP']
         # TODO: load tdt type
         self.tdt_seq = int_or_none(item['TDT_SEQ'])
-        self.show_yn = item["SHOW_YN"]
+        self.show = item['SHOW_YN'] == 1
+        self.icon = int(item['ICON_SEQ'])
+
+        self.tdungeon_type = None
+        self.tdungeon_type_name = 'no_type'
+
+        self.monsters = []
+        self.subdungeons = []
 
     def key(self):
         return self.dungeon_seq
 
     def deleted(self):
-        # TODO: Is show y/n the same as deleted?
-        return False
+        return not self.show
 
     def load(self, database: PgRawDatabase):
         pass
+#        if self.tdt_seq:
+#            self.tdungeon_type = database.getDungeonType(self.tdt_seq)
+#            # Somehow this can still fail
+#            if self.tdungeon_type:
+#                self.tdungeon_type_name = self.tdungeon_type.name
 
 
-# dungeonMonsterDropList
+class DungeonType(Enum):
+    Unknown = -1
+    Normal = 0
+    CoinDailyOther = 1
+    Technical = 2
+    Etc = 3
+
+
+# {
+#     "COIN_MAX": "2496",
+#     "COIN_MIN": "2496",
+#     "DUNGEON_SEQ": "81",
+#     "EXP_MAX": "2420",
+#     "EXP_MIN": "2420",
+#     "ORDER_IDX": "96",
+#     "STAGE": "5",
+#     "STAMINA": "15",
+#     "TSD_NAME_JP": "\u65ad\u7f6a\u306e\u7114 \u4e2d\u7d1a",
+#     "TSD_NAME_KR": "\ub2e8\uc8c4\uc758 \ubd88\uaf43 \uc911\uae09",
+#     "TSD_NAME_US": "Flame of Conviction - Int",
+#     "TSD_SEQ": "1365",
+#     "TSTAMP": "1373446281337"
+# },
+class PgSubDungeon(PgItem):
+    @staticmethod
+    def file_name():
+        return 'subDungeonList'
+
+    def __init__(self, item):
+        super().__init__()
+        self.dungeon_seq = int(item['DUNGEON_SEQ'])
+        self.exp_max = int(item['EXP_MAX'])
+        self.exp_min = int(item['EXP_MIN'])
+        self.order = int(item['ORDER_IDX'])
+        self.stage = int(item['STAGE'])
+        self.stamina = int(item['STAMINA'])
+        self.name = item['TSD_NAME_US']
+        self.tsd_seq = int(item['TSD_SEQ'])
+
+        self.monsters = []
+        self.floor_to_monsters = defaultdict(list)
+
+    def key(self):
+        return self.tsd_seq
+
+    def load(self, database: PgRawDatabase):
+        self.dungeon = database.getDungeon(self.dungeon_seq)
+        self.dungeon.subdungeons.append(self)
+
+
+# dungeonMonsterDropList.jsp
 # {
 #     "MONSTER_NO": "3427",
 #     "ORDER_IDX": "20",
@@ -713,21 +793,114 @@ class PgDungeonMonster(PgItem):
     def __init__(self, item):
         super().__init__()
         self.tdm_seq = int(item['TDM_SEQ'])  # unique id
+        self.amount = int(item['AMOUNT'])
+        self.atk = int(item['ATK'])
+        self.defence = int(item['DEF'])
         self.drop_monster_no = int(item['DROP_NO'])  # PgMonster unique id
-        self.monster_no = int(item['MONSTER_NO'])  # PgMonster unique id
         self.dungeon_seq = int(item['DUNGEON_SEQ'])  # PgDungeon uniqueId
-        self.tsd_seq = int(item['TSD_SEQ'])  # ??
+        self.floor = int(item['FLOOR'])
+        self.hp = int(item['HP'])
+        self.monster_no = int(item['MONSTER_NO'])  # PgMonster unique id
+        self.order = int(item['ORDER_IDX'])
+        self.tsd_seq = int(item['TSD_SEQ'])  # Sub Dungeon ID
+        self.turn = int(item['TURN'])
+
+        self.skills = []
 
     def key(self):
         return self.tdm_seq
 
     def load(self, database: PgRawDatabase):
-        self.drop_monster = database.getMonster(self.drop_monster_no)
         self.monster = database.getMonster(self.monster_no)
-        self.dungeon = database.getDungeon(self.dungeon_seq)
 
+        self.dungeon = database.getDungeon(self.dungeon_seq)
+        self.dungeon.monsters.append(self)
+
+        self.sub_dungeon = database.getSubDungeon(self.tsd_seq)
+        self.sub_dungeon.monsters.append(self)
+        self.sub_dungeon.floor_to_monsters[self.floor].append(self)
+
+        self.drop_monster = database.getMonster(self.drop_monster_no)
         if self.drop_monster:
             self.drop_monster.drop_dungeons.append(self.dungeon)
+
+
+# {
+#     "TDM_SEQ": "15044", # dungeon monster
+#     "TDS_SEQ": "8934", # damage
+#     "TSTAMP": "100",
+#     "TS_SEQ": "2190" # skill
+# },
+class PgDungeonSkill(PgItem):
+    @staticmethod
+    def file_name():
+        return 'dungeonSkillList'
+
+    def __init__(self, item):
+        super().__init__()
+        self.tdm_seq = int(item['TDM_SEQ'])
+        self.tds_seq = int(item['TDS_SEQ'])
+        self.ts_seq = int(item['TS_SEQ'])
+
+    def key(self):
+        return '{},{},{}'.format(self.tdm_seq, self.tds_seq, self.ts_seq)
+
+    def load(self, database: PgRawDatabase):
+        self.dungeon_monster = database.getDungeonMonster(self.tdm_seq)
+        if self.dungeon_monster:
+            self.dungeon_monster.skills.append(self)
+        self.damage = database.getDungeonDamage(self.tds_seq)
+        self.skill = database.getSkill(self.ts_seq)
+
+
+# {
+#     "DAMAGE": "16538.0",
+#     "TDS_SEQ": "14631",
+#     "TSTAMP": "1401764306350"
+# },
+class PgDungeonDamage(PgItem):
+    @staticmethod
+    def file_name():
+        return 'dungeonSkillDamageList'
+
+    def __init__(self, item):
+        super().__init__()
+        self.tds_seq = int(item['TDS_SEQ'])
+        self.amount = float(item['DAMAGE'])
+
+        self.monsters = []
+        self.floor_to_monsters = defaultdict(list)
+
+    def key(self):
+        return self.tds_seq
+
+    def load(self, database: PgRawDatabase):
+        pass
+
+
+# {
+#     "ORDER_IDX": "120",
+#     "TDT_NAME_JP": "\u30a2\u30f3\u30b1\u30fc\u30c8",
+#     "TDT_NAME_KR": "\uc559\ucf00\uc774\ud2b8",
+#     "TDT_NAME_US": "Survey",
+#     "TDT_SEQ": "9",
+#     "TSTAMP": "1388128221704"
+# },
+class PgDungeonType(PgItem):
+    @staticmethod
+    def file_name():
+        return 'dungeonTypeList'
+
+    def __init__(self, item):
+        super().__init__()
+        self.name = item['TDT_NAME_US']
+        self.tdt_seq = int(item['TDT_SEQ'])
+
+    def key(self):
+        return self.tdt_seq
+
+    def load(self, database: PgRawDatabase):
+        pass
 
 
 class EvoType(Enum):
