@@ -232,9 +232,8 @@ class PadGuideDb:
         await self.bot.say(inline('load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
 
     def do_dungeon_load(self, server, dungeon_id, dungeon_floor_id):
-        #'python3',
         args = [
-            'python',
+            'python3',
             self.settings.dungeonScriptFile(),
             '--db_config={}'.format(self.settings.configFile()),
             '--server={}'.format(server),
