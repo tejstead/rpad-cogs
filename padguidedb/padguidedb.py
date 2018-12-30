@@ -1,5 +1,16 @@
-from datetime import time
+import asyncio
+from collections import defaultdict
+import concurrent.futures
+import csv
+from datetime import datetime, date
+import decimal
+import io
 import json
+import logging
+import os
+import re
+import subprocess
+import sys
 
 import discord
 from discord.ext import commands
@@ -33,6 +44,9 @@ class PadGuideDb:
     def __init__(self, bot):
         self.bot = bot
         self.settings = PadGuideDbSettings("padguidedb")
+
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self.queue_size = 0
 
         global PADGUIDEDB_COG
         PADGUIDEDB_COG = self
@@ -188,6 +202,49 @@ class PadGuideDb:
                 await self.bot.say(inline('running: ' + sql))
                 cursor.execute(sql)
 
+    @padguidedb.command(pass_context=True)
+    @checks.is_owner()
+    async def setdungeonscriptfile(self, ctx, *, dungeon_script_file):
+        """Set the dungeon script."""
+        self.settings.setDungeonScriptFile(dungeon_script_file)
+        await self.bot.say(inline('Done'))
+
+    @padguidedb.command(pass_context=True)
+    @checks.is_owner()
+    async def setuserinfo(self, ctx, server: str, user_uuid: str, user_intid: str):
+        """Set the dungeon script."""
+        self.settings.setUserInfo(server, user_uuid, user_intid)
+        await self.bot.say(inline('Done'))
+
+    @padguidedb.command(pass_context=True)
+    @is_padguidedb_admin()
+    async def loaddungeon(self, ctx, server: str, dungeon_id: int, dungeon_floor_id: int):
+        event_loop = asyncio.get_event_loop()
+
+        running_load = event_loop.run_in_executor(
+            self.executor, self.do_dungeon_load,
+            server.upper(), dungeon_id, dungeon_floor_id)
+
+        self.queue_size += 1
+        await self.bot.say(inline('queued load in slot {}'.format(self.queue_size)))
+        await running_load
+        self.queue_size -= 1
+        await self.bot.say(inline('load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
+
+    def do_dungeon_load(self, server, dungeon_id, dungeon_floor_id):
+        #'python3',
+        args = [
+            'python',
+            self.settings.dungeonScriptFile(),
+            '--db_config={}'.format(self.settings.configFile()),
+            '--server={}'.format(server),
+            '--dungeon_id={}'.format(dungeon_id),
+            '--floor_id={}'.format(dungeon_floor_id),
+            '--user_uuid={}'.format(self.settings.userUuidFor(server)),
+            '--user_intid={}'.format(self.settings.userIntidFor(server)),
+        ]
+        subprocess.run(args)
+
 
 def setup(bot):
     n = PadGuideDb(bot)
@@ -199,6 +256,8 @@ class PadGuideDbSettings(CogSettings):
         config = {
             'admins': [],
             'config_file': '',
+            'dungeon_script_file': '',
+            'users': {}
         }
         return config
 
@@ -227,3 +286,20 @@ class PadGuideDbSettings(CogSettings):
     def setConfigFile(self, config_file):
         self.bot_settings['config_file'] = config_file
         self.save_settings()
+
+    def dungeonScriptFile(self):
+        return self.bot_settings.get('dungeon_script_file', '')
+
+    def setDungeonScriptFile(self, dungeon_script_file):
+        self.bot_settings['dungeon_script_file'] = dungeon_script_file
+        self.save_settings()
+
+    def setUserInfo(self, server, user_uuid, user_intid):
+        self.bot_settings['users'][server.upper()] = [user_uuid, user_intid]
+        self.save_settings()
+
+    def userUuidFor(self, server):
+        return self.bot_settings['users'][server.upper()][0]
+
+    def userIntidFor(self, server):
+        return self.bot_settings['users'][server.upper()][1]
