@@ -468,7 +468,7 @@ class SearchConfig(object):
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
         if self.unlock:
-            text = 'removes lock'
+            text = 'unlock all orbs'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
 
         if self.delay:
