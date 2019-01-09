@@ -668,7 +668,8 @@ class PgDungeon(PgItem):
         return self.dungeon_seq
 
     def deleted(self):
-        return not self.show
+        return False
+#         return not self.show
 
     def load(self, database: PgRawDatabase):
         pass
@@ -814,14 +815,15 @@ class PgDungeonMonster(PgItem):
         self.monster = database.getMonster(self.monster_no)
 
         self.dungeon = database.getDungeon(self.dungeon_seq)
-        self.dungeon.monsters.append(self)
+        if self.dungeon:
+            self.dungeon.monsters.append(self)
 
-        self.sub_dungeon = database.getSubDungeon(self.tsd_seq)
-        self.sub_dungeon.monsters.append(self)
-        self.sub_dungeon.floor_to_monsters[self.floor].append(self)
+#         self.sub_dungeon = database.getSubDungeon(self.tsd_seq)
+#         self.sub_dungeon.monsters.append(self)
+#         self.sub_dungeon.floor_to_monsters[self.floor].append(self)
 
         self.drop_monster = database.getMonster(self.drop_monster_no)
-        if self.drop_monster:
+        if self.drop_monster and self.dungeon:
             self.drop_monster.drop_dungeons.append(self.dungeon)
 
 
