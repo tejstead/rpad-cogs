@@ -548,7 +548,12 @@ class PadGlobal:
     @padglobal.command(pass_context=True)
     async def rmglossary(self, ctx, *, term):
         """Removes a term from the glossary."""
-        self.settings.rmGlossary(term.lower())
+        term = term.lower()
+        if term not in self.settings.glossary():
+            await self.bot.say("Glossary item doesn't exist.")
+            return
+
+        self.settings.rmGlossary(term)
         await self.bot.say("done")
 
     @commands.command(pass_context=True)
@@ -670,6 +675,10 @@ class PadGlobal:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
         name = str(m.monster_no)
+
+        if name not in self.settings.which():
+            await self.bot.say("Which item doesn't exist.")
+            return
 
         self.settings.rmWhich(name)
         await self.bot.say("done")
@@ -940,7 +949,12 @@ class PadGlobal:
 
     @padglobal.command(pass_context=True)
     async def rmdungeonguide(self, ctx, term: str):
-        self.settings.rmDungeonGuide(term.lower())
+        term = term.lower()
+        if term not in self.settings.dungeonGuide():
+            await self.bot.say("DungeonGuide doesn't exist.")
+            return
+
+        self.settings.rmDungeonGuide(term)
         await self.bot.say("done")
 
     @padglobal.command(pass_context=True)
@@ -962,6 +976,10 @@ class PadGlobal:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
         name = str(m.monster_no)
+
+        if name not in self.settings.leaderGuide():
+            await self.bot.say("LeaderGuide doesn't exist.")
+            return
 
         self.settings.rmLeaderGuide(name)
         await self.bot.say("done")
