@@ -125,14 +125,15 @@ class BadUser:
                 role = get_role_from_id(self.bot, server, role_id)
                 output += '\n\t' + role.name
             except Exception as e:
-                output += '\n\t' + str(e)
+                pass  # Role was deleted
+
         output += '\nPositive roles:\n'
         for role_id in self.settings.getPositiveRoles(server.id):
             try:
                 role = get_role_from_id(self.bot, server, role_id)
                 output += '\n\t' + role.name
             except Exception as e:
-                output += '\n\t' + str(e)
+                pass  # Role was deleted
 
         output += '\nStrike contents are private'
         output += '\nStrike existence is ' + \
