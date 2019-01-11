@@ -244,8 +244,11 @@ class PadGlobal:
         msg += "\n (is_low_priority, rarity, monster_no_na) : ({}, {}, {})".format(
             m.is_low_priority, m.rarity, m.monster_no_na)
 
+        sent_messages = []
         for page in pagify(msg):
-            await self.bot.say(box(page))
+            sent_messages.append(await self.bot.say(box(page)))
+        await rpadutils.await_and_remove(self.bot, sent_messages[-1], ctx.message.author,
+                                         delete_msgs=sent_messages, timeout=30)
 
     @commands.command(pass_context=True)
     @is_padglobal_admin()

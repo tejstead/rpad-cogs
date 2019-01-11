@@ -607,3 +607,28 @@ def get_pdx_id(m):
     if int(m.monster_no) == m.monster_no_jp:
         pdx_id = PDX_JP_ADJUSTMENTS.get(pdx_id, pdx_id)
     return pdx_id
+
+
+async def await_and_remove(bot, react_msg, listen_user, delete_msgs=None, emoji="❌", timeout=15):
+    try:
+        await bot.add_reaction(react_msg, emoji)
+    except Exception as e:
+        # failed to add reaction, ignore
+        return
+
+    r = await bot.wait_for_reaction(
+        emoji=[emoji],
+        message=react_msg,
+        user=listen_user,
+        timeout=timeout)
+
+    if r is None:
+        try:
+            await bot.remove_reaction(react_msg, emoji, react_msg.server.me)
+        except Exception as e:
+            # failed to remove reaction, ignore
+            return
+    else:
+        msgs = delete_msgs or [react_msg]
+        for m in msgs:
+            await bot.delete_message(m)
