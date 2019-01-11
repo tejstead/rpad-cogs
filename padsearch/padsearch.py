@@ -41,6 +41,7 @@ Single instance filters
 * absorbnull  : Damage Abasorb shield null
 * combo(n)    : Increase combo count by n
 * shield(n)   : Reduce damage taken by n%
+* resolve     : Leader skill where you survive when HP reduced to 0
 
 Multiple instance filters 
 * active(str)     : Active skill name/description
