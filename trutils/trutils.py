@@ -25,9 +25,9 @@ from .utils.dataIO import fileIO
 
 
 GETMIRU_HELP = """
-**Miru Bot now has a twin sister, also called Miru Bot (public)!**
 The new public Miru is open for invite to any server: personal, private, secret-handshake-entry-only, etc
-Unlike the private Miru used by larger community servers, public Miru has lower stability requirements, so I will install a variety of random entertainment plugins.
+Unlike the private Miru used by larger community servers, public Miru has lower stability requirements, 
+so I will install a variety of random entertainment plugins.
 
 To invite public Miru to your server, use the following link:
 https://discordapp.com/oauth2/authorize?client_id=296443771229569026&scope=bot
@@ -37,10 +37,8 @@ The following commands might come in handy:
 `^userhelp`     - a user-focused guide to Miru's commands
 `^help`             - the full list of Miru commands
 
-A link to the awakenings emoji pack is included in `^modhelp`
-
 If you want to be notified of updates to Miru, suggest features, or ask for help, join the Miru Support server:
-https://discord.gg/zB4QHgn(edited)
+https://discord.gg/zB4QHgn
 """
 
 USER_HELP = """
@@ -82,12 +80,6 @@ Monster Info:
 ^pic       prints a link to a a monster image on puzzledragonx, which discord will inline
 ^img       same as pic
 
-REM Simulation:
-^remlist     lists all the REMs available
-^reminfo     lists info for a specific REM
-^rollrem     simulate a roll for a REM
-^rollremfor  roll a REM until you get the desired monster
-
 Profile:
 Miru will store your personal PAD details, and provide them on request.
 Use the series of commands starting with ^profile to configure your own profile.
@@ -122,15 +114,6 @@ write it.
 
 ~~~~~~~~~~~~~~~~~~~~~~
 
-If you would like to add the awakening emojis to your server, upload the icons
-in the link (don't change their names) and Miru will automatically begin
-using them:
-https://drive.google.com/drive/folders/0B4BJOUE5gL0USS12a1BnS1pPMkE?usp=sharing
-
-Contact me if you need help evading the 50 emoji limit.
-
-~~~~~~~~~~~~~~~~~~~~~~
-
 Check out the ^help command from inside your server. You'll see a wider list of
 commands than normal users do.
 
@@ -140,9 +123,6 @@ might want to configure an Admin and a Mod role (they can be the same thing).
 ~~~~~~~~~~~~~~~~~~~~~~
 Interesting features
 ~~~~~~~~~~~~~~~~~~~~~~
-
-Twitter:
-If you'd like a twitter feed mirrored in your server, contact tactical_retreat
 
 Self applied roles:
 You can configure which roles a user can add to themself using ^selfrole via ^adminset
