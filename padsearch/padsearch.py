@@ -196,6 +196,7 @@ class PadSearchLexer(object):
         'TYPE',
         'SHUFFLE',
         'UNLOCK',
+        'RESOLVE',
         'DELAY',
         'REMOVE',
         'CONVERT',
@@ -293,6 +294,10 @@ class PadSearchLexer(object):
         r'unlock(\(\))?'
         return t
 
+    def t_RESOLVE(self, t):
+        r'resolve(\(\))?'
+        return t
+
     def t_DELAY(self, t):
         r'delay\(\d+\)'
         t.value = clean_name(t.value, 'delay')
@@ -379,6 +384,7 @@ class SearchConfig(object):
         self.inheritable = None
         self.shuffle = None
         self.unlock = None
+        self.resolve = None
         self.delay = None
         self.combo = None
         self.absorbnull = None
@@ -411,6 +417,7 @@ class SearchConfig(object):
             self.inheritable = self.setIfType('INHERITABLE', type, self.inheritable, value)
             self.shuffle = self.setIfType('SHUFFLE', type, self.shuffle, value)
             self.unlock = self.setIfType('UNLOCK', type, self.unlock, value)
+            self.resolve = self.setIfType('RESOLVE', type, self.resolve, value)
             self.delay = self.setIfType('DELAY', type, self.delay, value)
             self.combo = self.setIfType('COMBO', type, self.combo, value)
             self.absorbnull = self.setIfType('ABSORBNULL', type, self.absorbnull, value)
@@ -470,6 +477,10 @@ class SearchConfig(object):
         if self.unlock:
             text = 'unlock all orbs'
             self.filters.append(lambda m, t=text: t in m.search.active_desc)
+
+        if self.resolve:
+            text = 'may survive when'
+            self.filters.append(lambda m, t=text: t in m.search.leader)
 
         if self.delay:
             text = 'delay enemies for {}'.format(self.delay)
