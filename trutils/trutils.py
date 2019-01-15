@@ -618,23 +618,52 @@ class TrUtils:
 
     @commands.command(pass_context=True)
     @checks.is_owner()
-    async def superfuckingban(self, ctx, user: discord.User):
+    async def superfuckingban(self, ctx, user: discord.User, *, reason: str):
         """Really fucking bans someone.
 
         This will ban a user from every server that the bot can ban them from. Use with caution.
         """
-        msg = 'Report:'
+        mod_cog = self.bot.get_cog('Mod')
+        msg = 'Ban report for {} ({}):'.format(user.name, user.id)
         for server in self.bot.servers:
+            try:
+                ban_list = await self.bot.get_bans(server)
+                if user.id in [x.id for x in ban_list]:
+                    msg += '\n\tUser already banned from {}'.format(server.name)
+                    continue
+            except:
+                msg += '\n\tNot allowed to ban in {}; nothing I can do here'.format(server.name)
+                continue
+
+            for user in ban_list:
+                user_id_to_ban_server[user.id].append(server.id)
+
             m = server.get_member(user.id)
             if m is None:
-                msg += '\n\tUser not in {}'.format(server.name)
+                try:
+                    await self.bot.http.ban(user.id, server.id, 0)
+                    msg += '\n\tUser not in {}; added to hackban'.format(server.name)
+                    await mod_cog.new_case(server,
+                                           action="HACKBAN",
+                                           mod=ctx.message.author,
+                                           user=user,
+                                           reason='SuperBan by bot owner: {}'.format(reason))
+                except Exception as ex:
+                    msg += '\n\tUser not in {}; hackban failed: {}'.format(server.name, ex)
                 continue
             try:
-                self.bot.ban(m, delete_message_days=0)
+                await self.bot.ban(m, delete_message_days=0)
                 msg += '\n\tBanned from {}'.format(server.name)
+                await mod_cog.new_case(server,
+                                       action="BAN",
+                                       mod=ctx.message.author,
+                                       user=user,
+                                       reason='SuperBan by bot owner: {}'.format(reason))
             except Exception as ex:
                 msg += '\n\tFailed to ban from {} because {}'.format(server.name, ex)
-        await self.bot.say(box(msg))
+
+        for page in pagify(msg):
+            await self.bot.say(box(page))
 
     @commands.command(pass_context=True)
     @commands.cooldown(1, 60, commands.BucketType.user)
