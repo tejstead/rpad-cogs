@@ -635,9 +635,6 @@ class TrUtils:
                 msg += '\n\tNot allowed to ban in {}; nothing I can do here'.format(server.name)
                 continue
 
-            for user in ban_list:
-                user_id_to_ban_server[user.id].append(server.id)
-
             m = server.get_member(user.id)
             if m is None:
                 try:
