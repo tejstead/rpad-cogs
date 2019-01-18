@@ -392,7 +392,7 @@ class PgRawDatabase(object):
             return {}
 
         if self._data_dir:
-            file_path = os.path.join(self._data_dir, '{}.json'.format(itemtype.file_name))
+            file_path = os.path.join(self._data_dir, '{}.json'.format(itemtype.file_name()))
         else:
             file_path = JSON_FILE_PATTERN.format(itemtype.file_name())
         item_list = []
