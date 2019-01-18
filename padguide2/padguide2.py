@@ -292,12 +292,23 @@ class PadGuide2(object):
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 
+    @padguide2.command(pass_context=True)
+    @checks.is_owner()
+    async def setdatadir(self, ctx, *, data_dir):
+        """Set a local path to padguide data instead of downloading it."""
+        self.settings.setDataDir(ctx, data_dir)
+        await self.bot.say(inline('Done'))
 
 class PadGuide2Settings(CogSettings):
     def make_default_settings(self):
         config = {
+            'data_dir': '',
         }
         return config
+
+    def setDataDir(self, data_dir):
+        self.bot_settings['data_dir'] = data_dir
+        self.save_settings()
 
 
 def setup(bot):
