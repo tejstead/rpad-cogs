@@ -130,7 +130,7 @@ class PadGuide2(object):
 
         try:
             # Try and load the PadGuide database the first time with existing files
-            self.database = PgRawDatabase()
+            self.database = PgRawDatabase(data_dir=self.settings.dataDir())
             self._is_ready.set()
             print('Finished initial PadGuide2 load with existing database')
         except Exception as ex:
@@ -162,7 +162,9 @@ class PadGuide2(object):
         await self.download_and_refresh_nicknames()
 
     async def download_and_refresh_nicknames(self):
-        await self._download_files()
+        if not self.settings.dataDir():
+            await self._download_files()
+        await self._download_override_files()
 
         nickname_overrides = self._csv_to_tuples(NICKNAME_FILE_PATTERN)
         basename_overrides = self._csv_to_tuples(BASENAME_FILE_PATTERN)
@@ -176,7 +178,7 @@ class PadGuide2(object):
             if k.isdigit():
                 self.basename_overrides[int(k)].add(v.lower())
 
-        self.database = PgRawDatabase()
+        self.database = PgRawDatabase(data_dir=self.settings.dataDir())
         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
 
         self.write_monster_attr_data()
@@ -279,6 +281,7 @@ class PadGuide2(object):
                 if download_all or rpadutils.should_download(result_file, quick_expiry_secs):
                     await rpadutils.async_cached_padguide_request(client_session, endpoint, result_file, time_ms=three_weeks_ago)
 
+    async def _download_override_files(self):
         overrides_expiry_secs = 1 * 60 * 60
         await rpadutils.makeAsyncCachedPlainRequest(
             NICKNAME_FILE_PATTERN, NICKNAME_OVERRIDES_SHEET, overrides_expiry_secs)
@@ -306,6 +309,9 @@ class PadGuide2Settings(CogSettings):
         }
         return config
 
+    def dataDir(self):
+        return self.bot_settings['data_dir']
+
     def setDataDir(self, data_dir):
         self.bot_settings['data_dir'] = data_dir
         self.save_settings()
@@ -318,8 +324,9 @@ def setup(bot):
 
 
 class PgRawDatabase(object):
-    def __init__(self, skip_load=False):
+    def __init__(self, skip_load=False, data_dir=None):
         self._skip_load = skip_load
+        self._data_dir = data_dir
         self._all_pg_items = []
 
         # Load raw data items into id->value maps
@@ -384,7 +391,10 @@ class PgRawDatabase(object):
         if self._skip_load:
             return {}
 
-        file_path = JSON_FILE_PATTERN.format(itemtype.file_name())
+        if self._data_dir:
+            file_path = os.join(self._data_dir, '{}.json'.format(itemtype.file_name))
+        else:
+            file_path = JSON_FILE_PATTERN.format(itemtype.file_name())
         item_list = []
 
         if dataIO.is_valid_json(file_path):
