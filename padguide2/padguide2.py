@@ -299,7 +299,7 @@ class PadGuide2(object):
     @checks.is_owner()
     async def setdatadir(self, ctx, *, data_dir):
         """Set a local path to padguide data instead of downloading it."""
-        self.settings.setDataDir(ctx, data_dir)
+        self.settings.setDataDir(data_dir)
         await self.bot.say(inline('Done'))
 
 class PadGuide2Settings(CogSettings):
