@@ -107,6 +107,7 @@ class Speech:
         if existing_vc:
             await existing_vc.disconnect()
 
+        voice_client = None
         try:
             voice_client = await self.bot.join_voice_channel(channel)
 
