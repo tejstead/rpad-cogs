@@ -124,11 +124,12 @@ class Speech:
             await voice_client.disconnect()
 
             return True
-        except:
-            await self.bot.say(inline('Oops, something went wrong'))
-            traceback.print_exc()
+        except Exception as e:
             if voice_client:
-                await voice_client.disconnect()
+                try:
+                    await voice_client.disconnect()
+                except:
+                    pass
             return False
 
     @speech.command(pass_context=True)

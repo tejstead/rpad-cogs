@@ -372,10 +372,11 @@ class PadInfo:
         if m is not None:
             base_dir = '/home/tactical0retreat/pad_data/voices/fixed'
             voice_file = os.path.join(base_dir, server, '{}.wav'.format(m.monster_no_na))
+            header = '{} ({})'.format(monsterToHeader(m), server)
             if not os.path.exists(voice_file):
-                await self.bot.say(inline('Could not find voice for ' + monsterToHeader(m)))
+                await self.bot.say(inline('Could not find voice for ' + header))
                 return
-            await self.bot.say('Speaking for ' + monsterToHeader(m))
+            await self.bot.say('Speaking for ' + header)
             await speech_cog.play_path(channel, voice_file)
         else:
             await self.bot.say(self.makeFailureMsg(err))
