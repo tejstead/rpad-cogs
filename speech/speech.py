@@ -74,12 +74,15 @@ class Speech:
             await self.bot.say(inline('Command is too long'))
             return
 
+        await self.speak(channel, text) 
+
+    async def speak(self, channel, text: str):
         if self.busy:
             await self.bot.say(inline('Sorry, saying something else right now'))
             return False
         else:
             self.busy = True
-        
+
         try:
             voice = texttospeech.types.VoiceSelectionParams(
                 language_code='en-US', name='en-US-Wavenet-F')
@@ -93,11 +96,13 @@ class Speech:
             with open(SPOOL_PATH, 'wb') as out:
                 out.write(response.audio_content)
 
-            await self.speak(channel, SPOOL_PATH) 
+            await self.play_path(channel, SPOOL_PATH)
+            return True
         finally:
             self.busy = False
+        return False
 
-    async def speak(self, channel, audio_path: str):
+    async def play_path(self, channel, audio_path: str):
         existing_vc = self.bot.voice_client_in(channel.server)
         if existing_vc:
             await existing_vc.disconnect()
