@@ -74,19 +74,12 @@ class Speech:
             await self.bot.say(inline('Command is too long'))
             return
 
-        await self.speak(channel, text)
-
-    async def speak(self, channel, text: str):
         if self.busy:
             await self.bot.say(inline('Sorry, saying something else right now'))
             return False
         else:
             self.busy = True
-
-        existing_vc = self.bot.voice_client_in(channel.server)
-        if existing_vc:
-            await existing_vc.disconnect()
-
+        
         try:
             voice = texttospeech.types.VoiceSelectionParams(
                 language_code='en-US', name='en-US-Wavenet-F')
@@ -95,32 +88,39 @@ class Speech:
                 audio_encoding=texttospeech.enums.AudioEncoding.MP3)
 
             synthesis_input = texttospeech.types.SynthesisInput(text=text)
-
             response = self.service.synthesize_speech(synthesis_input, voice, audio_config)
 
             with open(SPOOL_PATH, 'wb') as out:
                 out.write(response.audio_content)
 
+            await self.speak(channel, SPOOL_PATH) 
+        finally:
+            self.busy = False
+
+    async def speak(self, channel, audio_path: str):
+        existing_vc = self.bot.voice_client_in(channel.server)
+        if existing_vc:
+            await existing_vc.disconnect()
+
+        try:
             voice_client = await self.bot.join_voice_channel(channel)
 
             use_avconv = False
             options = "-filter \"volume=volume=0.3\""
 
             audio_player = voice_client.create_ffmpeg_player(
-                SPOOL_PATH, use_avconv=use_avconv, options=options)
+                audio_path, use_avconv=use_avconv, options=options)
             audio_player.start()
 
             while not audio_player.is_done():
                 await asyncio.sleep(0.01)
 
             await voice_client.disconnect()
-            self.busy = False
 
             return True
         except:
             await self.bot.say(inline('Oops, something went wrong'))
             traceback.print_exc()
-            self.busy = False
             if voice_client:
                 await voice_client.disconnect()
             return False
