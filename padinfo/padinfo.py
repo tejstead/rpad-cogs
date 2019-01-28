@@ -349,6 +349,39 @@ class PadInfo:
         """Whispers you info on how to craft monster queries for ^id"""
         await self.bot.whisper(box(HELP_MSG))
 
+    @commands.command(pass_context=True)
+    async def padsay(self, ctx, server, *, query: str=None):
+        """Speak the voice line of a monster into your current chat"""
+        voice = ctx.message.author.voice
+        channel = voice.voice_channel
+        if channel is None:
+            await self.bot.say(inline('You must be in a voice channel to use this command'))
+            return
+
+        speech_cog = self.bot.get_cog('Speech')
+        if not speech_cog:
+            await self.bot.say(inline('Speech seems to be offline'))
+            return
+ 
+        if server.lower() not in ['na', 'jp']:
+            query = server + ' ' + (query or '')
+            server = 'na'
+        query = query.strip().lower()
+
+        m, err, debug_info = self.findMonster(query)
+        if m is not None:
+            base_dir = '/home/tactical0retreat/pad_data/voices/fixed'
+            voice_file = os.path.join(base_dir, server, '{}.wav'.format(m.monster_no_na))
+            header = '{} ({})'.format(monsterToHeader(m), server)
+            if not os.path.exists(voice_file):
+                await self.bot.say(inline('Could not find voice for ' + header))
+                return
+            await self.bot.say('Speaking for ' + header)
+            await speech_cog.play_path(channel, voice_file)
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
+
     @commands.group(pass_context=True)
     @checks.is_owner()
     async def padinfo(self, ctx):
