@@ -117,6 +117,7 @@ class PadGuideDb:
             jp_entry = load_dungeon('/home/tactical0retreat/pad_data/processed/jp_dungeons.json')
             na_entry = load_dungeon(
                 '/home/tactical0retreat/pad_data/processed/na_dungeons.json') or jp_entry
+            jp_entry = jp_entry or na_entry
 
             jp_name = jp_entry['clean_name']
             en_name = na_entry['clean_name']
