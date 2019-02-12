@@ -26,7 +26,7 @@ class FancySay:
             await send_cmd_help(context)
 
     @fancysay.command(pass_context=True, no_pm=True)
-    async def pingrole(self, ctx, role : discord.Role, *, text):
+    async def pingrole(self, ctx, role: discord.Role, *, text):
         """^fancysay pingrole rolename this is the text to ping
 
         1) Converts a role to mentionable
@@ -46,18 +46,14 @@ class FancySay:
             await self.bot.say(inline('Error: failed to set role mentionable'))
             return
 
+        await self.bot.delete_message(ctx.message)
+        await asyncio.sleep(1)
         await self.bot.say('From {}:\n{}\n{}'.format(ctx.message.author.mention, role.mention, text))
 
         try:
             await self.bot.edit_role(ctx.message.server, role, mentionable=False)
         except Exception as ex:
             await self.bot.say(inline('Error: failed to set role unmentionable'))
-            return
-
-        try:
-            await self.bot.delete_message(ctx.message)
-        except Exception as ex:
-            await self.bot.say(inline('Error: failed to delete request message'))
             return
 
     @fancysay.command(pass_context=True, no_pm=True)
@@ -106,6 +102,7 @@ class FancySay:
             await self.bot.delete_message(ctx.message)
         except Exception as error:
             print("failed to fancysay", error)
+
 
 def setup(bot):
     n = FancySay(bot)
