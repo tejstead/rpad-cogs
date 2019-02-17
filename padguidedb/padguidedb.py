@@ -47,6 +47,8 @@ class PadGuideDb:
 
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.queue_size = 0
+        self.full_etl_running = False
+        self.extract_images_running = False
 
         global PADGUIDEDB_COG
         PADGUIDEDB_COG = self
@@ -242,6 +244,59 @@ class PadGuideDb:
             '--floor_id={}'.format(dungeon_floor_id),
             '--user_uuid={}'.format(self.settings.userUuidFor(server)),
             '--user_intid={}'.format(self.settings.userIntidFor(server)),
+        ]
+        subprocess.run(args)
+
+    @padguidedb.group(pass_context=True)
+    @is_padguidedb_admin()
+    async def pipeline(self, context):
+        """PadGuide pipeline utilities."""
+        if context.invoked_subcommand is None:
+            await send_cmd_help(context)
+
+    @pipeline.command(pass_context=True)
+    @is_padguidedb_admin()
+    async def fulletl(self, ctx):
+        """Runs a job which downloads pad data, and updates the padguide database."""
+        if self.full_etl_running:
+            await self.bot.say(inline('Full ETL already running'))
+            return
+        
+        event_loop = asyncio.get_event_loop()
+        running_load = event_loop.run_in_executor(self.executor, self.do_full_etl)
+
+        self.full_etl_running = True
+        await self.bot.say(inline('Running full ETL pipeline: this could take a while'))
+        await running_load
+        self.full_etl_running = False
+        await self.bot.say(inline('Full ETL finished'))
+
+    def do_full_etl(self):
+        args = [
+            '/home/tactical0retreat/rpad-cogs-utils/pad_api_data/utils/miru_etl_load.sh',
+        ]
+        subprocess.run(args)
+
+    @pipeline.command(pass_context=True)
+    @is_padguidedb_admin()
+    async def extractimages(self, ctx):
+        """Runs a job which downloads image updates, generates full images, and portraits."""
+        if self.extract_images_running:
+            await self.bot.say(inline('Extract images already running'))
+            return
+
+        event_loop = asyncio.get_event_loop()
+        running_load = event_loop.run_in_executor(self.executor, self.do_extract_images)
+
+        self.extract_images_running = True
+        await self.bot.say(inline('Running image extract pipeline: this could take a while'))
+        await running_load
+        self.extract_images_running = False
+        await self.bot.say(inline('Image extract finished'))
+
+    def do_extract_images(self):
+        args = [
+            '/home/tactical0retreat/rpad-cogs-utils/pad_api_data/utils/miru_image_load.sh',
         ]
         subprocess.run(args)
 
