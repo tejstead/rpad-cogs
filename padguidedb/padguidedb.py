@@ -273,6 +273,7 @@ class PadGuideDb:
 
     def do_full_etl(self):
         args = [
+            'bash',
             '/home/tactical0retreat/rpad-cogs-utils/pad_api_data/utils/miru_etl_load.sh',
         ]
         subprocess.run(args)
@@ -296,6 +297,7 @@ class PadGuideDb:
 
     def do_extract_images(self):
         args = [
+            'bash',
             '/home/tactical0retreat/rpad-cogs-utils/pad_api_data/utils/miru_image_load.sh',
         ]
         subprocess.run(args)
