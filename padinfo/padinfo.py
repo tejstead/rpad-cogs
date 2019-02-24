@@ -48,8 +48,10 @@ EMBED_NOT_GENERATED = -1
 
 
 INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
-RPAD_PIC_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/full/{}.png'
-RPAD_PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/portrait/{}.png'
+RPAD_PIC_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/{}/full/{}.png'
+RPAD_PORTRAIT_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/{}/portrait/{}.png'
+VIDEO_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/animated/{}.mp4'
+GIF_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/animated/{}.gif'
 
 YT_SEARCH_TEMPLATE = 'https://www.youtube.com/results?search_query={}'
 
@@ -216,7 +218,8 @@ class PadInfo:
         id_embed = monsterToEmbed(m, self.get_emojis())
         evo_embed = monsterToEvoEmbed(m)
         mats_embed = monsterToEvoMatsEmbed(m)
-        pic_embed = monsterToPicEmbed(m)
+        animated = self.check_monster_animated(m.monster_no_jp)
+        pic_embed = monsterToPicEmbed(m, animated=animated)
         other_info_embed = monsterToOtherInfoEmbed(m)
 
         emoji_to_embed = OrderedDict()
@@ -362,7 +365,7 @@ class PadInfo:
         if not speech_cog:
             await self.bot.say(inline('Speech seems to be offline'))
             return
- 
+
         if server.lower() not in ['na', 'jp']:
             query = server + ' ' + (query or '')
             server = 'na'
@@ -380,7 +383,6 @@ class PadInfo:
             await speech_cog.play_path(channel, voice_file)
         else:
             await self.bot.say(self.makeFailureMsg(err))
-
 
     @commands.group(pass_context=True)
     @checks.is_owner()
@@ -427,6 +429,28 @@ class PadInfo:
         """Exported for use in other cogs"""
         return _map_awakenings_text(m)
 
+    @padinfo.command(pass_context=True)
+    @checks.is_owner()
+    async def setanimationdir(self, ctx, *, animation_dir=''):
+        """Set a directory containing animated images"""
+        self.settings.setAnimationDir(animation_dir)
+        await self.bot.say(inline('Done'))
+
+    def check_monster_animated(self, monster_id: int):
+        if not self.settings.animationDir():
+            return False
+
+        try:
+            animated_ids = set()
+            for f in os.listdir(self.settings.animationDir()):
+                f = f.rstrip('.mp4')
+                if f.isdigit() and int(f) == monster_id:
+                    return True
+        except:
+            pass
+
+        return False
+
 
 def setup(bot):
     print('padinfo bot setup')
@@ -438,7 +462,9 @@ def setup(bot):
 
 class PadInfoSettings(CogSettings):
     def make_default_settings(self):
-        config = {}
+        config = {
+            'animation_dir': '',
+        }
         return config
 
     def emojiServers(self):
@@ -451,6 +477,13 @@ class PadInfoSettings(CogSettings):
         es = self.emojiServers()
         es.clear()
         es.extend(emoji_servers)
+        self.save_settings()
+
+    def animationDir(self):
+        return self.bot_settings['animation_dir']
+
+    def setAnimationDir(self, animation_dir):
+        self.bot_settings['animation_dir'] = animation_dir
         self.save_settings()
 
 
@@ -609,9 +642,31 @@ def monsterToPicUrl(m: padguide2.PgMonster):
     return get_pic_url(m)
 
 
-def monsterToPicEmbed(m: padguide2.PgMonster):
+def monsterToPicEmbed(m: padguide2.PgMonster, animated=False):
     embed = monsterToBaseEmbed(m)
     url = monsterToPicUrl(m)
+    embed.set_image(url=url)
+    # Clear the thumbnail, don't need it on pic
+    embed.set_thumbnail(url='')
+    if animated:
+        description = '[{}]({}) –– [{}]({})'.format(
+            'HQ (MP4)', monsterToVideoUrl(m), 'LQ (GIF)', monsterToGifUrl(m))
+        embed.add_field(name='Animated links', value=description)
+
+    return embed
+
+
+def monsterToVideoUrl(m: padguide2.PgMonster):
+    return VIDEO_TEMPLATE.format(m.monster_no_jp)
+
+
+def monsterToGifUrl(m: padguide2.PgMonster):
+    return GIF_TEMPLATE.format(m.monster_no_jp)
+
+
+def monsterToGifEmbed(m: padguide2.PgMonster):
+    embed = monsterToBaseEmbed(m)
+    url = monsterToGifUrl(m)
     embed.set_image(url=url)
     # Clear the thumbnail, don't need it on pic
     embed.set_thumbnail(url='')
