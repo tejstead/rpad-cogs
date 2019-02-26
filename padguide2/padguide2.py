@@ -2285,8 +2285,8 @@ class NamedMonsterGroup(object):
                 basename = basename.replace(x, '')
 
         # Fix for DC collab garbage
-        x.replace('(comics)', '')
-        x.replace('(film)', '')
+        basename = basename.replace('(comics)', '')
+        basename = basename.replace('(film)', '')
 
         return basename.strip()
 
