@@ -302,6 +302,7 @@ class PadGuide2(object):
         self.settings.setDataDir(data_dir)
         await self.bot.say(inline('Done'))
 
+
 class PadGuide2Settings(CogSettings):
     def make_default_settings(self):
         config = {
@@ -2282,6 +2283,10 @@ class NamedMonsterGroup(object):
         for x in ['awoken', 'reincarnated']:
             if basename.startswith(x):
                 basename = basename.replace(x, '')
+
+        # Fix for DC collab garbage
+        x.replace('(comics)', '')
+        x.replace('(film)', '')
 
         return basename.strip()
 
