@@ -54,6 +54,7 @@ VIDEO_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/animated
 GIF_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/animated/{}.gif'
 
 YT_SEARCH_TEMPLATE = 'https://www.youtube.com/results?search_query={}'
+SKYOZORA_TEMPLATE = 'http://pad.skyozora.com/pets/{}'
 
 
 def get_pdx_url(m):
@@ -834,7 +835,9 @@ def monsterToOtherInfoEmbed(m: padguide2.PgMonster):
     body_text = box(tbl.get_string())
 
     search_text = YT_SEARCH_TEMPLATE.format(m.name_jp)
-    body_text += "\n**JP Name**: [{}]({})".format(m.name_jp, search_text)
+    skyozora_text = SKYOZORA_TEMPLATE.format(m.monster_no_jp)
+    body_text += "\n**JP Name**: {} | [YouTube]({}) | [Skyozora]({})".format(
+        m.name_jp, search_text, skyozora_text)
 
     if m.history_us:
         body_text += '\n**History:** {}'.format(m.history_us)
