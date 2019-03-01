@@ -2258,7 +2258,8 @@ class NamedMonsterGroup(object):
 
         monsters = monster_group.members
         self.group_size = len(monsters)
-        self.base_monster_no_na = monster_group.base_monster.monster_no
+        self.base_monster_no_na = monster_group.base_monster.monster_no_na
+        self.base_monster_no = monster_group.base_monster.monster_no
 
         self.monster_no_to_basename = {
             m.monster_no: self._compute_monster_basename(m) for m in monsters
