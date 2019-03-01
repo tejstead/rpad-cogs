@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import inspect
 import json
 import os
@@ -632,3 +633,19 @@ async def await_and_remove(bot, react_msg, listen_user, delete_msgs=None, emoji=
         msgs = delete_msgs or [react_msg]
         for m in msgs:
             await bot.delete_message(m)
+
+
+loop_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
+
+async def run_in_loop(bot, task, *args):
+    event_loop = asyncio.get_event_loop()
+    running_task = event_loop.run_in_executor(loop_executor, task, *args)
+    return await running_task
+
+
+async def translate_jp_en(bot, jp_text):
+    translate_cog = bot.get_cog('Translate')
+    if not translate_cog:
+        return None
+    return await run_in_loop(bot, translate_cog.translate_jp_en, jp_text)
