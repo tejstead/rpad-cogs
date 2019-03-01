@@ -43,6 +43,7 @@ CSV_FILE_PATTERN = 'data/padguide2/{}.csv'
 ATTR_EXPORT_PATH = 'data/padguide2/card_data.csv'
 NAMES_EXPORT_PATH = 'data/padguide2/computed_names.json'
 BASENAMES_EXPORT_PATH = 'data/padguide2/base_names.json'
+TRANSLATEDNAMES_EXPORT_PATH = 'data/padguide2/translated_names.json'
 
 SHEETS_PATTERN = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid={}&single=true&output=csv'
 GROUP_BASENAMES_OVERRIDES_SHEET = SHEETS_PATTERN.format('2070615818')
@@ -100,6 +101,9 @@ class PadGuide2(object):
 
         self.database = PgRawDatabase(skip_load=True)
 
+        # Map of google-translated JP names to EN names
+        self.translated_names = {}
+
     @asyncio.coroutine
     def wait_until_ready(self):
         """Wait until the PadGuide2 cog is ready.
@@ -116,6 +120,9 @@ class PadGuide2(object):
     def get_monster_by_no(self, monster_no: int):
         """Exported function that allows a client cog to get a full PgMonster by monster_no"""
         return self.database.getMonster(monster_no)
+
+    def get_translated_jp_name(self, jp_name):
+        return self.translate_names.get(jp_name, None)
 
     def register_tasks(self):
         self.reload_task = self.bot.loop.create_task(self.reload_data_task())
@@ -149,6 +156,12 @@ class PadGuide2(object):
                 traceback.print_exc()
 
             try:
+                await self.translate_names()
+            except Exception as ex:
+                print("translations failed", ex)
+                traceback.print_exc()
+
+            try:
                 wait_time = 60 if short_wait else 60 * 60 * 4
                 await asyncio.sleep(wait_time)
             except Exception as ex:
@@ -160,6 +173,20 @@ class PadGuide2(object):
         os.remove(NICKNAME_FILE_PATTERN)
         os.remove(BASENAME_FILE_PATTERN)
         await self.download_and_refresh_nicknames()
+
+    async def translate_names(self):
+        if os.path.exists(TRANSLATEDNAMES_EXPORT_PATH):
+            with open(TRANSLATEDNAMES_EXPORT_PATH) as f:
+                self.translated_names = json.load(f)
+
+        for m in self.database.all_monsters():
+            name_jp = m.name_jp
+            if rpadutils.containsJp(name_jp) and name_jp not in self.translated_names:
+                self.translated_names[name_jp] = await rpadutils.translate_jp_en(self.bot, name_jp)
+            m.translated_jp_name = self.translated_names.get(name_jp, None)
+
+        with open(TRANSLATEDNAMES_EXPORT_PATH, 'w', encoding='utf-8') as f:
+            json.dump(self.translated_names, f, sort_keys=True, indent=4)
 
     async def download_and_refresh_nicknames(self):
         if not self.settings.dataDir():
@@ -1201,6 +1228,9 @@ class PgMonster(PgItem):
         # Data populated via override
         self.limitbreak_stats = 1 + float(item['LIMIT_MULT']) / 100 if item['LIMIT_MULT'] else None
         self.superawakening_count = 0
+
+        # Data filled in post-load
+        self.translated_jp_name = None
 
     def key(self):
         return self.monster_no
