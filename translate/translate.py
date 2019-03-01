@@ -2,10 +2,11 @@ from collections import defaultdict
 import os
 import re
 
-from __main__ import user_allowed, send_cmd_help
 import discord
 from discord.ext import commands
 from googleapiclient.discovery import build
+
+from __main__ import user_allowed, send_cmd_help
 
 from .rpadutils import *
 from .rpadutils import CogSettings
@@ -62,10 +63,12 @@ class Translate:
         em = self.translateToEmbed(query)
         await self.bot.say(embed=em)
 
-    def translateToEmbed(self, query):
+    def translate_jp_en(self, query):
         result = self.service.translations().list(source='ja', target='en', format='text', q=query).execute()
-        translation = result.get('translations')[0].get('translatedText')
+        return result.get('translations')[0].get('translatedText')
 
+    def translateToEmbed(self, query):
+        translation = self.translate_jp_en(query)
         return discord.Embed(description='**Original**\n`{}`\n\n**Translation**\n`{}`'.format(query, translation))
 
     @translate.command(pass_context=True, no_pm=True)
