@@ -2054,10 +2054,12 @@ class MonsterIndex(object):
         # Sort the NamedMonsters into the opposite order we want to accept their nicknames in
         # This order is:
         #  1) High priority first
-        #  2) Monsters with larger group sizes
-        #  3) Monsters with higher ID values
+        #  2) Larger group sizes
+        #  3) Minimum ID size in the group
+        #  4) Monsters with higher ID values
         def named_monsters_sort(nm: NamedMonster):
-            return (not nm.is_low_priority, nm.group_size, nm.monster_no_na)
+            return (not nm.is_low_priority, nm.group_size, -1 *
+                    nm.base_monster_no_na, nm.monster_no_na)
         named_monsters.sort(key=named_monsters_sort)
 
         self.all_entries = {}
@@ -2256,7 +2258,7 @@ class NamedMonsterGroup(object):
 
         monsters = monster_group.members
         self.group_size = len(monsters)
-        self.base_monster_no = monster_group.base_monster.monster_no
+        self.base_monster_no_na = monster_group.base_monster.monster_no
 
         self.monster_no_to_basename = {
             m.monster_no: self._compute_monster_basename(m) for m in monsters
@@ -2339,7 +2341,7 @@ class NamedMonster(object):
         self.monster_no_jp = monster.monster_no_jp
 
         # ID of the root of the tree for this monster
-        self.base_monster_no = monster_group.base_monster_no
+        self.base_monster_no_na = monster_group.base_monster_no_na
 
         # This stuff is important for nickname generation
         self.group_basenames = monster_group.basenames
