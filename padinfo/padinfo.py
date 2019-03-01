@@ -855,6 +855,9 @@ def monsterToOtherInfoEmbed(m: padguide2.PgMonster):
     body_text += '  **Max Level:**: {}'.format(m.max_level)
     body_text += '\n**Rarity:** {} **Cost:** {}'.format(m.rarity, m.cost)
 
+    if m.translated_jp_name:
+        body_text += '\n**Google Translated:** {}'.format(m.translated_jp_name)
+
     embed.description = body_text
 
     return embed

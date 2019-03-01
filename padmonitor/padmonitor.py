@@ -7,6 +7,7 @@ from discord.ext import commands
 from __main__ import user_allowed, send_cmd_help
 
 from . import padguide2
+from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
@@ -56,6 +57,8 @@ class PadMonitor:
                 msg = 'New monsters added to {}:'.format(name)
                 for m in [new_map[x] for x in delta_set]:
                     msg += '\n\tNo. {} {}'.format(m.monster_no, m.name_na)
+                    if rpadutils.containsJp(m.name_na):
+                        msg += ' ({})'.format(m.translated_jp_name)
                 return msg
             else:
                 print('no monsters')
@@ -73,7 +76,8 @@ class PadMonitor:
     async def announce(self, channel_id, message):
         try:
             channel = self.bot.get_channel(channel_id)
-            await self.bot.send_message(channel, box(message))
+            for page in pagify(message):
+                await self.bot.send_message(channel, box(page))
         except Exception as ex:
             print('failed to send message to', channel_id, ' : ', ex)
 
