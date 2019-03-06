@@ -444,7 +444,7 @@ class PadInfo:
         try:
             animated_ids = set()
             for f in os.listdir(self.settings.animationDir()):
-                f = f.rstrip('.mp4')
+                f = f.replace('.mp4', '')
                 if f.isdigit() and int(f) == monster_id:
                     return True
         except:
