@@ -121,8 +121,8 @@ class PadGuideDb:
                 '/home/tactical0retreat/pad_data/processed/na_dungeons.json') or jp_entry
             jp_entry = jp_entry or na_entry
 
-            jp_name = jp_entry['clean_name']
-            en_name = na_entry['clean_name']
+            jp_name = jp_entry['clean_name'].replace("'", "''")
+            en_name = na_entry['clean_name'].replace("'", "''")
 
             tstamp = int(time.time()) * 1000
             sql = ('insert into dungeon_list (dungeon_type, icon_seq, name_jp, name_kr, name_us, order_idx, show_yn, tdt_seq, tstamp)'
@@ -261,7 +261,7 @@ class PadGuideDb:
         if self.full_etl_running:
             await self.bot.say(inline('Full ETL already running'))
             return
-        
+
         event_loop = asyncio.get_event_loop()
         running_load = event_loop.run_in_executor(self.executor, self.do_full_etl)
 
