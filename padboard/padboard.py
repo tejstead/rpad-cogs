@@ -1,15 +1,7 @@
-from abc import ABCMeta, abstractmethod
-from builtins import map
 from collections import defaultdict
 from collections import deque
-import copy
 from io import BytesIO
 import os
-import os
-from subprocess import check_call
-import sys
-import textwrap
-from time import time
 from zipfile import ZipFile
 
 import aiohttp
@@ -24,7 +16,6 @@ from . import padvision
 from . import rpadutils
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.dataIO import fileIO
 
 
 DATA_DIR = os.path.join('data', 'padboard')
@@ -115,14 +106,21 @@ class PadBoard:
             return
 
         img_board = self.classify(image_data)
+        img_board_nc = self.nc_classify(image_data)
 
         board_text = ''.join([''.join(r) for r in img_board])
+        board_text_nc = ''.join([''.join(r) for r in img_board_nc])
         # Convert O (used by padvision code) to X (used by Puzzled for bombs)
         board_text = board_text.replace('o', 'x')
+        board_text_nc = board_text_nc.replace('o', 'x')
         img_url = DAWNGLARE_BOARD_TEMPLATE.format(board_text)
         img_url2 = MIRUGLARE_BOARD_TEMPLATE.format(board_text)
 
         msg = '{}\n{}'.format(img_url, img_url2)
+        if board_text != board_text_nc:
+            img_url = DAWNGLARE_BOARD_TEMPLATE.format(board_text_nc)
+            msg += '\nThe alternate classifier disagreed, compare against\n{}'.format(img_url)
+
         await self.bot.say(msg)
 
     async def get_recent_image(self, ctx, user: discord.Member=None, message: discord.Message=None):
@@ -150,9 +148,14 @@ class PadBoard:
         nparr = np.fromstring(image_data, np.uint8)
         img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         img_extractor = padvision.SimilarityBoardExtractor(self.orb_type_to_images, img_np)
-        img_board = img_extractor.get_board()
-        return img_board
+        return img_extractor.get_board()
 
+    def nc_classify(self, image_data):
+        nparr = np.fromstring(image_data, np.uint8)
+        img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        model_path = '/home/tactical0retreat/git/pad-models/ICN3582626462823189160/model.tflite'
+        img_extractor = padvision.NeuralClassifierBoardExtractor(model_path, img_np, image_data)
+        return img_extractor.get_board()
 
 def check_folder():
     if not os.path.exists(DATA_DIR):

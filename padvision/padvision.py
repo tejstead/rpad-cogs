@@ -1,9 +1,9 @@
 from collections import defaultdict
 import os
-import pickle
-
 import cv2
-import np
+import PIL.Image
+import io
+import traceback
 
 ORB_IMG_SIZE = 40
 
@@ -180,3 +180,71 @@ class SimilarityBoardExtractor(object):
 
     def get_similarity(self):
         return self.similarity
+
+
+nn_orb_types = [
+    'b',
+    'd',
+    'g',
+    'h',
+    'j',
+    'l',
+    'm',
+    'o',
+    'p',
+    'r',
+]
+
+class NeuralClassifierBoardExtractor(object):
+    def __init__(self, model_path, np_img, img_bytes):
+        self.model_path = model_path
+        self.np_img = np_img
+        self.img = PIL.Image.open(io.BytesIO(img_bytes))
+        self.processed = False
+        self.results = [['u' for x in range(6)] for y in range(5)]
+
+    def process(self):
+        try:
+            self._process()
+        except Exception as ex:
+            print("orb extractor failed " + str(ex))
+            traceback.print_exc()
+
+    def _process(self):
+        import numpy as np
+        import tensorflow as tf
+
+        oe = OrbExtractor(self.np_img)
+
+        # Load TFLite model and allocate tensors.
+        interpreter = tf.contrib.lite.Interpreter(model_path=self.model_path)
+        interpreter.allocate_tensors()
+
+        # Get input and output tensors.
+        input_details = interpreter.get_input_details()[0]
+        output_details = interpreter.get_output_details()[0]
+
+        input_orb_size = input_details['shape'][1]
+        input_tensor_idx = input_details['index']
+        output_tensor_idx = output_details['index']
+
+        input_data = np.zeros((1, input_orb_size, input_orb_size, 3), dtype='uint8')
+
+        for y, x in board_iterator():
+            box_coords = oe.get_orb_vertices(x, y)
+            orb_img = self.img.crop(box_coords)
+            orb_img = orb_img.resize((input_orb_size, input_orb_size), PIL.Image.ANTIALIAS)
+            input_data[0] = np.array(orb_img)
+
+            interpreter.set_tensor(input_tensor_idx, input_data)
+            interpreter.invoke()
+            output_data = interpreter.get_tensor(output_tensor_idx)
+            max_idx = np.argmax(output_data)
+            self.results[y][x] = nn_orb_types[max_idx]
+
+    def get_board(self):
+        if not self.processed:
+            self.process()
+            self.processed = True
+        return self.results
+
