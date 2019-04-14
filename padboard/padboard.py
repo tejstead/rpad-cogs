@@ -29,9 +29,6 @@ from .utils.dataIO import fileIO
 
 DATA_DIR = os.path.join('data', 'padboard')
 ORB_DATA_DIR = os.path.join(DATA_DIR, 'orb_images')
-PIXEL_DATA_DIR = os.path.join(DATA_DIR, 'pixel_data')
-PIXEL_FILE = 'hsv_pixels_to_orb.pdict'
-PIXEL_FILE_PATH = os.path.join(PIXEL_DATA_DIR, PIXEL_FILE)
 
 DAWNGLARE_BOARD_TEMPLATE = "https://candyninja001.github.io/Puzzled/?patt={}"
 MIRUGLARE_BOARD_TEMPLATE = "https://storage.googleapis.com/mirubot/websites/padsim/index.html?patt={}"
@@ -42,7 +39,6 @@ class PadBoard:
         self.bot = bot
         self.logs = defaultdict(lambda: deque(maxlen=1))
         self.orb_type_to_images = padvision.load_orb_images_dir_to_map(ORB_DATA_DIR)
-        self.hsv_pixels_to_orb = padvision.load_hsv_to_orb(PIXEL_FILE_PATH)
 
     async def log_message(self, message):
         url = rpadutils.extract_image_url(message)
@@ -65,27 +61,6 @@ class PadBoard:
             except Exception as e:
                 print(e)
 
-    @padboard.command(pass_context=True)
-    @checks.is_owner()
-    async def downloadpixelfile(self, ctx, pixel_file_url):
-        """Replaces the current H/S pixel to orb map file"""
-        await self.bot.say(inline('starting download'))
-        async with aiohttp.get(pixel_file_url) as r:
-            if r.status != 200:
-                await self.bot.say(inline('download failed'))
-                return
-
-            file_bytes = await r.read()
-
-            await self.bot.say(box('deleting existing file and replacing with file of size: {}'.format(len(file_bytes))))
-
-            os.makedirs(PIXEL_DATA_DIR, exist_ok=True)
-            with open(PIXEL_FILE_PATH, 'wb') as f:
-                f.write(file_bytes)
-
-            await self.bot.say(inline('done saving'))
-            self.hsv_pixels_to_orb = padvision.load_hsv_to_orb(PIXEL_FILE_PATH)
-            await self.bot.say(inline('done reloading'))
 
     @padboard.command(pass_context=True)
     @checks.is_owner()
@@ -139,20 +114,15 @@ class PadBoard:
         if not image_data:
             return
 
-        img_board, hsv_board = self.classify(image_data)
+        img_board = self.classify(image_data)
 
         board_text = ''.join([''.join(r) for r in img_board])
         # Convert O (used by padvision code) to X (used by Puzzled for bombs)
         board_text = board_text.replace('o', 'x')
         img_url = DAWNGLARE_BOARD_TEMPLATE.format(board_text)
         img_url2 = MIRUGLARE_BOARD_TEMPLATE.format(board_text)
-        # Disabling HSV board for now. It's basically always worse
-#         hsv_url = DAWNGLARE_BOARD_TEMPLATE.format(''.join([''.join(r) for r in hsv_board]))
 
         msg = '{}\n{}'.format(img_url, img_url2)
-#         if img_url != hsv_url:
-#             msg += '\n{}'.format(inline("I'm uncertain about this board, check the output carefully. Compare against:"))
-#             msg += '\n{}'.format(hsv_url)
         await self.bot.say(msg)
 
     async def get_recent_image(self, ctx, user: discord.Member=None, message: discord.Message=None):
@@ -180,14 +150,8 @@ class PadBoard:
         nparr = np.fromstring(image_data, np.uint8)
         img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         img_extractor = padvision.SimilarityBoardExtractor(self.orb_type_to_images, img_np)
-
-        img_hsv = cv2.cvtColor(img_np.copy(), cv2.COLOR_BGR2HSV)
-        hsv_extractor = padvision.PixelCompareBoardExtractor(self.hsv_pixels_to_orb, img_hsv)
-
         img_board = img_extractor.get_board()
-        hsv_board = hsv_extractor.get_board()
-
-        return img_board, hsv_board
+        return img_board
 
 
 def check_folder():
