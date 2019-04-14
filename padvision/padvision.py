@@ -54,33 +54,6 @@ def getL2ErrThresholded(A, B):
     # Convert to a reasonable scale, since L2 error is summed across all pixels of the image.
     return errorL2 / (100 * 100);
 
-def getMSErr(imageA, imageB):
-    # the 'Mean Squared Error' between the two images is the
-    # sum of the squared difference between the two images;
-    # NOTE: the two images must have the same dimension
-    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
-    err /= float(imageA.shape[0] * imageA.shape[1])
-
-    # return the MSE, the lower the error, the more "similar"
-    # the two images are
-    return err
-
-def getMSErrThresholded(imageA, imageB):
-    imageA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY)
-    imageB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY)
-    imageA = cv2.adaptiveThreshold(imageA, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 2)
-    imageB = cv2.adaptiveThreshold(imageB, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 2)
-
-    # the 'Mean Squared Error' between the two images is the
-    # sum of the squared difference between the two images;
-    # NOTE: the two images must have the same dimension
-    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
-    err /= float(imageA.shape[0] * imageA.shape[1])
-
-    # return the MSE, the lower the error, the more "similar"
-    # the two images are
-    return err
-
 def resizeOrbImg(img):
     height, width, _ = img.shape
     if height < ORB_IMG_SIZE or width < ORB_IMG_SIZE:
@@ -111,13 +84,6 @@ def load_orb_images_dir_to_map(orb_image_dir):
         orb_type_to_images[orb_type].append(img)
 
     return orb_type_to_images
-
-def load_hsv_to_orb(hsv_file_path):
-    try:
-        return pickle.load(open(hsv_file_path, 'rb'))
-    except Exception as ex:
-        print('failed to load hsv pixel to orb map', ex)
-    return {}
 
 
 class OrbExtractor(object):
@@ -214,45 +180,3 @@ class SimilarityBoardExtractor(object):
 
     def get_similarity(self):
         return self.similarity
-
-
-def pixel_array_to_tuple(pixel):
-    # Converts an HSV pixel into a tuple used as a key
-    # don't need to store V, H/S is good enough
-    return (pixel[0], pixel[1])
-
-class PixelCompareBoardExtractor(object):
-    def __init__(self, hsv_pixels_to_orb, hsv_img):
-        self.hsv_pixels_to_orb = hsv_pixels_to_orb
-        self.hsv_img = hsv_img
-        self.processed = False
-        self.results = [['u' for x in range(6)] for y in range(5)]
-
-    def process(self):
-        oe = OrbExtractor(self.hsv_img)
-
-        for y, x in board_iterator():
-            orb_img = oe.get_orb_img(x, y)
-
-            detected_orb = self.process_orb(orb_img)
-            if detected_orb:
-                self.results[y][x] = detected_orb
-
-        self.processed = True
-
-    def process_orb(self, orb_img):
-        height, width, _ = orb_img.shape
-        for y in range(height):
-            for x in range(width):
-                pixel = orb_img[y][x]
-                key = pixel_array_to_tuple(pixel)
-                matched_orb = self.hsv_pixels_to_orb.get(key, None)
-                if matched_orb is not None:
-                    return matched_orb
-        return None
-
-    def get_board(self):
-        if not self.processed:
-            self.process()
-
-        return self.results
