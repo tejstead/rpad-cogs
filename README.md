@@ -38,6 +38,10 @@ Code should adhere to the [Google Python Style Guide](https://google.github.io/s
     * setuptools
     * google-cloud
     * google-api
+    * backoff
+    * dill
+    * prettytable
+    * ply
 ## Setting up the bot
 * Install Red - [Windows Install](https://twentysix26.github.io/Red-Docs/red_install_windows/) (or switch to whichever OS you want)
 * Create your bot account & have it join a private server with just you and the bot, for testing. Probably don't name it Miru to avoid confusion. This step is also explained in the above instructions.
@@ -46,8 +50,13 @@ Code should adhere to the [Google Python Style Guide](https://google.github.io/s
 * Fork this repo (you are probably already on the page, but if not [go here](https://github.com/nachoapps/rpad-cogs). You will need a GitHub account to do this. Click the button that says "Fork" in the upper-right-hand corner of the page.
 * Install Miru cogs - [Link to instructions](https://twentysix26.github.io/Red-Docs/red_getting_started/#community-cogs). Install your fork of it, not the original!
 * All cogs must be directly in the folder `Red-DiscordBot\cogs`, so if you aren't on Linux you will likely have to copy-paste the Python files into your fork manually any time you want to commit / make a pull request.
-* Some cogs will have cross dependencies. Check the command prompt that Miru is running from if you encounter any errors. If you forgot one of the dependencies covered above then you will have to restart the bot after fixing it.
-
+* If you forgot one of the dependencies covered above then you may have to restart the bot after fixing it, if the error doesn't go away immediately.
+* Some cogs will have cross dependencies on each other. Check the command prompt that Miru is running from if you encounter any errors.
+* Common dependencies include:
+    * rpaduitls
+    * padguide2
+    * padinfo
+    * padsearch
 # Puzzle and Dragons
 
 Most cogs here relate to the mobile game 'Puzzle and Dragons'. Data is sourced from the
