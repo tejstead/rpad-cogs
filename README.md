@@ -57,6 +57,7 @@ Code should adhere to the [Google Python Style Guide](https://google.github.io/s
     * padguide2
     * padinfo
     * padsearch
+* After you have done all of this, restart the bot again. Hopefully by now `^id ` should work!
 # Puzzle and Dragons
 
 Most cogs here relate to the mobile game 'Puzzle and Dragons'. Data is sourced from the
