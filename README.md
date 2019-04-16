@@ -32,7 +32,7 @@ VERSION = imp.load_source('version', os.path.join(here, 'src/%s/version.py' % PA
     * setuptools
     * google-cloud
     * google-api
-* Install Miru cogs - [Link](https://twentysix26.github.io/Red-Docs/red_getting_started/#community-cogs). Install your fork of it, not the original!
+* Install Miru cogs - [Link to instructions](https://twentysix26.github.io/Red-Docs/red_getting_started/#community-cogs). Install your fork of it, not the original!
 
 # Puzzle and Dragons
 
