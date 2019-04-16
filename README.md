@@ -53,7 +53,7 @@ Code should adhere to the [Google Python Style Guide](https://google.github.io/s
 * If you forgot one of the dependencies covered above then you may have to restart the bot after fixing it, if the error doesn't go away immediately.
 * Some cogs will have cross dependencies on each other. Check the command prompt that Miru is running from if you encounter any errors.
 * Common dependencies include:
-    * rpaduitls
+    * rpadutils
     * padguide2
     * padinfo
     * padsearch
