@@ -33,6 +33,7 @@ VERSION = imp.load_source('version', os.path.join(here, 'src/%s/version.py' % PA
     * google-cloud
     * google-api
 * Install Miru cogs - [Link to instructions](https://twentysix26.github.io/Red-Docs/red_getting_started/#community-cogs). Install your fork of it, not the original!
+* All cogs must be directly in the folder `Red-DiscordBot\cogs`, so if you aren't on Linux you will likely have to copy-paste the Python files into your fork manually any time you want to commit / make a pull request.
 
 # Puzzle and Dragons
 
