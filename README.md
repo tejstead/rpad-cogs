@@ -19,31 +19,20 @@ CHANGELOG = open(os.path.join(here, 'CHANGELOG.rst'), encoding='utf8').read()
 VERSION = imp.load_source('version', os.path.join(here, 'src/%s/version.py' % PACKAGE_NAME)).__version__
 ```
 * Open a command line in this same directory and run `py setup.py install`
-* You may have to install some other libraries, just use `pip install` or `py -m pip install` for those
-* Install Miru cogs - [Link](https://twentysix26.github.io/Red-Docs/red_getting_started/#community-cogs) install your fork of it, not the original!
-
-# Requirements
-
-Cogs here depend on one or more of the following packages. I haven't done a good job verifying
-this list.
-
-* python-dateutil
-* pytz
-* twython
-* feedparser
-* romkan 
-  + check out project from git
-  + update open calls in setup.py to include `encoding='utf8'`
-  + run setup.py install
-* tabulate
-* pypng
-* padtools
-* opencv-python
-* Pillow
-* setuptools
-* google-cloud
-* google-api
-
+* You may have to install some or all of the following libraries, just use `pip install` or `py -m pip install` in a command prompt for these (note this may be an incomplete list still):
+    * python-dateutil
+    * pytz
+    * twython
+    * feedparser
+    * tabulate
+    * pypng
+    * padtools
+    * opencv-python
+    * Pillow
+    * setuptools
+    * google-cloud
+    * google-api
+* Install Miru cogs - [Link](https://twentysix26.github.io/Red-Docs/red_getting_started/#community-cogs). Install your fork of it, not the original!
 
 # Puzzle and Dragons
 
