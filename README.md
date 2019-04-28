@@ -14,7 +14,8 @@ Code should adhere to the [Google Python Style Guide](https://google.github.io/s
 * Familiarize yourself with how to use a command prompt and Git Bash (if you can't do this you will have a baaaaaaad time) (though in Git all you have to do is git clone so you don't actually need to know everything)
 
 ## Installing Miru Dependencies
-* For Romanji/Kana conversion you will use Romkan. This is a bit tricky to install.
+* For Romanji/Kana conversion you will use Romkan. This is a bit tricky to install so we'll go over it first.
+    * If you want to skip this, you can locally comment out all calls to it, but this might be annoying when syncing your code if you're editing files that import it, so you should probably just do it. But if figuring this out is a barrier to entry to start actually coding, feel free to skip at least at the start.
     * git clone [this repo](https://github.com/soimort/python-romkan) into any folder you want.
     * Open setup.py in the text editor or IDE of your choice. Make the following replacement (basically add `encoding='utf8'` in 3 places):
     ```python
@@ -42,6 +43,8 @@ Code should adhere to the [Google Python Style Guide](https://google.github.io/s
     * dill
     * prettytable
     * ply
+    * aiohttp
+    * discord
 ## Setting up the bot
 * Install Red - [Windows Install](https://twentysix26.github.io/Red-Docs/red_install_windows/) (or switch to whichever OS you want)
 * Create your bot account & have it join a private server with just you and the bot, for testing. Probably don't name it Miru to avoid confusion. This step is also explained in the above instructions.
@@ -56,8 +59,15 @@ Code should adhere to the [Google Python Style Guide](https://google.github.io/s
     * rpadutils
     * padguide2
     * padinfo
-    * padsearch
 * After you have done all of this, restart the bot again. Hopefully by now `^id ` should work!
+
+## Other
+
+### Emoji
+* If you want emojis in `^id` commands, and you are setting this up for DEV PURPOSES ONLY, you can talk to tactical_retreat about getting your bot invited to the emoji servers. If you want to make your own separate Miru instance though, you're on your own for that.
+* Give t_r your bot's invite link & ask him for the server IDs
+* Then use `^padinfo setemojiservers` with the IDs he gives you. The main Miru server is one of them, you can get that ID yourself.
+
 # Puzzle and Dragons
 
 Most cogs here relate to the mobile game 'Puzzle and Dragons'. Data is sourced from the

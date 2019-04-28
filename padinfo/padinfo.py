@@ -99,17 +99,24 @@ class PadInfo:
         self.other_info_emoji = '\N{SCROLL}'
 
         self.historic_lookups_file_path = "data/padinfo/historic_lookups.json"
+        self.historic_lookups_file_path_id2 = "data/padinfo/historic_lookups_id2.json"
         if not dataIO.is_valid_json(self.historic_lookups_file_path):
             print("Creating empty historic_lookups.json...")
             dataIO.save_json(self.historic_lookups_file_path, {})
 
+        if not dataIO.is_valid_json(self.historic_lookups_file_path_id2):
+            print("Creating empty historic_lookups_id2.json...")
+            dataIO.save_json(self.historic_lookups_file_path_id2, {})
+        
         self.historic_lookups = dataIO.load_json(self.historic_lookups_file_path)
+        self.historic_lookups_id2 = dataIO.load_json(self.historic_lookups_file_path_id2)
 
     def __unload(self):
         # Manually nulling out database because the GC for cogs seems to be pretty shitty
         self.index_all = padguide2.empty_index()
         self.index_na = padguide2.empty_index()
         self.historic_lookups = {}
+        self.historic_lookups_id2 = {}
 
     async def reload_nicknames(self):
         await self.bot.wait_until_ready()
@@ -170,6 +177,23 @@ class PadInfo:
 
     async def _do_id(self, ctx, query: str, na_only=False):
         m, err, debug_info = self.findMonster(query, na_only=na_only)
+        if m is not None:
+            await self._do_idmenu(ctx, m, self.id_emoji)
+        else:
+            await self.bot.say(self.makeFailureMsg(err))
+
+    @commands.command(name="id2", pass_context=True)
+    async def _do_id2_all(self, ctx, *, query: str):
+        """Monster info (main tab)"""
+        await self._do_id2(ctx, query)
+    
+    @commands.command(name="id2na", pass_context=True)
+    async def _do_id2_na(self, ctx, *, query: str):
+        """Monster info (limited to NA monsters ONLY)"""
+        await self._do_id2(ctx, query, na_only=True)
+
+    async def _do_id2(self, ctx, query: str, na_only=False):
+        m, err, debug_info = self.findMonster2(query, na_only=na_only)
         if m is not None:
             await self._do_idmenu(ctx, m, self.id_emoji)
         else:
@@ -425,6 +449,22 @@ class PadInfo:
     def _findMonster(self, query, na_only=False):
         monster_index = self.index_na if na_only else self.index_all
         return monster_index.find_monster(query)
+
+    def findMonster2(self, query, na_only=False):
+        query = rmdiacritics(query)
+        nm, err, debug_info = self._findMonster2(query, na_only)
+        
+        monster_no = nm.monster_no if nm else -1
+        self.historic_lookups_id2[query] = monster_no
+        dataIO.save_json(self.historic_lookups_file_path_id2, self.historic_lookups_id2)
+        
+        m = self.get_monster_by_no(nm.monster_no) if nm else None
+        
+        return m, err, debug_info
+    
+    def _findMonster2(self, query, na_only=False):
+        monster_index = self.index_na if na_only else self.index_all
+        return monster_index.find_monster2(query)
 
     def map_awakenings_text(self, m):
         """Exported for use in other cogs"""

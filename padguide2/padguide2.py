@@ -2092,9 +2092,11 @@ class MonsterIndex(object):
                     nm.base_monster_no_na, nm.monster_no_na)
         named_monsters.sort(key=named_monsters_sort)
 
+        self.all_prefixes = set()
         self.all_entries = {}
         self.two_word_entries = {}
         for nm in named_monsters:
+            self.all_prefixes.update(nm.prefixes)
             for nickname in nm.final_nicknames:
                 self.all_entries[nickname] = nm
             for nickname in nm.final_two_word_nicknames:
@@ -2275,7 +2277,83 @@ class MonsterIndex(object):
 
         # couldn't find anything
         return None, "Could not find a match for: " + query, None
+    
+    
 
+    def find_monster2(self, query):
+        """Search with alternative method for resolving prefixes.
+        
+        Implements the lookup for id2, where you are allowed to specify multiple prefixes for a card.
+        All prefixes are required to be exactly matched by the card.
+        Follows a similar logic to the regular id but after each check, will remove any potential match that doesn't
+        contain every single specified prefix.
+        """
+        query = rpadutils.rmdiacritics(query).lower().strip()
+        # id search
+        if query.isdigit():
+            m = self.monster_no_na_to_named_monster.get(int(query))
+            if m is None:
+                return None, 'Looks like a monster ID but was not found', None
+            else:
+                return m, None, "ID lookup"
+        
+        # handle exact nickname match
+        if query in self.all_entries:
+            return self.all_entries[query], None, "Exact nickname"
+    
+        contains_jp = rpadutils.containsJp(query)
+        if len(query) < 2 and contains_jp:
+            return None, 'Japanese queries must be at least 2 characters', None
+        elif len(query) < 4 and not contains_jp:
+            return None, 'Your query must be at least 4 letters', None
+
+        # we want to look up only the main part of the query, and then verify that each result has the prefixes
+        # so break up the query into an array of prefixes, and a string (new_query) that will be the lookup
+        query_prefixes = []
+        parts_of_query = query.split()
+        new_query = ''
+        for i, part in enumerate(parts_of_query):
+            if part in self.all_prefixes:
+                query_prefixes.append(part)
+            else:
+                new_query = ' '.join(parts_of_query[i:])
+                break
+        
+        # if we don't actually have multiple prefixes, then default to using the regular id lookup
+        if len(query_prefixes) < 2:
+            return self.find_monster(query)
+        
+        matches = set()
+        
+        # first try to get matches from nicknames
+        for nickname, m in self.all_entries.items():
+            if new_query in nickname:
+                matches.add(m)
+        self.remove_potential_matches_without_all_prefixes(matches, query_prefixes)
+        
+        # if we don't have any candidates yet, pick a new method
+        if not len(matches):
+            # try matching on exact names next
+            for nickname, m in self.all_na_name_to_monsters.items():
+                if new_query in m.name_na.lower() or new_query in m.name_jp.lower():
+                    matches.add(m)
+            self.remove_potential_matches_without_all_prefixes(matches, query_prefixes)
+            
+        if len(matches):
+            return self.pickBestMonster(matches), None, None
+        return None, "Could not find a match for: " + query, None
+        
+    
+    # verify that potential matches do in fact have the prefixes that we want
+    def remove_potential_matches_without_all_prefixes(self, matches, query_prefixes):
+        to_remove = set()
+        for m in matches:
+            for prefix in query_prefixes:
+                if prefix not in m.prefixes:
+                    to_remove.add(m)
+                    break
+        matches.difference_update(to_remove)
+    
     def pickBestMonster(self, named_monster_list):
         return max(named_monster_list, key=lambda x: (not x.is_low_priority, x.rarity, x.monster_no_na))
 
