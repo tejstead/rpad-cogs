@@ -32,6 +32,7 @@ class CmCard(object):
         row = [x.strip() for x in csv_row]
         self.name = row[0]
         self.name_clean = clean_name_for_query(self.name)
+        self.expansion = row[12]
         self.rarity = row[1]
         self.monspell = row[2]
         self.cost = row[3]
