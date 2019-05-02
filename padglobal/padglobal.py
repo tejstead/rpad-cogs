@@ -47,7 +47,7 @@ PADGLOBAL_COG = None
 
 
 def is_padglobal_admin_check(ctx):
-    return PADGLOBAL_COG.settings.checkAdmin(ctx.message.author.id)
+    return PADGLOBAL_COG.settings.checkAdmin(ctx.message.author.id) or checks.is_owner_check(ctx)
 
 
 def is_padglobal_admin():
