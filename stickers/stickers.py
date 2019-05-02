@@ -17,7 +17,7 @@ STICKER_COG = None
 
 
 def is_sticker_admin_check(ctx):
-    return STICKER_COG.settings.checkAdmin(ctx.message.author.id)
+    return STICKER_COG.settings.checkAdmin(ctx.message.author.id) or checks.is_owner_check(ctx)
 
 
 def is_sticker_admin():
