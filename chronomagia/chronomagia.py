@@ -144,6 +144,9 @@ def make_embed(c: CmCard):
     if c.monspell == 'Monster':
         mtype = '\n{}/{} '.format(c.type1, c.type2) if c.type2 else '{} '.format(c.type1)
         embed.add_field(name=mtype, value='Atk {}\nDef {}'.format(c.atk, c.defn), inline=True)
+        if c.expansion:
+            embed.add_field(name='Expansion', value=c.expansion, inline=False)
+            
         if c.atkeff:
             embed.add_field(name='Attack Effect', value=c.atkeff, inline=False)
 
