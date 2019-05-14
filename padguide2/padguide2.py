@@ -48,9 +48,11 @@ TRANSLATEDNAMES_EXPORT_PATH = 'data/padguide2/translated_names.json'
 SHEETS_PATTERN = 'https://docs.google.com/spreadsheets/d/1EoZJ3w5xsXZ67kmarLE4vfrZSIIIAfj04HXeZVST3eY/pub?gid={}&single=true&output=csv'
 GROUP_BASENAMES_OVERRIDES_SHEET = SHEETS_PATTERN.format('2070615818')
 NICKNAME_OVERRIDES_SHEET = SHEETS_PATTERN.format('0')
+PANTHNAME_OVERRIDES_SHEET = SHEETS_PATTERN.format('959933643')
 
 NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames')
 BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
+PANTHNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('panthnames')
 
 
 class PadGuide2(object):
@@ -98,6 +100,8 @@ class PadGuide2(object):
 
         # An int -> set(string), monster_id_na to set of basename overrides
         self.basename_overrides = defaultdict(set)
+        
+        self.panthname_overrides = defaultdict(set)
 
         self.database = PgRawDatabase(skip_load=True)
 
@@ -115,7 +119,7 @@ class PadGuide2(object):
 
     def create_index(self, accept_filter=None):
         """Exported function that allows a client cog to create a monster index"""
-        return MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, accept_filter=accept_filter)
+        return MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, self.panthname_overrides, accept_filter=accept_filter)
 
     def get_monster_by_no(self, monster_no: int):
         """Exported function that allows a client cog to get a full PgMonster by monster_no"""
@@ -172,6 +176,7 @@ class PadGuide2(object):
     async def reload_config_files(self):
         os.remove(NICKNAME_FILE_PATTERN)
         os.remove(BASENAME_FILE_PATTERN)
+        os.remove(PANTHNAME_FILE_PATTERN)
         await self.download_and_refresh_nicknames()
 
     async def translate_names(self):
@@ -195,6 +200,7 @@ class PadGuide2(object):
 
         nickname_overrides = self._csv_to_tuples(NICKNAME_FILE_PATTERN)
         basename_overrides = self._csv_to_tuples(BASENAME_FILE_PATTERN)
+        panthname_overrides = self._csv_to_tuples(PANTHNAME_FILE_PATTERN)
 
         self.nickname_overrides = {x[0].lower(): int(x[1])
                                    for x in nickname_overrides if x[1].isdigit()}
@@ -204,13 +210,15 @@ class PadGuide2(object):
             k, v = x
             if k.isdigit():
                 self.basename_overrides[int(k)].add(v.lower())
+        
+        self.panthname_overrides = {x[0].lower(): x[1].lower() for x in panthname_overrides}
 
         self.database = PgRawDatabase(data_dir=self.settings.dataDir())
-        self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides)
-
+        self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, self.panthname_overrides)
+        
         self.write_monster_attr_data()
         self.write_monster_computed_names()
-
+    
     def write_monster_computed_names(self):
         results = {}
         for name, nm in self.index.all_entries.items():
@@ -314,6 +322,8 @@ class PadGuide2(object):
             NICKNAME_FILE_PATTERN, NICKNAME_OVERRIDES_SHEET, overrides_expiry_secs)
         await rpadutils.makeAsyncCachedPlainRequest(
             BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, overrides_expiry_secs)
+        await rpadutils.makeAsyncCachedPlainRequest(
+            PANTHNAME_FILE_PATTERN, PANTHNAME_OVERRIDES_SHEET, overrides_expiry_secs)
 
     @commands.group(pass_context=True)
     @checks.is_owner()
@@ -2031,11 +2041,11 @@ def float_or_none(maybe_float: str):
 
 
 def empty_index():
-    return MonsterIndex(PgRawDatabase(skip_load=True), {}, {})
+    return MonsterIndex(PgRawDatabase(skip_load=True), {}, {}, {})
 
 
 class MonsterIndex(object):
-    def __init__(self, monster_database, nickname_overrides, basename_overrides, accept_filter=None):
+    def __init__(self, monster_database, nickname_overrides, basename_overrides, panthname_overrides, accept_filter=None):
         # Important not to hold onto anything except IDs here so we don't leak memory
         monster_groups = monster_database.grouped_monsters
 
@@ -2091,8 +2101,22 @@ class MonsterIndex(object):
             return (not nm.is_low_priority, nm.group_size, -1 *
                     nm.base_monster_no_na, nm.monster_no_na)
         named_monsters.sort(key=named_monsters_sort)
+        
+        # set up a set of all pantheon names, a set of all pantheon nicknames, and a dictionary of nickname -> full name
+        # later we will set up a dictionary of pantheon full name -> monsters
+        self.all_pantheon_names = set()
+        self.pantheon_nick_to_name = {}
+        self.all_pantheon_nicknames = set()
+        for k in panthname_overrides.keys():
+            v = panthname_overrides[k]
+            self.pantheon_nick_to_name[k.lower()] = v.lower()
+            self.pantheon_nick_to_name[v.lower()] = v.lower()
+            self.all_pantheon_nicknames.add(k.lower())
+            self.all_pantheon_nicknames.add(v.lower())
+            self.all_pantheon_names.add(v.lower())
 
         self.all_prefixes = set()
+        self.pantheons = defaultdict(set)
         self.all_entries = {}
         self.two_word_entries = {}
         for nm in named_monsters:
@@ -2101,6 +2125,10 @@ class MonsterIndex(object):
                 self.all_entries[nickname] = nm
             for nickname in nm.final_two_word_nicknames:
                 self.two_word_entries[nickname] = nm
+            if nm.series:
+                for pantheon in self.all_pantheon_names:
+                    if pantheon.lower() == nm.series.lower():
+                        self.pantheons[pantheon.lower()].add(nm)
 
         self.all_monsters = named_monsters
         self.all_na_name_to_monsters = {m.name_na.lower(): m for m in named_monsters}
@@ -2111,6 +2139,7 @@ class MonsterIndex(object):
             nm = self.monster_no_na_to_named_monster.get(monster_no_na)
             if nm:
                 self.all_entries[nickname] = nm
+        
 
     def init_index(self):
         pass
@@ -2279,7 +2308,6 @@ class MonsterIndex(object):
         return None, "Could not find a match for: " + query, None
     
     
-
     def find_monster2(self, query):
         """Search with alternative method for resolving prefixes.
         
@@ -2320,43 +2348,75 @@ class MonsterIndex(object):
                 break
         
         # if we don't actually have multiple prefixes, then default to using the regular id lookup
-        if len(query_prefixes) < 2:
+        if len(query_prefixes) < 1:
             return self.find_monster(query)
         
-        matches = set()
+        matches = PotentialMatches()
         
         # first try to get matches from nicknames
         for nickname, m in self.all_entries.items():
             if new_query in nickname:
                 matches.add(m)
-        self.remove_potential_matches_without_all_prefixes(matches, query_prefixes)
+        matches.remove_potential_matches_without_all_prefixes(query_prefixes)
         
         # if we don't have any candidates yet, pick a new method
-        if not len(matches):
+        if not matches.length():
             # try matching on exact names next
             for nickname, m in self.all_na_name_to_monsters.items():
                 if new_query in m.name_na.lower() or new_query in m.name_jp.lower():
                     matches.add(m)
-            self.remove_potential_matches_without_all_prefixes(matches, query_prefixes)
-            
-        if len(matches):
-            return self.pickBestMonster(matches), None, None
-        return None, "Could not find a match for: " + query, None
+            matches.remove_potential_matches_without_all_prefixes(query_prefixes)
         
-    
-    # verify that potential matches do in fact have the prefixes that we want
-    def remove_potential_matches_without_all_prefixes(self, matches, query_prefixes):
-        to_remove = set()
-        for m in matches:
-            for prefix in query_prefixes:
-                if prefix not in m.prefixes:
-                    to_remove.add(m)
-                    break
-        matches.difference_update(to_remove)
+        # check for exact match on pantheon name but only if needed
+        if not matches.length():
+            for pantheon in self.all_pantheon_nicknames:
+                if new_query == pantheon.lower():
+                    matches.get_monsters_from_potential_pantheon_match(pantheon, self.pantheon_nick_to_name, self.pantheons)
+            matches.remove_potential_matches_without_all_prefixes(query_prefixes)
+
+        # check for any match on pantheon name, again but only if needed
+        if not matches.length():
+            for pantheon in self.all_pantheon_nicknames:
+                if new_query in pantheon.lower():
+                    matches.get_monsters_from_potential_pantheon_match(pantheon, self.pantheon_nick_to_name, self.pantheons)
+            matches.remove_potential_matches_without_all_prefixes(query_prefixes)
+        
+        if matches.length():
+            return matches.pick_best_monster(), None, None
+        return None, "Could not find a match for: " + query, None
     
     def pickBestMonster(self, named_monster_list):
         return max(named_monster_list, key=lambda x: (not x.is_low_priority, x.rarity, x.monster_no_na))
 
+class PotentialMatches(object):
+    def __init__(self):
+        self.match_list = set()
+    
+    def add(self, m):
+        self.match_list.add(m)
+    
+    def update(self, monster_list):
+        self.match_list.update(monster_list)
+    
+    def length(self):
+        return len(self.match_list)
+    
+    def remove_potential_matches_without_all_prefixes(self, query_prefixes):
+        to_remove = set()
+        for m in self.match_list:
+            for prefix in query_prefixes:
+                if prefix not in m.prefixes:
+                    to_remove.add(m)
+                    break
+        self.match_list.difference_update(to_remove)
+    
+    def get_monsters_from_potential_pantheon_match(self, pantheon, pantheon_nick_to_name, pantheons):
+        full_name = pantheon_nick_to_name[pantheon]
+        self.update(pantheons[full_name])
+    
+    def pick_best_monster(self):
+        return max(self.match_list, key=lambda x: (not x.is_low_priority, x.rarity, x.monster_no_na))
+    
 
 class NamedMonsterGroup(object):
     def __init__(self, monster_group: MonsterGroup, basename_overrides: list):
@@ -2456,6 +2516,11 @@ class NamedMonster(object):
         # This stuff is important for nickname generation
         self.group_basenames = monster_group.basenames
         self.prefixes = prefixes
+        
+        # Pantheon
+        series = monster.series
+        if series:
+            self.series = series.name
 
         # Data used to determine how to rank the nicknames
         self.is_low_priority = monster_group.is_low_priority or monster.is_equip
@@ -2507,7 +2572,6 @@ class NamedMonster(object):
             for prefix in self.prefixes:
                 self.final_two_word_nicknames.add(prefix + basename)
                 self.final_two_word_nicknames.add(prefix + ' ' + basename)
-
 
 def compute_killers(*types):
     if 'Balance' in types:
