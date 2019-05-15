@@ -216,7 +216,7 @@ class PadGuide2(object):
 
         self.database = PgRawDatabase(data_dir=self.settings.dataDir())
         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, self.panthname_overrides)
-        
+
         self.write_monster_attr_data()
         self.write_monster_computed_names()
 
@@ -2106,7 +2106,7 @@ class MonsterIndex(object):
         # set up a set of all pantheon names, a set of all pantheon nicknames, and a dictionary of nickname -> full name
         # later we will set up a dictionary of pantheon full name -> monsters
         self.all_pantheon_names = set()
-        self.all_pantheon_names.update({v for _, v in panthname_overrides.items()})
+        self.all_pantheon_names.update(panthname_overrides.values())
         
         self.pantheon_nick_to_name = panthname_overrides
         self.pantheon_nick_to_name.update(panthname_overrides)
