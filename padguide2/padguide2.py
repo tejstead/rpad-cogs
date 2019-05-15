@@ -212,13 +212,14 @@ class PadGuide2(object):
                 self.basename_overrides[int(k)].add(v.lower())
         
         self.panthname_overrides = {x[0].lower(): x[1].lower() for x in panthname_overrides}
+        self.panthname_overrides.update({v: v for _, v in self.panthname_overrides.items()})
 
         self.database = PgRawDatabase(data_dir=self.settings.dataDir())
         self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, self.panthname_overrides)
         
         self.write_monster_attr_data()
         self.write_monster_computed_names()
-    
+
     def write_monster_computed_names(self):
         results = {}
         for name, nm in self.index.all_entries.items():
@@ -2105,15 +2106,13 @@ class MonsterIndex(object):
         # set up a set of all pantheon names, a set of all pantheon nicknames, and a dictionary of nickname -> full name
         # later we will set up a dictionary of pantheon full name -> monsters
         self.all_pantheon_names = set()
-        self.pantheon_nick_to_name = {}
+        self.all_pantheon_names.update({v for _, v in panthname_overrides.items()})
+        
+        self.pantheon_nick_to_name = panthname_overrides
+        self.pantheon_nick_to_name.update(panthname_overrides)
+        
         self.all_pantheon_nicknames = set()
-        for k in panthname_overrides.keys():
-            v = panthname_overrides[k]
-            self.pantheon_nick_to_name[k.lower()] = v.lower()
-            self.pantheon_nick_to_name[v.lower()] = v.lower()
-            self.all_pantheon_nicknames.add(k.lower())
-            self.all_pantheon_nicknames.add(v.lower())
-            self.all_pantheon_names.add(v.lower())
+        self.all_pantheon_nicknames.update(panthname_overrides.keys())
 
         self.all_prefixes = set()
         self.pantheons = defaultdict(set)
@@ -2347,7 +2346,7 @@ class MonsterIndex(object):
                 new_query = ' '.join(parts_of_query[i:])
                 break
         
-        # if we don't actually have multiple prefixes, then default to using the regular id lookup
+        # if we don't have any prefixes, then default to using the regular id lookup
         if len(query_prefixes) < 1:
             return self.find_monster(query)
         
@@ -2518,9 +2517,7 @@ class NamedMonster(object):
         self.prefixes = prefixes
         
         # Pantheon
-        series = monster.series
-        if series:
-            self.series = series.name
+        self.series = monster.series.name if monster.series else None
 
         # Data used to determine how to rank the nicknames
         self.is_low_priority = monster_group.is_low_priority or monster.is_equip
