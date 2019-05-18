@@ -971,6 +971,10 @@ AWAKENING_NAME_MAP_RPAD = {
     'Enhanced Team Attack': 'teamboost_atk',
     'Enhanced Team RCV': 'teamboost_rcv',
 
+    'Reduced Attack': 'reduce_atk',
+    'Reduced HP': 'reduce_hp',
+    'Reduced Heal': 'reduce_rcv',
+
     'God Killer': 'killer_god',
     'Dragon Killer': 'killer_dragon',
     'Devil Killer': 'killer_devil',
