@@ -1065,6 +1065,10 @@ AWAKENING_NAME_MAP = {
     'Enhanced Team Attack': 'TEAM-ATK',
     'Enhanced Team RCV': 'TEAM-RCV',
 
+    'Reduced HP': '-HP',
+    'Reduced Attack': '-ATK',
+    'Reduced Heal': '-RCV',
+
     'Auto-Recover': 'AUTO-RECOVER',
     'Skill Boost': 'SB',
     'Resistance-Skill Bind': 'SBR',
