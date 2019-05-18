@@ -973,7 +973,7 @@ AWAKENING_NAME_MAP_RPAD = {
 
     'Reduced Attack': 'reduce_atk',
     'Reduced HP': 'reduce_hp',
-    'Reduced Heal': 'reduce_rcv',
+    'Reduced RCV': 'reduce_rcv',
 
     'God Killer': 'killer_god',
     'Dragon Killer': 'killer_dragon',
@@ -1067,7 +1067,7 @@ AWAKENING_NAME_MAP = {
 
     'Reduced HP': '-HP',
     'Reduced Attack': '-ATK',
-    'Reduced Heal': '-RCV',
+    'Reduced RCV': '-RCV',
 
     'Auto-Recover': 'AUTO-RECOVER',
     'Skill Boost': 'SB',
