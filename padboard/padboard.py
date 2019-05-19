@@ -19,7 +19,6 @@ from .utils.chat_formatting import *
 
 
 DATA_DIR = os.path.join('data', 'padboard')
-ORB_DATA_DIR = os.path.join(DATA_DIR, 'orb_images')
 
 DAWNGLARE_BOARD_TEMPLATE = "https://candyninja001.github.io/Puzzled/?patt={}"
 MIRUGLARE_BOARD_TEMPLATE = "https://storage.googleapis.com/mirubot/websites/padsim/index.html?patt={}"
@@ -29,7 +28,6 @@ class PadBoard:
     def __init__(self, bot):
         self.bot = bot
         self.logs = defaultdict(lambda: deque(maxlen=1))
-        self.orb_type_to_images = padvision.load_orb_images_dir_to_map(ORB_DATA_DIR)
 
     async def log_message(self, message):
         url = rpadutils.extract_image_url(message)
@@ -43,42 +41,6 @@ class PadBoard:
         if context.invoked_subcommand is None:
             await send_cmd_help(context)
 
-    def clear_training_folder(self):
-        for f in os.listdir(ORB_DATA_DIR):
-            file_path = os.path.join(ORB_DATA_DIR, f)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            except Exception as e:
-                print(e)
-
-
-    @padboard.command(pass_context=True)
-    @checks.is_owner()
-    async def downloadtraining(self, ctx, training_zip_url):
-        """Replaces the current training set from a new zip file.
-        Current path to zip file is https://drive.google.com/uc?export=download&id=0B4BJOUE5gL0UTF9xZnJkVHJYWEU
-        """
-        await self.bot.say(inline('starting download'))
-        async with aiohttp.get(training_zip_url) as r:
-            if r.status != 200:
-                await self.bot.say(inline('download failed'))
-                return
-
-            zipfile_bytes = await r.read()
-            zip_file = ZipFile(BytesIO(zipfile_bytes))
-            files = zip_file.namelist()
-
-            if len(files) == 0:
-                await self.bot.say(inline('empty zip file?'))
-                return
-
-            await self.bot.say(box('deleting existing files and unzipping files: {}'.format(len(files))))
-            self.clear_training_folder()
-            zip_file.extractall(ORB_DATA_DIR)
-            await self.bot.say(inline('done extracting'))
-            self.orb_type_to_images = padvision.load_orb_images_dir_to_map(ORB_DATA_DIR)
-            await self.bot.say(inline('done reloading'))
 
     def find_image(self, user_id):
         urls = list(self.logs[user_id])
@@ -105,21 +67,15 @@ class PadBoard:
         if not image_data:
             return
 
-        img_board = self.classify(image_data)
         img_board_nc = self.nc_classify(image_data)
 
-        board_text = ''.join([''.join(r) for r in img_board])
         board_text_nc = ''.join([''.join(r) for r in img_board_nc])
         # Convert O (used by padvision code) to X (used by Puzzled for bombs)
-        board_text = board_text.replace('o', 'x')
         board_text_nc = board_text_nc.replace('o', 'x')
-        img_url = DAWNGLARE_BOARD_TEMPLATE.format(board_text)
-        img_url2 = MIRUGLARE_BOARD_TEMPLATE.format(board_text)
+        img_url = DAWNGLARE_BOARD_TEMPLATE.format(board_text_nc)
+        img_url2 = MIRUGLARE_BOARD_TEMPLATE.format(board_text_nc)
 
         msg = '{}\n{}'.format(img_url, img_url2)
-        if board_text != board_text_nc:
-            img_url = DAWNGLARE_BOARD_TEMPLATE.format(board_text_nc)
-            msg += '\nThe alternate classifier disagreed, compare against\n{}'.format(img_url)
 
         await self.bot.say(msg)
 
@@ -144,12 +100,6 @@ class PadBoard:
 
         return image_data
 
-    def classify(self, image_data):
-        nparr = np.fromstring(image_data, np.uint8)
-        img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        img_extractor = padvision.SimilarityBoardExtractor(self.orb_type_to_images, img_np)
-        return img_extractor.get_board()
-
     def nc_classify(self, image_data):
         nparr = np.fromstring(image_data, np.uint8)
         img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -160,8 +110,6 @@ class PadBoard:
 def check_folder():
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
-    if not os.path.exists(ORB_DATA_DIR):
-        os.makedirs(ORB_DATA_DIR)
 
 
 def check_file():
