@@ -1,6 +1,3 @@
-from collections import defaultdict
-import os
-import cv2
 import PIL.Image
 import io
 import traceback
@@ -27,63 +24,6 @@ def board_iterator():
     for y in range(5):
         for x in range(6):
             yield y, x
-
-
-def dbg_display(img):
-    cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-    cv2.imshow('image', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-# Compare two images by getting the L2 error (square-root of sum of squared error).
-def getL2Err(A, B):
-    # Calculate the L2 relative error between images.
-    errorL2 = cv2.norm(A, B, cv2.NORM_L2);
-    # Convert to a reasonable scale, since L2 error is summed across all pixels of the image.
-    return errorL2 / (100 * 100);
-
-# Compare two images by getting the L2 error (square-root of sum of squared error).
-def getL2ErrThresholded(A, B):
-    A = cv2.cvtColor(A, cv2.COLOR_BGR2GRAY)
-    B = cv2.cvtColor(B, cv2.COLOR_BGR2GRAY)
-    A = cv2.adaptiveThreshold(A, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 3)
-    B = cv2.adaptiveThreshold(B, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 3)
-
-    # Calculate the L2 relative error between images.
-    errorL2 = cv2.norm(A, B, cv2.NORM_L2);
-    # Convert to a reasonable scale, since L2 error is summed across all pixels of the image.
-    return errorL2 / (100 * 100);
-
-def resizeOrbImg(img):
-    height, width, _ = img.shape
-    if height < ORB_IMG_SIZE or width < ORB_IMG_SIZE:
-        return cv2.resize(img, (ORB_IMG_SIZE, ORB_IMG_SIZE), interpolation=cv2.INTER_CUBIC)
-    elif height > ORB_IMG_SIZE or width > ORB_IMG_SIZE:
-        return cv2.resize(img, (ORB_IMG_SIZE, ORB_IMG_SIZE), interpolation=cv2.INTER_AREA)
-    else:
-        return img
-
-def find_best_match(orb_img, orb_type_to_images, similarity_fn):
-    best_match = 'u'
-    best_match_sim = 99999
-    for orb_type, image_list in orb_type_to_images.items():
-        for i in image_list:
-            sim = similarity_fn(orb_img, i)
-            if sim < best_match_sim:
-                best_match = orb_type
-                best_match_sim = sim
-    return best_match, best_match_sim
-
-def load_orb_images_dir_to_map(orb_image_dir):
-    orb_type_to_images = defaultdict(list)
-
-    for f in os.listdir(orb_image_dir):
-        img = cv2.imread('{}/{}'.format(orb_image_dir, f), cv2.IMREAD_COLOR)
-        img = resizeOrbImg(img)
-        orb_type = f[0]
-        orb_type_to_images[orb_type].append(img)
-
-    return orb_type_to_images
 
 
 class OrbExtractor(object):
@@ -152,34 +92,6 @@ class OrbExtractor(object):
     def get_orb_img(self, x, y):
         return self.img[self.get_orb_coords(x, y)]
 
-
-class SimilarityBoardExtractor(object):
-    def __init__(self, orb_type_to_images, img):
-        self.orb_type_to_images = orb_type_to_images
-        self.img = img
-        self.processed = False
-        self.results = [['u' for x in range(6)] for y in range(5)]
-        self.similarity = [[0 for x in range(6)] for y in range(5)]
-
-    def process(self):
-        oe = OrbExtractor(self.img)
-
-        for y, x in board_iterator():
-            orb_img = oe.get_orb_img(x, y)
-            orb_img = resizeOrbImg(orb_img)
-
-            best_match, best_match_sim = find_best_match(orb_img, self.orb_type_to_images, getL2ErrThresholded)
-            self.results[y][x] = best_match
-            self.similarity[y][x] = best_match_sim
-
-    def get_board(self):
-        if not self.processed:
-            self.process()
-            self.processed = True
-        return self.results
-
-    def get_similarity(self):
-        return self.similarity
 
 
 nn_orb_types = [
