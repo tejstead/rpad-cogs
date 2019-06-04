@@ -8,7 +8,7 @@ import aiohttp
 import cv2
 import discord
 from discord.ext import commands
-import np
+import numpy as np
 
 from __main__ import send_cmd_help
 
