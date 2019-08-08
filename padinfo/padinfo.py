@@ -1041,6 +1041,12 @@ AWAKENING_NAME_MAP_RPAD = {
     'Combo Orb': 'orb_combo',
     'Skill Voice': 'misc_voice',
     'Dungeon Bonus': 'misc_dungeonbonus',
+
+    'Resistance-Dark＋': 'res_blind_super',
+    'Resistance-Jammer＋': 'res_jammer_super',
+    'Resistance-Poison＋': 'res_poison_super',
+    'Jammer Orb’s Blessing': 'misc_jammerboost',
+    'Poison Orb’s Blessing': 'misc_poisonboost',
 }
 
 AWAKENING_NAME_MAP = {
