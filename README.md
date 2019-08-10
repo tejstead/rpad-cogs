@@ -2,9 +2,7 @@
 
 Cogs developed for Miru Bot.
 
-This codebase is a mess right now. I'm working on cleaning it up, promise =)
-
-Code should adhere to the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html)
+Code should be pep8 formatted with a 100 character line limit.
 
 # Setting up your own Miru instance for contributing code
 
