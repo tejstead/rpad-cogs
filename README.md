@@ -57,6 +57,7 @@ Code should be pep8 formatted with a 100 character line limit.
     * rpadutils
     * padguide2
     * padinfo
+* Note that when you edit cogs with dependencies, you might need to do multiple reloads. For example, if updating padguide2, you will need to reload padinfo as well.
 * After you have done all of this, restart the bot again. Hopefully by now `^id ` should work!
 
 ## Other
