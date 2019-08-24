@@ -358,6 +358,19 @@ class PadGlobal:
         self.settings.setBoards(command)
         await self.bot.say("PAD command set to boards.")
 
+    @padglobal.command(pass_context=True)
+    async def checktype(self, ctx, command: str):
+        """Checks if a command is board, glossary, or guide"""
+        command = command.lower()
+        if command in self.settings.boards():
+            await self.bot.say('{} is a board.'.format(command))
+        elif command in self.settings.faq():
+            await self.bot.say('{} is a FAQ.'.format(command))
+        elif command in self.c_commands:
+            await self.bot.say('{} is a general padglobal command.'.format(command))
+        else:
+            await self.bot.say('{} is not a padglobal command. It might be a meme or a custom command.'.format(command))
+
     @commands.command(pass_context=True)
     async def pad(self, ctx):
         """Shows PAD global command list"""
