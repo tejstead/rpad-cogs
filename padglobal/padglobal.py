@@ -583,7 +583,7 @@ class PadGlobal:
         if term:
             term_new, definition = self.lookup_boss(term)
             if definition:
-                if term_new.lower() != term:
+                if term_new != term.lower():
                     await self.bot.say('No entry for {} found, corrected to {}'.format(term, term_new))
                 await self.bot.say(definition)
             else:
