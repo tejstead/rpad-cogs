@@ -27,6 +27,7 @@ PAD Global Commands
 ^padfaq   : FAQ command list
 ^boards   : optimal boards
 ^glossary : common PAD definitions
+^boss     : boss mechanics
 ^which    : which monster evo info
 """
 
@@ -90,6 +91,7 @@ class PadGlobal:
         faq = {k: v for k, v in self.c_commands.items() if k in self.settings.faq()}
         boards = {k: v for k, v in self.c_commands.items() if k in self.settings.boards()}
         glossary = self.settings.glossary()
+        bosses = self.settings.boss()
         which = self.settings.which()
         dungeon_guide = self.settings.dungeonGuide()
         leader_guide = self.settings.leaderGuide()
@@ -99,6 +101,7 @@ class PadGlobal:
             'faq': faq,
             'boards': boards,
             'glossary': glossary,
+            'boss': bosses,
             'which': which,
             'dungeon_guide': dungeon_guide,
             'leader_guide': leader_guide,
@@ -360,7 +363,7 @@ class PadGlobal:
 
     @padglobal.command(pass_context=True)
     async def checktype(self, ctx, command: str):
-        """Checks if a command is board, glossary, or guide"""
+        """Checks if a command is board, FAQ, or general"""
         command = command.lower()
         if command in self.settings.boards():
             await self.bot.say('{} is a board.'.format(command))
@@ -570,6 +573,69 @@ class PadGlobal:
             return
 
         self.settings.rmGlossary(term)
+        await self.bot.say("done")
+
+    @commands.command(pass_context=True)
+    async def boss(self, ctx, *, term: str=None):
+        """Shows boss skill entries"""
+        if await self._check_disabled(ctx):
+            return
+        if term:
+            term_new, definition = self.lookup_boss(term)
+            if definition:
+                if term_new.lower() != term:
+                    await self.bot.say('No entry for {} found, corrected to {}'.format(term, term_new))
+                await self.bot.say(definition)
+            else:
+                await self.bot.say(inline('No mechanics found'))
+            return
+        msg = self.boss_to_text()
+        for page in pagify(msg):
+            await self.bot.whisper(page)
+
+    def lookup_boss(self, term):
+        bosses = self.settings.boss()
+        term = term.lower()
+        definition = bosses.get(term, None)
+        if definition:
+            return term, definition
+        matches = self._get_corrected_cmds(term, bosses.keys())
+
+        if not matches:
+            matches = difflib.get_close_matches(term, bosses.keys(), n=1, cutoff=.8)
+
+        if not matches:
+            return term, None
+        else:
+            term = matches[0]
+            return term, bosses[term]
+
+    def boss_to_text(self):
+        bosses = self.settings.boss()
+        msg = '__**PAD Boss Mechanics terms (also check out ^pad / ^padfaq / ^boards / ^which /^glossary)**__'
+        for term in sorted(bosses.keys()):
+            definition = bosses[term]
+            msg += '\n**{}**\n{}'.format(term, definition)
+        return msg
+
+    @padglobal.command(pass_context=True)
+    async def addboss(self, ctx, term, *, definition):
+        """Adds a set of boss mechanics.
+        If you want to use a multiple word boss name, enclose it in quotes."""
+        term = term.lower()
+        op = 'EDITED' if term in self.settings.boss() else 'ADDED'
+        self.settings.addBoss(term, definition)
+        await self.bot.say("PAD boss mechanics successfully {}.".format(op))
+
+    @padglobal.command(pass_context=True)
+    async def rmboss(self, ctx, *, term):
+        """Adds a set of boss mechanics."""
+        term = term.lower()
+        if term not in self.settings.boss():
+            await self.bot.say("Glossary item doesn't exist.")
+            return
+
+        self.settings.rmBoss(term)
         await self.bot.say("done")
 
     @commands.command(pass_context=True)
@@ -1047,6 +1113,7 @@ class PadGlobalSettings(CogSettings):
             'boards': [],
             'glossary': {},
             'which': {},
+            'boss': {},
             'disabled_servers': [],
         }
         return config
@@ -1092,6 +1159,10 @@ class PadGlobalSettings(CogSettings):
         self.clearCmd(cmd)
         self.save_settings()
 
+    def setBoss(self, cmd):
+        self.clearCmd(cmd)
+        self.save_settings()
+
     def setFaq(self, cmd):
         self.clearCmd(cmd)
         self.faq().append(cmd)
@@ -1116,6 +1187,22 @@ class PadGlobalSettings(CogSettings):
         glossary = self.glossary()
         if term in glossary:
             glossary.pop(term)
+            self.save_settings()
+
+    def boss(self):
+        key = 'boss'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = {}
+        return self.bot_settings[key]
+
+    def addBoss(self, term, definition):
+        self.boss()[term] = definition
+        self.save_settings()
+
+    def rmBoss(self, term):
+        boss = self.boss()
+        if term in boss:
+            boss.pop(term)
             self.save_settings()
 
     def which(self):
