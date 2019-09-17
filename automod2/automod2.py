@@ -326,7 +326,9 @@ class AutoMod2:
     async def autoemojis(self, ctx, key: str = None):
         """Will automatically add a set of emojis to all messages sent in this channel.
 
-        Currently supported: tips"""
+        Currently supported: tips
+
+        Include the text [noemojis] to suppress emoji addition"""
         if not key:
             self.settings.setAutoEmojis(ctx, None)
             await self.bot.say(inline('Auto emojis cleared'))
@@ -342,6 +344,8 @@ class AutoMod2:
         ctx = CtxWrapper(message, self.bot)
         key = self.settings.getAutoEmojis(ctx)
         if not key:
+            return
+        if '[noemojis]' in message.content:
             return
         emoji_list = EMOJIS[key]
         for emoji in emoji_list:
