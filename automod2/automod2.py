@@ -26,7 +26,6 @@ from .utils import checks
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
 
-
 LOGS_PER_CHANNEL_USER = 5
 
 AUTOMOD_HELP = """
@@ -71,7 +70,9 @@ You can see the configuration for the server using [p]automod2 list
 
 You can also prevent users from spamming images using [p]automod2 imagelimit
 """
-
+EMOJIS = {
+    'tips': ['\N{THUMBS UP SIGN}', '\N{THUMBS DOWN SIGN}', '\N{EYES}']
+}
 
 def linked_img_count(message):
     return len(message.embeds) + len(message.attachments)
@@ -188,7 +189,8 @@ class AutoMod2:
             whitelists = config['whitelist']
             blacklists = config['blacklist']
             image_limit = config.get('image_limit', 0)
-            if len(whitelists + blacklists) + image_limit == 0:
+            auto_emojis_key = config.get('auto_emojis', None)
+            if len(whitelists + blacklists) + image_limit == 0 and not auto_emojis_key:
                 continue
 
             output += '\n#{}'.format(channel.name)
@@ -199,6 +201,7 @@ class AutoMod2:
             for name in blacklists:
                 output += '\n\t\t{}'.format(name)
             output += '\n\tImage Limit: {}'.format(image_limit)
+            output += '\n\tAuto Emojis Type: {}'.format(auto_emojis_key)
         await boxPagifySay(self.bot.say, output)
 
     @automod2.command(name="patterns", pass_context=True, no_pm=True)
@@ -317,6 +320,32 @@ class AutoMod2:
             msg = msg_template.format(message.channel.name,
                                       ','.join(failed_whitelists), msg_content)
             await self.deleteAndReport(message, msg)
+
+    @automod2.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def autoemojis(self, ctx, key: str = None):
+        """Will automatically add a set of emojis to all messages sent in this channel.
+
+        Currently supported: tips"""
+        if not key:
+            self.settings.setAutoEmojis(ctx, None)
+            await self.bot.say(inline('Auto emojis cleared'))
+            return
+        key = key.lower()
+        if key not in EMOJIS:
+            await self.bot.say(inline('Unknown key'))
+            return
+        self.settings.setAutoEmojis(ctx, key)
+        await self.bot.say(inline('Auto Emojis for this channel configured!'))
+
+    async def add_auto_emojis(self, message):
+        ctx = CtxWrapper(message, self.bot)
+        key = self.settings.getAutoEmojis(ctx)
+        if not key:
+            return
+        emoji_list = EMOJIS[key]
+        for emoji in emoji_list:
+            await self.bot.add_reaction(message, emoji)
 
     @commands.group(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
@@ -576,6 +605,7 @@ def matchesIncludeExclude(include_pattern, exclude_pattern, txt):
 def setup(bot):
     n = AutoMod2(bot)
     bot.add_listener(n.mod_message_images, "on_message")
+    bot.add_listener(n.add_auto_emojis, "on_message")
     bot.add_listener(n.mod_message, "on_message")
     bot.add_listener(n.mod_message_edit, "on_message_edit")
     bot.add_listener(n.mod_message_watchdog, "on_message")
@@ -594,7 +624,7 @@ class AutoMod2Settings(CogSettings):
             channels = server['channels']
             for channel_id in list(channels.keys()):
                 channel = channels[channel_id]
-                if channel.get('whitelist') or channel.get('blacklist') or channel.get('image_limit'):
+                if [channel.get(_) for _ in ['whitelist', 'blacklist', 'image_limit', 'auto_emoji']]:
                     continue
                 channels.pop(channel_id)
 
@@ -626,6 +656,7 @@ class AutoMod2Settings(CogSettings):
                 'whitelist': [],
                 'blacklist': [],
                 'image_limit': 0,
+                'auto_emojis': None
             }
 
         return channels[channel_id]
@@ -698,6 +729,15 @@ class AutoMod2Settings(CogSettings):
     def setImageLimit(self, ctx, image_limit):
         channel = self.getChannel(ctx)
         channel['image_limit'] = image_limit
+        self.save_settings()
+
+    def getAutoEmojis(self, ctx):
+        channel = self.getChannel(ctx)
+        return channel.get('auto_emojis_type', None)
+
+    def setAutoEmojis(self, ctx, key):
+        channel = self.getChannel(ctx)
+        channel['auto_emojis_type'] = key
         self.save_settings()
 
     def getWatchdog(self, server_id):
