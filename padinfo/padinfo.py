@@ -578,28 +578,49 @@ def monsterToBaseEmbed(m: padguide2.PgMonster):
     return embed
 
 
-def monsterToEvoEmbed(m: padguide2.PgMonster):
-    embed = monsterToBaseEmbed(m)
-
-    if not len(m.alt_evos):
-        embed.description = 'No alternate evos'
-        return embed
-
-    field_name = '{} alternate evos'.format(len(m.alt_evos))
+def printEvoListFields(list_of_monsters, embed, name):
+    if not len(list_of_monsters):
+        return
+    field_name = name.format(len(list_of_monsters))
     field_data = ''
-    for ae in sorted(m.alt_evos, key=lambda x: int(x.monster_no)):
+    for ae in sorted(list_of_monsters, key=lambda x: int(x.monster_no)):
         field_data += "{}\n".format(monsterToLongHeader(ae, link=True))
 
     embed.add_field(name=field_name, value=field_data)
 
+
+def monsterToEvoEmbed(m: padguide2.PgMonster):
+    embed = monsterToBaseEmbed(m)
+
+    if not len(m.alt_evos) and not m.evo_gem:
+        embed.description = 'No alternate evos or evo gem'
+        return embed
+
+    printEvoListFields(m.alt_evos, embed, '{} alternate evo(s)')
+    if not m.evo_gem:
+        return embed
+    printEvoListFields([m.evo_gem], embed, '{} evo gem(s)')
+
     return embed
+
+
+def printMonsterEvoOfList(monster_list, embed, field_name):
+    if not len(monster_list):
+        return
+    field_data = ''
+    if len(monster_list) > 5:
+        field_data = '{} monsters'.format(len(monster_list))
+    else:
+        item_count = min(len(monster_list), 5)
+        for ae in sorted(monster_list, key=lambda x: x.monster_no_na, reverse=True)[:item_count]:
+            field_data += "{}\n".format(monsterToLongHeader(ae, link=True))
+    embed.add_field(name=field_name, value=field_data)
 
 
 def monsterToEvoMatsEmbed(m: padguide2.PgMonster):
     embed = monsterToBaseEmbed(m)
 
     mats_for_evo_size = len(m.mats_for_evo)
-    material_of_size = len(m.material_of)
 
     field_name = 'Evo materials'
     field_data = ''
@@ -610,19 +631,10 @@ def monsterToEvoMatsEmbed(m: padguide2.PgMonster):
         field_data = 'None'
     embed.add_field(name=field_name, value=field_data)
 
-    if not material_of_size:
+    printMonsterEvoOfList(m.material_of, embed, 'Material for')
+    if not m.evo_gem:
         return embed
-
-    field_name = 'Material for'
-    field_data = ''
-    if material_of_size > 5:
-        field_data = '{} monsters'.format(material_of_size)
-    else:
-        item_count = min(material_of_size, 5)
-        for ae in sorted(m.material_of, key=lambda x: x.monster_no_na, reverse=True)[:item_count]:
-            field_data += "{}\n".format(monsterToLongHeader(ae, link=True))
-    embed.add_field(name=field_name, value=field_data)
-
+    printMonsterEvoOfList(m.evo_gem.material_of, embed, "Tree's gem (may not be this evo) is mat for")
     return embed
 
 
