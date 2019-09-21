@@ -632,7 +632,7 @@ class PadGlobal:
         """Adds a set of boss mechanics."""
         term = term.lower()
         if term not in self.settings.boss():
-            await self.bot.say("Glossary item doesn't exist.")
+            await self.bot.say("Boss mechanics item doesn't exist.")
             return
 
         self.settings.rmBoss(term)
