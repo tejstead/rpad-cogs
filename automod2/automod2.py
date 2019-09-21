@@ -26,6 +26,7 @@ from .utils import checks
 from .utils.dataIO import fileIO
 from .utils.settings import Settings
 
+
 LOGS_PER_CHANNEL_USER = 5
 
 AUTOMOD_HELP = """
@@ -71,7 +72,11 @@ You can see the configuration for the server using [p]automod2 list
 You can also prevent users from spamming images using [p]automod2 imagelimit
 """
 EMOJIS = {
-    'tips': ['\N{THUMBS UP SIGN}', '\N{THUMBS DOWN SIGN}', '\N{EYES}']
+    'tips': [
+        '\N{THUMBS UP SIGN}',
+        '\N{THUMBS DOWN SIGN}',
+        '\N{EYES}',
+    ]
 }
 
 def linked_img_count(message):
@@ -328,7 +333,8 @@ class AutoMod2:
 
         Currently supported: tips
 
-        Include the text [noemojis] to suppress emoji addition"""
+        Include the text [noemojis] to suppress emoji addition
+        """
         if not key:
             self.settings.setAutoEmojis(ctx, None)
             await self.bot.say(inline('Auto emojis cleared'))
@@ -628,7 +634,7 @@ class AutoMod2Settings(CogSettings):
             channels = server['channels']
             for channel_id in list(channels.keys()):
                 channel = channels[channel_id]
-                if [channel.get(_) for _ in ['whitelist', 'blacklist', 'image_limit', 'auto_emoji']]:
+                if any([channel.get(x) for x in ['whitelist', 'blacklist', 'image_limit', 'auto_emoji']]):
                     continue
                 channels.pop(channel_id)
 
