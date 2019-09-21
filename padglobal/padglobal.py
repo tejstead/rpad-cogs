@@ -1159,10 +1159,6 @@ class PadGlobalSettings(CogSettings):
         self.clearCmd(cmd)
         self.save_settings()
 
-    def setBoss(self, cmd):
-        self.clearCmd(cmd)
-        self.save_settings()
-
     def setFaq(self, cmd):
         self.clearCmd(cmd)
         self.faq().append(cmd)
