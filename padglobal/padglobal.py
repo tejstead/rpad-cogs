@@ -624,6 +624,9 @@ class PadGlobal:
         If you want to use a multiple word boss name, enclose it in quotes."""
         term = term.lower()
         op = 'EDITED' if term in self.settings.boss() else 'ADDED'
+        definition = clean_global_mentions(definition)
+        definition = definition.replace(u'\u200b', '')
+        definition = replace_emoji_names_with_code(self._get_emojis(), definition)
         self.settings.addBoss(term, definition)
         await self.bot.say("PAD boss mechanics successfully {}.".format(op))
 
