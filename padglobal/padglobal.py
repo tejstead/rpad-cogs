@@ -593,6 +593,15 @@ class PadGlobal:
         for page in pagify(msg):
             await self.bot.whisper(page)
 
+    @commands.command(pass_context=True)
+    async def bosslist(self, ctx):
+        """Shows boss skill entries"""
+        if await self._check_disabled(ctx):
+            return
+        msg = self.boss_to_text_index()
+        for page in pagify(msg):
+            await self.bot.whisper(page)
+
     def lookup_boss(self, term):
         bosses = self.settings.boss()
         term = term.lower()
@@ -612,10 +621,16 @@ class PadGlobal:
 
     def boss_to_text(self):
         bosses = self.settings.boss()
-        msg = '__**PAD Boss Mechanics terms (also check out ^pad / ^padfaq / ^boards / ^which /^glossary)**__'
+        msg = '__**PAD Boss Mechanics (also check out ^pad / ^padfaq / ^boards / ^which /^glossary)**__'
         for term in sorted(bosses.keys()):
             definition = bosses[term]
             msg += '\n**{}**\n{}'.format(term, definition)
+        return msg
+
+    def boss_to_text_index(self):
+        bosses = self.settings.boss()
+        msg = '__**Available PAD Boss Mechanics (also check out ^pad / ^padfaq / ^boards / ^which /^glossary)**__'
+        msg = msg + '\n' + ',\n'.join(sorted(bosses.keys()))
         return msg
 
     @padglobal.command(pass_context=True)
