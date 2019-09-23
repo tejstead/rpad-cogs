@@ -194,7 +194,7 @@ class AutoMod2:
             whitelists = config['whitelist']
             blacklists = config['blacklist']
             image_limit = config.get('image_limit', 0)
-            auto_emojis_key = config.get('auto_emojis', None)
+            auto_emojis_key = config.get('auto_emojis_type', None)
             if len(whitelists + blacklists) + image_limit == 0 and not auto_emojis_key:
                 continue
 
@@ -666,7 +666,7 @@ class AutoMod2Settings(CogSettings):
                 'whitelist': [],
                 'blacklist': [],
                 'image_limit': 0,
-                'auto_emojis': None
+                'auto_emojis_type': None
             }
 
         return channels[channel_id]
