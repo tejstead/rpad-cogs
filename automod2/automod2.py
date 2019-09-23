@@ -347,6 +347,8 @@ class AutoMod2:
         await self.bot.say(inline('Auto Emojis for this channel configured!'))
 
     async def add_auto_emojis(self, message):
+        if message.author.id == self.bot.user.id or message.channel.is_private:
+            return
         ctx = CtxWrapper(message, self.bot)
         key = self.settings.getAutoEmojis(ctx)
         if not key:
