@@ -194,8 +194,8 @@ class AutoMod2:
             whitelists = config['whitelist']
             blacklists = config['blacklist']
             image_limit = config.get('image_limit', 0)
-            auto_emojis_key = config.get('auto_emojis_type', None)
-            if len(whitelists + blacklists) + image_limit == 0 and not auto_emojis_key:
+            auto_emojis_type = config.get('auto_emojis_type', None)
+            if len(whitelists + blacklists) + image_limit == 0 and not auto_emojis_type:
                 continue
 
             output += '\n#{}'.format(channel.name)
@@ -206,7 +206,7 @@ class AutoMod2:
             for name in blacklists:
                 output += '\n\t\t{}'.format(name)
             output += '\n\tImage Limit: {}'.format(image_limit)
-            output += '\n\tAuto Emojis Type: {}'.format(auto_emojis_key)
+            output += '\n\tAuto Emojis Type: {}'.format(auto_emojis_type)
         await boxPagifySay(self.bot.say, output)
 
     @automod2.command(name="patterns", pass_context=True, no_pm=True)
@@ -636,7 +636,7 @@ class AutoMod2Settings(CogSettings):
             channels = server['channels']
             for channel_id in list(channels.keys()):
                 channel = channels[channel_id]
-                if any([channel.get(x) for x in ['whitelist', 'blacklist', 'image_limit', 'auto_emoji']]):
+                if any([channel.get(x) for x in ['whitelist', 'blacklist', 'image_limit', 'auto_emojis_type']]):
                     continue
                 channels.pop(channel_id)
 
