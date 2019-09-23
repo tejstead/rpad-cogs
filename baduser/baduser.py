@@ -90,6 +90,22 @@ class BadUser:
         self.settings.rmPositiveRole(ctx.message.server.id, role.id)
         await self.bot.say(inline('Removed positive role "' + role.name + '"'))
 
+    @baduser.command(name="addneutralrole", pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def addNeutralRole(self, ctx, *, role):
+        """Designate a role as a 'benefit' role."""
+        role = get_role(ctx.message.server.roles, role)
+        self.settings.addNeutralRole(ctx.message.server.id, role.id)
+        await self.bot.say(inline('Added neutral role "' + role.name + '"'))
+
+    @baduser.command(name="rmneutralrole", pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_server=True)
+    async def rmNeutralRole(self, ctx, *, role):
+        """Cancels a role from 'benefit' status."""
+        role = get_role(ctx.message.server.roles, role)
+        self.settings.rmNeutralRole(ctx.message.server.id, role.id)
+        await self.bot.say(inline('Removed positive role "' + role.name + '"'))
+
     @baduser.command(name="setchannel", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def setChannel(self, ctx, channel: discord.Channel):
@@ -129,6 +145,14 @@ class BadUser:
 
         output += '\nPositive roles:\n'
         for role_id in self.settings.getPositiveRoles(server.id):
+            try:
+                role = get_role_from_id(self.bot, server, role_id)
+                output += '\n\t' + role.name
+            except Exception as e:
+                pass  # Role was deleted
+
+        output += '\nNeutral roles:\n'
+        for role_id in self.settings.getNeutralRoles(server.id):
             try:
                 role = get_role_from_id(self.bot, server, role_id)
                 output += '\n\t' + role.name
@@ -402,6 +426,7 @@ class BadUser:
 
         bad_role_ids = self.settings.getPunishmentRoles(after.server.id)
         positive_role_ids = self.settings.getPositiveRoles(after.server.id)
+        neutral_role_ids = self.settings.getNeutralRoles(after.server.id)
 
         for role in new_roles:
             if role.id in bad_role_ids:
@@ -412,9 +437,16 @@ class BadUser:
                 await self.recordRoleChange(after, role.name, True)
                 return
 
+            if role.id in neutral_role_ids:
+                await self.recordRoleChange(after, role.name, True, send_ping=False)
+                return
+
         for role in removed_roles:
             if role.id in positive_role_ids:
                 await self.recordRoleChange(after, role.name, False)
+                return
+            if role.id in neutral_role_ids:
+                await self.recordRoleChange(after, role.name, False, send_ping=False)
                 return
 
     async def recordBadUser(self, member, role_name):
@@ -442,7 +474,7 @@ class BadUser:
             except Exception as e:
                 await self.bot.send_message(channel_obj, 'Failed to notify the user! I might be blocked\n' + box(str(e)))
 
-    async def recordRoleChange(self, member, role_name, is_added):
+    async def recordRoleChange(self, member, role_name, is_added, send_ping = True):
         msg = 'Detected role {} : Name={} Nick={} ID={} Joined={} Role={}'.format(
             "Added" if is_added else "Removed", member.name, member.nick, member.id, member.joined_at, role_name)
 
@@ -451,7 +483,8 @@ class BadUser:
             channel_obj = discord.Object(update_channel)
             try:
                 await self.bot.send_message(channel_obj, inline(msg))
-                await self.bot.send_message(channel_obj, 'Hey @here please leave a note explaining why this role was modified')
+                if send_ping:
+                    await self.bot.send_message(channel_obj, 'Hey @here please leave a note explaining why this role was modified')
             except:
                 print('Failed to notify in', update_channel, msg)
 
@@ -523,6 +556,24 @@ class BadUserSettings(CogSettings):
 
     def rmPositiveRole(self, server_id, role_id):
         role_ids = self.getPositiveRoles(server_id)
+        if role_id in role_ids:
+            role_ids.remove(role_id)
+        self.save_settings()
+
+    def addNeutralRole(self, server_id, role_id):
+        role_ids = self.getNeutralRoles(server_id)
+        if role_id not in role_ids:
+            role_ids.append(role_id)
+        self.save_settings()
+
+    def getNeutralRoles(self, server_id):
+        server = self.getServer(server_id)
+        if 'neutral_role_ids' not in server:
+            server['neutral_role_ids'] = []
+        return server['neutral_role_ids']
+
+    def rmNeutralRole(self, server_id, role_id):
+        role_ids = self.getNeutralRoles(server_id)
         if role_id in role_ids:
             role_ids.remove(role_id)
         self.save_settings()
