@@ -77,23 +77,23 @@ class BadUser:
     @baduser.command(name="addpositiverole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addPositiveRole(self, ctx, *, role):
-        """Designate a role as a notable but not ping-worthy role."""
+        """Designate a role as a 'benefit' role."""
         role = get_role(ctx.message.server.roles, role)
         self.settings.addPositiveRole(ctx.message.server.id, role.id)
-        await self.bot.say(inline('Added neutral role "' + role.name + '"'))
+        await self.bot.say(inline('Added positive role "' + role.name + '"'))
 
     @baduser.command(name="rmpositiverole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmPositiveRole(self, ctx, *, role):
-        """Cancels a role from notable but not ping-worthy status."""
+        """Cancels a role from 'benefit' status."""
         role = get_role(ctx.message.server.roles, role)
         self.settings.rmPositiveRole(ctx.message.server.id, role.id)
-        await self.bot.say(inline('Removed neutral role "' + role.name + '"'))
+        await self.bot.say(inline('Removed positive role "' + role.name + '"'))
 
     @baduser.command(name="addneutralrole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def addNeutralRole(self, ctx, *, role):
-        """Designate a role as a 'benefit' role."""
+        """Designate a role as a notable but not ping-worthy role."""
         role = get_role(ctx.message.server.roles, role)
         self.settings.addNeutralRole(ctx.message.server.id, role.id)
         await self.bot.say(inline('Added neutral role "' + role.name + '"'))
@@ -101,10 +101,10 @@ class BadUser:
     @baduser.command(name="rmneutralrole", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def rmNeutralRole(self, ctx, *, role):
-        """Cancels a role from 'benefit' status."""
+        """Cancels a role from notable but not ping-worthy status."""
         role = get_role(ctx.message.server.roles, role)
         self.settings.rmNeutralRole(ctx.message.server.id, role.id)
-        await self.bot.say(inline('Removed positive role "' + role.name + '"'))
+        await self.bot.say(inline('Removed neutral role "' + role.name + '"'))
 
     @baduser.command(name="setchannel", pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
