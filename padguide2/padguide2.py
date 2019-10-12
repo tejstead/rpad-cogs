@@ -1321,16 +1321,13 @@ class PgMonster(PgItem):
         # third requirement is it can't be a mat for this monster
         # final requirement is it can't be a mat for anything else in this monster's tree
         if self.active_skill and self.type1 != 'Evolve':
-            mons: PgMonster = None
             for mons in self.active_skill.monsters_with_active:
                 if mons.type1 == 'Evolve':
                     is_gem_candidate = True
                     for mat in self.mats_for_evo:
                         if mat.monster_no == mons.monster_no:
                             is_gem_candidate = False
-                    evo: PgMonster = None
                     for evo in self.alt_evos:
-                        mat: PgMonster = None
                         for mat in evo.mats_for_evo:
                             if mat.monster_no == mons.monster_no:
                                 is_gem_candidate = False
