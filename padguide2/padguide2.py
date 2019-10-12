@@ -100,7 +100,7 @@ class PadGuide2(object):
 
         # An int -> set(string), monster_id_na to set of basename overrides
         self.basename_overrides = defaultdict(set)
-        
+
         self.panthname_overrides = defaultdict(set)
 
         self.database = PgRawDatabase(skip_load=True)
@@ -210,7 +210,7 @@ class PadGuide2(object):
             k, v = x
             if k.isdigit():
                 self.basename_overrides[int(k)].add(v.lower())
-        
+
         self.panthname_overrides = {x[0].lower(): x[1].lower() for x in panthname_overrides}
         self.panthname_overrides.update({v: v for _, v in self.panthname_overrides.items()})
 
@@ -1315,22 +1315,22 @@ class PgMonster(PgItem):
                     link(em, alt_evos)
             link(self, [])
 
-        #  how to determine if a monster is a unique evo gem for this card:
+        # how to determine if a monster is a unique evo gem for this card:
         # first requirement is it has the same skill
         # second requirement is that its type is Evo and this card isn't itself an evo mat
         # third requirement is it can't be a mat for this monster
         # final requirement is it can't be a mat for anything else in this monster's tree
         if self.active_skill and self.type1 != 'Evolve':
-            mons: PgMonster
+            mons: PgMonster = None
             for mons in self.active_skill.monsters_with_active:
                 if mons.type1 == 'Evolve':
                     is_gem_candidate = True
                     for mat in self.mats_for_evo:
                         if mat.monster_no == mons.monster_no:
                             is_gem_candidate = False
-                    evo: PgMonster
+                    evo: PgMonster = None
                     for evo in self.alt_evos:
-                        mat: PgMonster
+                        mat: PgMonster = None
                         for mat in evo.mats_for_evo:
                             if mat.monster_no == mons.monster_no:
                                 is_gem_candidate = False
@@ -2126,15 +2126,15 @@ class MonsterIndex(object):
             return (not nm.is_low_priority, nm.group_size, -1 *
                     nm.base_monster_no_na, nm.monster_no_na)
         named_monsters.sort(key=named_monsters_sort)
-        
+
         # set up a set of all pantheon names, a set of all pantheon nicknames, and a dictionary of nickname -> full name
         # later we will set up a dictionary of pantheon full name -> monsters
         self.all_pantheon_names = set()
         self.all_pantheon_names.update(panthname_overrides.values())
-        
+
         self.pantheon_nick_to_name = panthname_overrides
         self.pantheon_nick_to_name.update(panthname_overrides)
-        
+
         self.all_pantheon_nicknames = set()
         self.all_pantheon_nicknames.update(panthname_overrides.keys())
 
@@ -2162,7 +2162,7 @@ class MonsterIndex(object):
             nm = self.monster_no_na_to_named_monster.get(monster_no_na)
             if nm:
                 self.all_entries[nickname] = nm
-        
+
 
     def init_index(self):
         pass
@@ -2329,11 +2329,11 @@ class MonsterIndex(object):
 
         # couldn't find anything
         return None, "Could not find a match for: " + query, None
-    
-    
+
+
     def find_monster2(self, query):
         """Search with alternative method for resolving prefixes.
-        
+
         Implements the lookup for id2, where you are allowed to specify multiple prefixes for a card.
         All prefixes are required to be exactly matched by the card.
         Follows a similar logic to the regular id but after each check, will remove any potential match that doesn't
@@ -2347,11 +2347,11 @@ class MonsterIndex(object):
                 return None, 'Looks like a monster ID but was not found', None
             else:
                 return m, None, "ID lookup"
-        
+
         # handle exact nickname match
         if query in self.all_entries:
             return self.all_entries[query], None, "Exact nickname"
-    
+
         contains_jp = rpadutils.containsJp(query)
         if len(query) < 2 and contains_jp:
             return None, 'Japanese queries must be at least 2 characters', None
@@ -2369,19 +2369,19 @@ class MonsterIndex(object):
             else:
                 new_query = ' '.join(parts_of_query[i:])
                 break
-        
+
         # if we don't have any prefixes, then default to using the regular id lookup
         if len(query_prefixes) < 1:
             return self.find_monster(query)
-        
+
         matches = PotentialMatches()
-        
+
         # first try to get matches from nicknames
         for nickname, m in self.all_entries.items():
             if new_query in nickname:
                 matches.add(m)
         matches.remove_potential_matches_without_all_prefixes(query_prefixes)
-        
+
         # if we don't have any candidates yet, pick a new method
         if not matches.length():
             # try matching on exact names next
@@ -2389,7 +2389,7 @@ class MonsterIndex(object):
                 if new_query in m.name_na.lower() or new_query in m.name_jp.lower():
                     matches.add(m)
             matches.remove_potential_matches_without_all_prefixes(query_prefixes)
-        
+
         # check for exact match on pantheon name but only if needed
         if not matches.length():
             for pantheon in self.all_pantheon_nicknames:
@@ -2403,27 +2403,27 @@ class MonsterIndex(object):
                 if new_query in pantheon.lower():
                     matches.get_monsters_from_potential_pantheon_match(pantheon, self.pantheon_nick_to_name, self.pantheons)
             matches.remove_potential_matches_without_all_prefixes(query_prefixes)
-        
+
         if matches.length():
             return matches.pick_best_monster(), None, None
         return None, "Could not find a match for: " + query, None
-    
+
     def pickBestMonster(self, named_monster_list):
         return max(named_monster_list, key=lambda x: (not x.is_low_priority, x.rarity, x.monster_no_na))
 
 class PotentialMatches(object):
     def __init__(self):
         self.match_list = set()
-    
+
     def add(self, m):
         self.match_list.add(m)
-    
+
     def update(self, monster_list):
         self.match_list.update(monster_list)
-    
+
     def length(self):
         return len(self.match_list)
-    
+
     def remove_potential_matches_without_all_prefixes(self, query_prefixes):
         to_remove = set()
         for m in self.match_list:
@@ -2432,14 +2432,14 @@ class PotentialMatches(object):
                     to_remove.add(m)
                     break
         self.match_list.difference_update(to_remove)
-    
+
     def get_monsters_from_potential_pantheon_match(self, pantheon, pantheon_nick_to_name, pantheons):
         full_name = pantheon_nick_to_name[pantheon]
         self.update(pantheons[full_name])
-    
+
     def pick_best_monster(self):
         return max(self.match_list, key=lambda x: (not x.is_low_priority, x.rarity, x.monster_no_na))
-    
+
 
 class NamedMonsterGroup(object):
     def __init__(self, monster_group: MonsterGroup, basename_overrides: list):
@@ -2539,7 +2539,7 @@ class NamedMonster(object):
         # This stuff is important for nickname generation
         self.group_basenames = monster_group.basenames
         self.prefixes = prefixes
-        
+
         # Pantheon
         self.series = monster.series.name if monster.series else None
 
