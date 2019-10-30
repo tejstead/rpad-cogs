@@ -103,7 +103,6 @@ class PadGuideDb:
         with self.get_connection() as cursor:
             sql = ("select dungeon_id, name_na, name_jp, visible from dungeons"
                    " where (lower(name_na) like '%{}%' or lower(name_jp) like '%{}%')"
-                   " and show_yn = 1"
                    " order by dungeon_id desc limit 20".format(search_text, search_text))
             cursor.execute(sql)
             results = list(cursor.fetchall())
