@@ -97,113 +97,20 @@ class PadGuideDb:
 
     @padguidedb.command(pass_context=True)
     @is_padguidedb_admin()
-    async def dungeonstub(self, ctx, *, pad_dungeon_id: int):
-        """Creates a stub entry for a dungeon"""
-        sql_items = []
-        with self.get_connection() as cursor:
-            sql = 'select * from etl_dungeon_map where pad_dungeon_id={}'.format(pad_dungeon_id)
-            cursor.execute(sql)
-            results = list(cursor.fetchall())
-            if results:
-                await self.bot.say(inline('found an existing mapping for that dungeon'))
-                return
-
-            def load_dungeon(file_path):
-                with open(file_path) as f:
-                    data = json.load(f)
-                    for d in data:
-                        if d['dungeon_id'] == pad_dungeon_id:
-                            return d
-                    return None
-
-            jp_entry = load_dungeon('/home/tactical0retreat/pad_data/processed/jp_dungeons.json')
-            na_entry = load_dungeon(
-                '/home/tactical0retreat/pad_data/processed/na_dungeons.json') or jp_entry
-            jp_entry = jp_entry or na_entry
-
-            jp_name = jp_entry['clean_name'].replace("'", "''")
-            en_name = na_entry['clean_name'].replace("'", "''")
-
-            tstamp = int(time.time()) * 1000
-            sql = ('insert into dungeon_list (dungeon_type, icon_seq, name_jp, name_kr, name_us, order_idx, show_yn, tdt_seq, tstamp)'
-                   " values (1, 0, '{}', '{}', '{}', 0, 1, 41, {})".format(jp_name, en_name, en_name, tstamp))
-            sql_items.append(sql)
-            cursor.execute(sql)
-            dungeon_seq = cursor.lastrowid
-
-            sql = 'delete from etl_dungeon_ignore where pad_dungeon_id={}'.format(pad_dungeon_id)
-            sql_items.append(sql)
-            cursor.execute(sql)
-            sql = 'insert into etl_dungeon_map (pad_dungeon_id, dungeon_seq) values ({}, {})'.format(
-                pad_dungeon_id, dungeon_seq)
-            sql_items.append(sql)
-            cursor.execute(sql)
-
-            await self.bot.say(box('Finished running:\n' + '\n'.join(sql_items)))
-
-    @padguidedb.command(pass_context=True)
-    @is_padguidedb_admin()
     async def searchdungeon(self, ctx, *, search_text):
         """Search"""
         search_text = search_text.replace("@#$%^&*;/<>?\|`~-=", " ")
         with self.get_connection() as cursor:
-            sql = ("select dungeon_seq, name_us, name_jp from dungeon_list"
-                   " where (lower(name_us) like '%{}%' or lower(name_jp) like '%{}%')"
+            sql = ("select dungeon_id, name_na, name_jp, visible from dungeons"
+                   " where (lower(name_na) like '%{}%' or lower(name_jp) like '%{}%')"
                    " and show_yn = 1"
-                   " order by dungeon_seq limit 20".format(search_text, search_text))
+                   " order by dungeon_id desc limit 20".format(search_text, search_text))
             cursor.execute(sql)
             results = list(cursor.fetchall())
             msg = 'Results\n' + json.dumps(results, indent=2, sort_keys=True, ensure_ascii=False)
             await self.bot.say(inline(sql))
             for page in pagify(msg):
                 await self.bot.say(box(page))
-
-    @padguidedb.command(pass_context=True)
-    @is_padguidedb_admin()
-    async def mapdungeon(self, ctx, pad_dungeon_id: int, dungeon_seq: int):
-        """Map dungeon"""
-        with self.get_connection() as cursor:
-            sql = 'select * from etl_dungeon_ignore where pad_dungeon_id={}'.format(pad_dungeon_id)
-            cursor.execute(sql)
-            ignore_results = len(cursor.fetchall())
-            msg = 'pad_dungeon_id {} {} currently ignored'.format(
-                pad_dungeon_id, 'is' if ignore_results else 'is not')
-            await self.bot.say(inline(msg))
-
-            sql = 'select * from etl_dungeon_map where pad_dungeon_id={} and dungeon_seq={}'.format(
-                pad_dungeon_id, dungeon_seq)
-            cursor.execute(sql)
-            mapping_results = list(cursor.fetchall())
-            if len(mapping_results):
-                await self.bot.say(inline('that mapping already exists, exiting'))
-                return
-
-            sql = 'select * from etl_dungeon_map where pad_dungeon_id={} or dungeon_seq={}'.format(
-                pad_dungeon_id, dungeon_seq)
-            cursor.execute(sql)
-            mapping_results = list(cursor.fetchall())
-            msg = 'Existing mappings\n' + json.dumps(mapping_results, indent=2, sort_keys=True)
-            for page in pagify(msg):
-                await self.bot.say(box(page))
-
-            sql_items = []
-            if ignore_results:
-                sql_items.append(
-                    'delete from etl_dungeon_ignore where pad_dungeon_id={}'.format(pad_dungeon_id))
-            sql_items.append('insert into etl_dungeon_map (pad_dungeon_id, dungeon_seq) values ({}, {})'.format(
-                pad_dungeon_id, dungeon_seq))
-
-            await self.bot.say(box('I will apply these updates:\n' + '\n'.join(sql_items)))
-
-            await self.bot.say(inline('type yes to apply updates'))
-            msg = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
-            if not msg or msg.content[0].lower() != 'y':
-                await self.bot.say(inline('aborting'))
-                return
-
-            for sql in sql_items:
-                await self.bot.say(inline('running: ' + sql))
-                cursor.execute(sql)
 
     @padguidedb.command(pass_context=True)
     @checks.is_owner()
