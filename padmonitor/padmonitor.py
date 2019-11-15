@@ -1,18 +1,10 @@
-import io
-import traceback
+from __main__ import send_cmd_help
 
-import discord
-from discord.ext import commands
-
-from __main__ import user_allowed, send_cmd_help
-
-from . import padguide2
 from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.dataIO import dataIO
 
 
 class PadMonitor:
@@ -33,9 +25,9 @@ class PadMonitor:
 
     async def check_seen(self):
         """Refresh the monster indexes."""
-        pg_cog = self.bot.get_cog('PadGuide2')
+        pg_cog = self.bot.get_cog('Dadguide')
         await pg_cog.wait_until_ready()
-        all_monsters = pg_cog.database.all_monsters()
+        all_monsters = pg_cog.database.get_all_monsters()
         jp_monster_map = {m.monster_no: m for m in all_monsters}
         na_monster_map = {m.monster_no: m for m in all_monsters if m.on_na}
 
