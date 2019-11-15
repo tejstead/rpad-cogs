@@ -2,10 +2,12 @@ import asyncio
 from builtins import filter, map
 from collections import OrderedDict
 from collections import defaultdict
+import os
 import io
 import json
 import re
 import traceback
+import urllib.parse
 
 from dateutil import tz
 import discord
@@ -15,14 +17,13 @@ import prettytable
 
 from __main__ import user_allowed, send_cmd_help
 
-from . import padguide2
+from . import dadguide
 from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
 from .utils.dataIO import dataIO
-
 
 HELP_MSG = """
 ^helpid : shows this message
@@ -46,13 +47,13 @@ submit an override suggestion: https://docs.google.com/forms/d/1kJH9Q0S8iqqULwrR
 
 EMBED_NOT_GENERATED = -1
 
-
 INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
 RPAD_PIC_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/{}/full/{}.png'
 RPAD_PORTRAIT_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/{}/portrait/{}.png'
 VIDEO_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/animated/{}.mp4'
 GIF_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/animated/{}.gif'
-
+ORB_SKIN_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/paddata/orb_styles/extract/jp/BLOCK{0:03d}.PNG'
+ORB_SKIN_CB_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/paddata/orb_styles/extract/jp/BLOCK{0:03d}CB.PNG'
 YT_SEARCH_TEMPLATE = 'https://www.youtube.com/results?search_query={}'
 SKYOZORA_TEMPLATE = 'http://pad.skyozora.com/pets/{}'
 
@@ -62,14 +63,14 @@ def get_pdx_url(m):
 
 
 def get_portrait_url(m):
-    if int(m.monster_no) != m.monster_no_na:
+    if int(m.monster_id) != m.monster_no_na:
         return RPAD_PORTRAIT_TEMPLATE.format('na', m.monster_no_na)
     else:
         return RPAD_PORTRAIT_TEMPLATE.format('jp', m.monster_no_jp)
 
 
 def get_pic_url(m):
-    if int(m.monster_no) != m.monster_no_na:
+    if int(m.monster_id) != m.monster_no_na:
         return RPAD_PIC_TEMPLATE.format('na', m.monster_no_na)
     else:
         return RPAD_PIC_TEMPLATE.format('jp', m.monster_no_jp)
@@ -81,8 +82,8 @@ class PadInfo:
 
         self.settings = PadInfoSettings("padinfo")
 
-        self.index_all = padguide2.empty_index()
-        self.index_na = padguide2.empty_index()
+        self.index_all = None
+        self.index_na = None
 
         self.menu = Menu(bot)
 
@@ -107,14 +108,14 @@ class PadInfo:
         if not dataIO.is_valid_json(self.historic_lookups_file_path_id2):
             print("Creating empty historic_lookups_id2.json...")
             dataIO.save_json(self.historic_lookups_file_path_id2, {})
-        
+
         self.historic_lookups = dataIO.load_json(self.historic_lookups_file_path)
         self.historic_lookups_id2 = dataIO.load_json(self.historic_lookups_file_path_id2)
 
     def __unload(self):
         # Manually nulling out database because the GC for cogs seems to be pretty shitty
-        self.index_all = padguide2.empty_index()
-        self.index_na = padguide2.empty_index()
+        self.index_all = None
+        self.index_na = None
         self.historic_lookups = {}
         self.historic_lookups_id2 = {}
 
@@ -132,28 +133,14 @@ class PadInfo:
 
     async def refresh_index(self):
         """Refresh the monster indexes."""
-        pg_cog = self.bot.get_cog('PadGuide2')
-        await pg_cog.wait_until_ready()
-        self.index_all = pg_cog.create_index()
-        self.index_na = pg_cog.create_index(lambda m: m.on_na)
+        dg_cog = self.bot.get_cog('Dadguide')
+        await dg_cog.wait_until_ready()
+        self.index_all = dg_cog.create_index()
+        self.index_na = dg_cog.create_index(lambda m: m.on_na)
 
     def get_monster_by_no(self, monster_no: int):
-        pg_cog = self.bot.get_cog('PadGuide2')
-        return pg_cog.get_monster_by_no(monster_no)
-
-    @commands.command(pass_context=True)
-    async def skillrotation(self, ctx, server: str='NA'):
-        """Print the current rotating skillups for a server (NA/JP)"""
-        server = normalizeServer(server)
-        if server not in ['NA', 'JP']:
-            await self.bot.say(inline('Supported servers are NA, JP'))
-            return
-
-        pg_cog = self.bot.get_cog('PadGuide2')
-        monsters = pg_cog.database.rotating_skillups(server)
-
-        for page in pagify(monsters_to_rotation_list(monsters, server, self.index_all)):
-            await self.bot.say(box(page))
+        dg_cog = self.bot.get_cog('Dadguide')
+        return dg_cog.get_monster_by_no(monster_no)
 
     @commands.command(pass_context=True)
     async def jpname(self, ctx, *, query: str):
@@ -186,7 +173,7 @@ class PadInfo:
     async def _do_id2_all(self, ctx, *, query: str):
         """Monster info (main tab)"""
         await self._do_id2(ctx, query)
-    
+
     @commands.command(name="id2na", pass_context=True)
     async def _do_id2_na(self, ctx, *, query: str):
         """Monster info (limited to NA monsters ONLY)"""
@@ -267,13 +254,13 @@ class PadInfo:
 
     async def _do_evolistmenu(self, ctx, sm):
         monsters = sm.alt_evos
-        monsters.sort(key=lambda m: m.monster_no)
+        monsters.sort(key=lambda m: m.monster_id)
 
         emoji_to_embed = OrderedDict()
         for idx, m in enumerate(monsters):
             emoji = char_to_emoji(str(idx))
             emoji_to_embed[emoji] = monsterToEmbed(m, self.get_emojis())
-            if m == sm:
+            if m.monster_id == sm.monster_id:
                 starting_menu_emoji = emoji
 
         return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed, timeout=60)
@@ -287,7 +274,8 @@ class PadInfo:
         emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
 
         try:
-            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=timeout)
+            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji,
+                                                                   timeout=timeout)
             if result_msg and result_embed:
                 # Message is finished but not deleted, clear the footer
                 result_embed.set_footer(text=discord.Embed.Empty)
@@ -333,7 +321,7 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     @commands.command(pass_context=True, aliases=['leaders', 'leaderskills', 'ls'])
-    async def leaderskill(self, ctx, left_query: str, right_query: str=None, *, bad=None):
+    async def leaderskill(self, ctx, left_query: str, right_query: str = None, *, bad=None):
         """Display the multiplier and leaderskills for two monsters
 
         If either your left or right query contains spaces, wrap in quotes.
@@ -378,7 +366,7 @@ class PadInfo:
         await self.bot.whisper(box(HELP_MSG))
 
     @commands.command(pass_context=True)
-    async def padsay(self, ctx, server, *, query: str=None):
+    async def padsay(self, ctx, server, *, query: str = None):
         """Speak the voice line of a monster into your current chat"""
         voice = ctx.message.author.voice
         channel = voice.voice_channel
@@ -438,11 +426,11 @@ class PadInfo:
         query = rmdiacritics(query)
         nm, err, debug_info = self._findMonster(query, na_only)
 
-        monster_no = nm.monster_no if nm else -1
+        monster_no = nm.monster_id if nm else -1
         self.historic_lookups[query] = monster_no
         dataIO.save_json(self.historic_lookups_file_path, self.historic_lookups)
 
-        m = self.get_monster_by_no(nm.monster_no) if nm else None
+        m = self.get_monster_by_no(nm.monster_id) if nm else None
 
         return m, err, debug_info
 
@@ -453,22 +441,18 @@ class PadInfo:
     def findMonster2(self, query, na_only=False):
         query = rmdiacritics(query)
         nm, err, debug_info = self._findMonster2(query, na_only)
-        
-        monster_no = nm.monster_no if nm else -1
+
+        monster_no = nm.monster_id if nm else -1
         self.historic_lookups_id2[query] = monster_no
         dataIO.save_json(self.historic_lookups_file_path_id2, self.historic_lookups_id2)
-        
-        m = self.get_monster_by_no(nm.monster_no) if nm else None
-        
+
+        m = self.get_monster_by_no(nm.monster_id) if nm else None
+
         return m, err, debug_info
-    
+
     def _findMonster2(self, query, na_only=False):
         monster_index = self.index_na if na_only else self.index_all
         return monster_index.find_monster2(query)
-
-    def map_awakenings_text(self, m):
-        """Exported for use in other cogs"""
-        return _map_awakenings_text(m)
 
     @padinfo.command(pass_context=True)
     @checks.is_owner()
@@ -528,12 +512,12 @@ class PadInfoSettings(CogSettings):
         self.save_settings()
 
 
-def monsterToHeader(m: padguide2.PgMonster, link=False):
+def monsterToHeader(m: dadguide.DgMonster, link=False):
     msg = 'No. {} {}'.format(m.monster_no_na, m.name_na)
     return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
 
 
-def monsterToJpSuffix(m: padguide2.PgMonster):
+def monsterToJpSuffix(m: dadguide.DgMonster):
     suffix = ""
     if m.roma_subname:
         suffix += ' [{}]'.format(m.roma_subname)
@@ -542,33 +526,23 @@ def monsterToJpSuffix(m: padguide2.PgMonster):
     return suffix
 
 
-def monsterToLongHeader(m: padguide2.PgMonster, link=False):
+def monsterToLongHeader(m: dadguide.DgMonster, link=False):
     msg = monsterToHeader(m) + monsterToJpSuffix(m)
     return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
 
 
-def monsterToLongHeaderWithAttr(m: padguide2.PgMonster, link=False):
-    header = 'No. {} {} {}'.format(
-        m.monster_no_na,
-        "({}{})".format(attr_prefix_map[m.attr1], "/" +
-                        attr_prefix_map[m.attr2] if m.attr2 else ""),
-        m.name_na)
-    msg = header + monsterToJpSuffix(m)
-    return '[{}]({})'.format(msg, get_pdx_url(m)) if link else msg
-
-
-def monsterToEvoText(m: padguide2.PgMonster):
+def monsterToEvoText(m: dadguide.DgMonster):
     output = monsterToLongHeader(m)
-    for ae in sorted(m.alt_evos, key=lambda x: int(x.monster_no)):
+    for ae in sorted(m.alt_evos, key=lambda x: int(x.monster_id)):
         output += "\n\t- {}".format(monsterToLongHeader(ae))
     return output
 
 
-def monsterToThumbnailUrl(m: padguide2.PgMonster):
+def monsterToThumbnailUrl(m: dadguide.DgMonster):
     return get_portrait_url(m)
 
 
-def monsterToBaseEmbed(m: padguide2.PgMonster):
+def monsterToBaseEmbed(m: dadguide.DgMonster):
     header = monsterToLongHeader(m)
     embed = discord.Embed()
     embed.set_thumbnail(url=monsterToThumbnailUrl(m))
@@ -583,13 +557,13 @@ def printEvoListFields(list_of_monsters, embed, name):
         return
     field_name = name.format(len(list_of_monsters))
     field_data = ''
-    for ae in sorted(list_of_monsters, key=lambda x: int(x.monster_no)):
+    for ae in sorted(list_of_monsters, key=lambda x: int(x.monster_id)):
         field_data += "{}\n".format(monsterToLongHeader(ae, link=True))
 
     embed.add_field(name=field_name, value=field_data)
 
 
-def monsterToEvoEmbed(m: padguide2.PgMonster):
+def monsterToEvoEmbed(m: dadguide.DgMonster):
     embed = monsterToBaseEmbed(m)
 
     if not len(m.alt_evos) and not m.evo_gem:
@@ -617,14 +591,14 @@ def printMonsterEvoOfList(monster_list, embed, field_name):
     embed.add_field(name=field_name, value=field_data)
 
 
-def monsterToEvoMatsEmbed(m: padguide2.PgMonster):
+def monsterToEvoMatsEmbed(m: dadguide.DgMonster):
     embed = monsterToBaseEmbed(m)
 
-    mats_for_evo_size = len(m.mats_for_evo)
+    mats_for_evo = m.mats_for_evo
 
     field_name = 'Evo materials'
     field_data = ''
-    if mats_for_evo_size:
+    if len(mats_for_evo) > 0:
         for ae in m.mats_for_evo:
             field_data += "{}\n".format(monsterToLongHeader(ae, link=True))
     else:
@@ -638,7 +612,7 @@ def monsterToEvoMatsEmbed(m: padguide2.PgMonster):
     return embed
 
 
-def monsterToPantheonEmbed(m: padguide2.PgMonster):
+def monsterToPantheonEmbed(m: dadguide.DgMonster):
     full_pantheon = m.series.monsters
     pantheon_list = list(filter(lambda x: x.evo_from is None, full_pantheon))
     if len(pantheon_list) == 0 or len(pantheon_list) > 6:
@@ -655,22 +629,12 @@ def monsterToPantheonEmbed(m: padguide2.PgMonster):
     return embed
 
 
-def monsterToSkillupsEmbed(m: padguide2.PgMonster):
-    skillups_list = m.active_skill.monsters_with_active if m.active_skill else []
-    skillups_list = list(filter(lambda m: m.sell_mp < 3000, skillups_list))
-    server_skillups = m.active_skill.server_skillups if m.active_skill else []
-
-    if len(skillups_list) + len(server_skillups) == 0:
+def monsterToSkillupsEmbed(m: dadguide.DgMonster):
+    skillups_list = m.active_skill.skillups if m.active_skill else []
+    if len(skillups_list) == 0:
         return None
 
     embed = monsterToBaseEmbed(m)
-
-    skillups_to_skip = []
-    for server, skillup in server_skillups.items():
-        skillup_header = 'Skillup in ' + server
-        skillup_body = monsterToHeader(skillup, link=True)
-        embed.add_field(name=skillup_header, value=skillup_body)
-        skillups_to_skip.append(skillup.monster_no_na)
 
     field_name = 'Skillups'
     field_data = ''
@@ -681,8 +645,6 @@ def monsterToSkillupsEmbed(m: padguide2.PgMonster):
         skillups_list = skillups_list[0:8]
 
     for monster in sorted(skillups_list, key=lambda x: x.monster_no_na):
-        if monster.monster_no_na in skillups_to_skip:
-            continue
         field_data += '\n' + monsterToHeader(monster, link=True)
 
     if len(field_data.strip()):
@@ -691,33 +653,44 @@ def monsterToSkillupsEmbed(m: padguide2.PgMonster):
     return embed
 
 
-def monsterToPicUrl(m: padguide2.PgMonster):
+def monsterToPicUrl(m: dadguide.DgMonster):
     return get_pic_url(m)
 
 
-def monsterToPicEmbed(m: padguide2.PgMonster, animated=False):
+def monsterToPicEmbed(m: dadguide.DgMonster, animated=False):
     embed = monsterToBaseEmbed(m)
     url = monsterToPicUrl(m)
     embed.set_image(url=url)
     # Clear the thumbnail, don't need it on pic
     embed.set_thumbnail(url='')
+    extra_links = []
     if animated:
-        description = '[{}]({}) –– [{}]({})'.format(
-            'HQ (MP4)', monsterToVideoUrl(m), 'LQ (GIF)', monsterToGifUrl(m))
-        embed.add_field(name='Animated links', value=description)
+        extra_links.append('Animation: {} -- {}'.format(monsterToVideoUrl(m), monsterToGifUrl(m)))
+    if m.orb_skin_id is not None:
+        extra_links.append('Orb Skin: {} -- {}'.format(monsterToOrbSkinUrl(m), monsterToOrbSkinCBUrl(m)))
+    if len(extra_links) > 0:
+        embed.add_field(name='Extra Links', value='\n'.join(extra_links))
 
     return embed
 
 
-def monsterToVideoUrl(m: padguide2.PgMonster):
-    return VIDEO_TEMPLATE.format(m.monster_no_jp)
+def monsterToVideoUrl(m: dadguide.DgMonster, link_text='(MP4)'):
+    return '[{}]({})'.format(link_text, VIDEO_TEMPLATE.format(m.monster_no_jp))
 
 
-def monsterToGifUrl(m: padguide2.PgMonster):
-    return GIF_TEMPLATE.format(m.monster_no_jp)
+def monsterToGifUrl(m: dadguide.DgMonster, link_text='(GIF)'):
+    return '[{}]({})'.format(link_text, GIF_TEMPLATE.format(m.monster_no_jp))
 
 
-def monsterToGifEmbed(m: padguide2.PgMonster):
+def monsterToOrbSkinUrl(m: dadguide.DgMonster, link_text='Regular'):
+    return '[{}]({})'.format(link_text, ORB_SKIN_TEMPLATE.format(m.orb_skin_id))
+
+
+def monsterToOrbSkinCBUrl(m: dadguide.DgMonster, link_text='Color Blind'):
+    return '[{}]({})'.format(link_text, ORB_SKIN_CB_TEMPLATE.format(m.orb_skin_id))
+
+
+def monsterToGifEmbed(m: dadguide.DgMonster):
     embed = monsterToBaseEmbed(m)
     url = monsterToGifUrl(m)
     embed.set_image(url=url)
@@ -726,9 +699,9 @@ def monsterToGifEmbed(m: padguide2.PgMonster):
     return embed
 
 
-def monstersToLsEmbed(left_m: padguide2.PgMonster, right_m: padguide2.PgMonster):
-    lhp, latk, lrcv, lresist = left_m.leader_skill_data.get_data()
-    rhp, ratk, rrcv, rresist = right_m.leader_skill_data.get_data()
+def monstersToLsEmbed(left_m: dadguide.DgMonster, right_m: dadguide.DgMonster):
+    lhp, latk, lrcv, lresist = left_m.leader_skill.data
+    rhp, ratk, rrcv, rresist = right_m.leader_skill.data
     multiplier_text = createMultiplierText(lhp, latk, lrcv, lresist, rhp, ratk, rrcv, rresist)
 
     embed = discord.Embed()
@@ -745,23 +718,18 @@ def monstersToLsEmbed(left_m: padguide2.PgMonster, right_m: padguide2.PgMonster)
     return embed
 
 
-def monsterToHeaderEmbed(m: padguide2.PgMonster):
+def monsterToHeaderEmbed(m: dadguide.DgMonster):
     header = monsterToLongHeader(m, link=True)
     embed = discord.Embed()
     embed.description = header
     return embed
 
 
-def monsterToTypeString(m: padguide2.PgMonster):
-    output = m.type1
-    if m.type2:
-        output += '/' + m.type2
-    if m.type3:
-        output += '/' + m.type3
-    return output
+def monsterToTypeString(m: dadguide.DgMonster):
+    return '/'.join([t.name for t in m.types])
 
 
-def monsterToAcquireString(m: padguide2.PgMonster):
+def monsterToAcquireString(m: dadguide.DgMonster):
     acquire_text = None
     if m.farmable and not m.mp_evo:
         # Some MP shop monsters 'drop' in PADR
@@ -787,10 +755,10 @@ def match_emoji(emoji_list, name):
     for e in emoji_list:
         if e.name == name:
             return e
-    return None
+    return name
 
 
-def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
+def monsterToEmbed(m: dadguide.DgMonster, emoji_list):
     embed = monsterToBaseEmbed(m)
 
     info_row_1 = monsterToTypeString(m)
@@ -806,24 +774,23 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
 
     embed.add_field(name=info_row_1, value=info_row_2)
 
-    if m.limitbreak_stats and m.limitbreak_stats > 1:
-        def lb(x): return int(round(m.limitbreak_stats * x))
-        stats_row_1 = 'Weighted {} | LB {}'.format(m.weighted_stats, lb(m.weighted_stats))
+    hp, atk, rcv, weighted = m.stats(lv=99)
+    if m.limit_mult > 0:
+        lb_hp, lb_atk, lb_rcv, lb_weighted = m.stats(lv=110)
+        stats_row_1 = 'Weighted {} | LB {} (+{}%)'.format(weighted, lb_weighted, m.limit_mult)
         stats_row_2 = '**HP** {} ({})\n**ATK** {} ({})\n**RCV** {} ({})'.format(
-            m.hp, lb(m.hp), m.atk, lb(m.atk), m.rcv, lb(m.rcv))
+            hp, lb_hp, atk, lb_atk, rcv, lb_rcv)
     else:
-        stats_row_1 = 'Weighted {}'.format(m.weighted_stats)
-        stats_row_2 = '**HP** {}\n**ATK** {}\n**RCV** {}'.format(m.hp, m.atk, m.rcv)
+        stats_row_1 = 'Weighted {}'.format(weighted)
+        stats_row_2 = '**HP** {}\n**ATK** {}\n**RCV** {}'.format(hp, atk, rcv)
     embed.add_field(name=stats_row_1, value=stats_row_2)
 
     awakenings_row = ''
     for idx, a in enumerate(m.awakenings):
-        a = a.get_name()
-        mapped_awakening = AWAKENING_NAME_MAP_RPAD.get(a, a)
+        as_id = a.awoken_skill_id
+        as_name = a.name
+        mapped_awakening = AWAKENING_MAP.get(as_id, as_name)
         mapped_awakening = match_emoji(emoji_list, mapped_awakening)
-
-        if mapped_awakening is None:
-            mapped_awakening = AWAKENING_NAME_MAP.get(a, a)
 
         # Wrap superawakenings to the next line
         if len(m.awakenings) - idx == m.superawakening_count:
@@ -836,30 +803,24 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
     if not len(awakenings_row):
         awakenings_row = 'No Awakenings'
 
-    killers = compute_killers(m.type1, m.type2, m.type3)
-    killers_row = '**Available Killers:** {}'.format(' '.join(killers))
+    killers_row = '**Available Killers:** {}'.format(' '.join(m.killers))
 
     embed.description = '{}\n{}'.format(awakenings_row, killers_row)
 
-    if len(m.server_actives) >= 2:
-        for server, active in m.server_actives.items():
-            active_header = '({} Server) Active Skill ({} -> {})'.format(server,
-                                                                         active.turn_max, active.turn_min)
-            active_body = active.desc
-            embed.add_field(name=active_header, value=active_body, inline=False)
-    else:
-        active_header = 'Active Skill'
-        active_body = 'None/Missing'
-        if m.active_skill:
-            active_header = 'Active Skill ({} -> {})'.format(m.active_skill.turn_max,
-                                                             m.active_skill.turn_min)
-            active_body = m.active_skill.desc
-        embed.add_field(name=active_header, value=active_body, inline=False)
+    active_header = 'Active Skill'
+    active_body = 'None/Missing'
+    active_skill = m.active_skill
+    if active_skill:
+        active_header = 'Active Skill ({} -> {})'.format(active_skill.turn_max,
+                                                         active_skill.turn_min)
+        active_body = active_skill.desc
+    embed.add_field(name=active_header, value=active_body, inline=False)
 
-    ls_row = m.leader_skill.desc if m.leader_skill else 'None/Missing'
+    leader_skill = m.leader_skill
+    ls_row = m.leader_skill.desc if leader_skill else 'None/Missing'
     ls_header = 'Leader Skill'
-    if m.leader_skill_data:
-        hp, atk, rcv, resist = m.leader_skill_data.get_data()
+    if leader_skill:
+        hp, atk, rcv, resist = m.leader_skill.data
         multiplier_text = createMultiplierText(hp, atk, rcv, resist)
         ls_header += " [ {} ]".format(multiplier_text)
     embed.add_field(name=ls_header, value=ls_row, inline=False)
@@ -867,26 +828,30 @@ def monsterToEmbed(m: padguide2.PgMonster, emoji_list):
     return embed
 
 
-def monsterToOtherInfoEmbed(m: padguide2.PgMonster):
+def monsterToOtherInfoEmbed(m: dadguide.DgMonster):
     embed = monsterToBaseEmbed(m)
     # Clear the thumbnail, takes up too much space
     embed.set_thumbnail(url='')
 
-    stat_cols = ['', 'Max', 'M297', 'Inh', 'I297']
-    tbl = prettytable.PrettyTable(stat_cols)
-    tbl.hrules = prettytable.NONE
-    tbl.vrules = prettytable.NONE
-    tbl.align = "r"
-    hhp = m.hp + 99 * 10
-    hatk = m.atk + 99 * 5
-    hrcv = m.rcv + 99 * 3
-    tbl.add_row(['HP', m.hp, hhp, int(m.hp * .1), int(hhp * .1)])
-    tbl.add_row(['ATK', m.atk, hatk, int(m.atk * .05), int(hatk * .05)])
-    tbl.add_row(['RCV', m.rcv, hrcv, int(m.rcv * .15), int(hrcv * .15)])
+    body_text = '\n'
+    stat_cols = ['', 'HP', 'ATK', 'RCV']
+    for plus in (0, 297):
+        body_text += '**Stats at +{}:**'.format(plus)
+        tbl = prettytable.PrettyTable(stat_cols)
+        tbl.hrules = prettytable.NONE
+        tbl.vrules = prettytable.NONE
+        tbl.align = "l"
+        levels = (m.level, 110) if m.limit_mult > 0 else (m.level,)
+        for lv in levels:
+            for inh in (False, True):
+                hp, atk, rcv, _ = m.stats(lv, plus=plus, inherit=inh)
+                row_name = 'Lv{}'.format(lv)
+                if inh:
+                    row_name = '(Inh)'
+                tbl.add_row([row_name.format(plus), hp, atk, rcv])
+        body_text += box(tbl.get_string())
 
-    body_text = box(tbl.get_string())
-
-    search_text = YT_SEARCH_TEMPLATE.format(m.name_jp)
+    search_text = YT_SEARCH_TEMPLATE.format(urllib.parse.quote(m.name_jp))
     skyozora_text = SKYOZORA_TEMPLATE.format(m.monster_no_jp)
     body_text += "\n**JP Name**: {} | [YouTube]({}) | [Skyozora]({})".format(
         m.name_jp, search_text, skyozora_text)
@@ -896,7 +861,7 @@ def monsterToOtherInfoEmbed(m: padguide2.PgMonster):
 
     body_text += '\n**Series:** {}'.format(m.series.name)
     body_text += '\n**Sell MP:** {:,}'.format(m.sell_mp)
-    if m.buy_mp > 0:
+    if m.buy_mp is not None:
         body_text += "  **Buy MP:** {:,}".format(m.buy_mp)
 
     if m.exp < 1000000:
@@ -904,221 +869,89 @@ def monsterToOtherInfoEmbed(m: padguide2.PgMonster):
     else:
         xp_text = '{:.1f}'.format(m.exp / 1000000).rstrip('0').rstrip('.') + 'M'
     body_text += '\n**XP to Max:** {}'.format(xp_text)
-    body_text += '  **Max Level:**: {}'.format(m.max_level)
+    body_text += '  **Max Level:**: {}'.format(m.level)
     body_text += '\n**Rarity:** {} **Cost:** {}'.format(m.rarity, m.cost)
 
-    if m.translated_jp_name:
-        body_text += '\n**Google Translated:** {}'.format(m.translated_jp_name)
+    # body_text += '\n**Google Translated:** {}'.format(tl_name)
 
     embed.description = body_text
 
     return embed
 
 
-def monsters_to_rotation_list(monster_list, server: str, index_all: padguide2.MonsterIndex):
-    # Shorten some of the longer names
-    name_remap = {
-        'Extreme King Metal Tamadra': 'Fat Tama',
-        'Extreme King Metal Dragon': 'EKMD',
-        'Ancient Green Sacred Mask': 'Green Mask',
-        'Ancient Blue Sacred Mask': 'Blue Mask',
-    }
-    ignore_monsters = [
-        'Ancient Draggie Knight',
-    ]
-
-    monster_list.sort(key=lambda m: m.monster_no, reverse=True)
-    next_rotation_date = None
-    for m in monster_list:
-        if server in m.future_skillup_rotation:
-            next_rotation_date = m.future_skillup_rotation[server].rotation_date_str
-            break
-
-    cols = [server + ' Skillup', 'Current']
-    if next_rotation_date:
-        cols.append(next_rotation_date)
-    tbl = prettytable.PrettyTable(cols)
-    tbl.hrules = prettytable.HEADER
-    tbl.vrules = prettytable.NONE
-    tbl.align = "l"
-
-    def cell_name(m: padguide2.PgMonster):
-        nm = index_all.monster_no_to_named_monster[m.monster_no]
-        name = nm.group_computed_basename.title()
-        return name_remap.get(name, name)
-
-    for m in monster_list:
-        skill = m.server_actives[server]
-
-        sm = skill.monsters_with_active
-        # Since some newer monsters like jewel of creation are being used as
-        # skillups, exclude them from the list of skillup targets.
-
-        def is_bad_type(m):
-            return set(['enhance', 'evolve', 'vendor']).intersection(set(m.types))
-        sm = max(sm, key=lambda x: (not is_bad_type(x), x.monster_no))
-
-        skillup_name = cell_name(m)
-        if skillup_name in ignore_monsters:
-            continue
-        row = [skillup_name, cell_name(sm)]
-        if next_rotation_date:
-            if server in m.future_skillup_rotation:
-                next_skill = m.future_skillup_rotation[server].skill
-                nm = max(next_skill.monsters_with_active, key=lambda x: x.monster_no)
-                row.append(cell_name(nm))
-            else:
-                row.append('')
-        tbl.add_row(row)
-
-    return tbl.get_string()
-
-
-AWAKENING_NAME_MAP_RPAD = {
-    'Enhanced Attack': 'boost_atk',
-    'Enhanced HP': 'boost_hp',
-    'Enhanced Heal': 'boost_rcv',
-
-    'Enhanced Team HP': 'teamboost_hp',
-    'Enhanced Team Attack': 'teamboost_atk',
-    'Enhanced Team RCV': 'teamboost_rcv',
-
-    'Reduced Attack': 'reduce_atk',
-    'Reduced HP': 'reduce_hp',
-    'Reduced RCV': 'reduce_rcv',
-
-    'God Killer': 'killer_god',
-    'Dragon Killer': 'killer_dragon',
-    'Devil Killer': 'killer_devil',
-    'Machine Killer': 'killer_machine',
-    'Balanced Killer': 'killer_balance',
-    'Attacker Killer': 'killer_attacker',
-
-    'Physical Killer': 'killer_physical',
-    'Healer Killer': 'killer_healer',
-    'Evolve Material Killer': 'killer_evomat',
-    'Awaken Material Killer': 'killer_awoken',
-    'Enhance Material Killer': 'killer_enhancemat',
-    'Vendor Material Killer': 'killer_vendor',
-
-    'Auto-Recover': 'misc_autoheal',
-    'Recover Bind': 'misc_bindclear',
-    'Enhanced Combo': 'misc_comboboost',
-    'Super Enhanced Combo': 'misc_super_comboboost',
-    'Guard Break': 'misc_guardbreak',
-    'Multi Boost': 'misc_multiboost',
-    'Additional Attack': 'misc_extraattack',
-    'Skill Boost': 'misc_sb',
-    'Extend Time': 'misc_te',
-    'Two-Pronged Attack': 'misc_tpa',
-    'Damage Void Shield Penetration': 'misc_voidshield',
-    'Awoken Assist': 'misc_assist',
-
-    'Enhanced Fire Orbs': 'oe_fire',
-    'Enhanced Water Orbs': 'oe_water',
-    'Enhanced Wood Orbs': 'oe_wood',
-    'Enhanced Light Orbs': 'oe_light',
-    'Enhanced Dark Orbs': 'oe_dark',
-    'Enhanced Heal Orbs': 'oe_heart',
-
-    'Reduce Fire Damage': 'reduce_fire',
-    'Reduce Water Damage': 'reduce_water',
-    'Reduce Wood Damage': 'reduce_wood',
-    'Reduce Light Damage': 'reduce_light',
-    'Reduce Dark Damage': 'reduce_dark',
-
-    'Resistance-Bind': 'res_bind',
-    'Resistance-Dark': 'res_blind',
-    'Resistance-Jammers': 'res_jammer',
-    'Resistance-Poison': 'res_poison',
-    'Resistance-Skill Bind': 'res_skillbind',
-
-    'Enhanced Fire Att.': 'row_fire',
-    'Enhanced Water Att.': 'row_water',
-    'Enhanced Wood Att.': 'row_wood',
-    'Enhanced Light Att.': 'row_light',
-    'Enhanced Dark Att.': 'row_dark',
-
-    'Skill Charge': 'misc_skillcharge',
-    'Super Additional Attack': 'misc_super_extraattack',
-    'Resistance-Bind＋': 'res_bind_super',
-    'Extend Time＋': 'misc_te_super',
-    'Resistance-Cloud': 'res_cloud',
-    'Resistance-Board Restrict': 'res_seal',
-    'Skill Boost＋': 'misc_sb_super',
-    'L-Shape Attack': 'l_attack',
-    'L-Shape Damage Reduction': 'l_shield',
-    'Enhance when HP is below 50%': 'attack_boost_low',
-    'Enhance when HP is above 80%': 'attack_boost_high',
-    'Combo Orb': 'orb_combo',
-    'Skill Voice': 'misc_voice',
-    'Dungeon Bonus': 'misc_dungeonbonus',
-
-    'Resistance-Dark＋': 'res_blind_super',
-    'Resistance-Jammer＋': 'res_jammer_super',
-    'Resistance-Poison＋': 'res_poison_super',
-    'Jammer Orb’s Blessing': 'misc_jammerboost',
-    'Poison Orb’s Blessing': 'misc_poisonboost',
-}
-
-AWAKENING_NAME_MAP = {
-    'Enhanced Fire Orbs': 'R-OE',
-    'Enhanced Water Orbs': 'B-OE',
-    'Enhanced Wood Orbs': 'G-OE',
-    'Enhanced Light Orbs': 'L-OE',
-    'Enhanced Dark Orbs': 'D-OE',
-    'Enhanced Heal Orbs': 'H-OE',
-
-    'Enhanced Fire Att.': 'R-RE',
-    'Enhanced Water Att.': 'B-RE',
-    'Enhanced Wood Att.': 'G-RE',
-    'Enhanced Light Att.': 'L-RE',
-    'Enhanced Dark Att.': 'D-RE',
-
-    'Enhanced HP': 'HP',
-    'Enhanced Attack': 'ATK',
-    'Enhanced Heal': 'RCV',
-
-    'Enhanced Team HP': 'TEAM-HP',
-    'Enhanced Team Attack': 'TEAM-ATK',
-    'Enhanced Team RCV': 'TEAM-RCV',
-
-    'Reduced HP': '-HP',
-    'Reduced Attack': '-ATK',
-    'Reduced RCV': '-RCV',
-
-    'Auto-Recover': 'AUTO-RECOVER',
-    'Skill Boost': 'SB',
-    'Resistance-Skill Bind': 'SBR',
-    'Two-Pronged Attack': 'TPA',
-    'Multi Boost': 'MULTI-BOOST',
-    'Recover Bind': 'RCV-BIND',
-    'Extend Time': 'TE',
-    'Enhanced Combo': 'COMBO-BOOST',
-    'Guard Break': 'DEF-BREAK',
-    'Additional Attack': 'EXTRA-ATK',
-    'Damage Void Shield Penetration': 'VOID-BREAK',
-    'Awoken Assist': 'ASSIST',
-
-    'Resistance-Bind': 'RES-BIND',
-    'Resistance-Dark': 'RES-BLIND',
-    'Resistance-Poison': 'RES-POISON',
-    'Resistance-Jammers': 'RES-JAMMER',
-
-    'Reduce Fire Damage': 'R-RES',
-    'Reduce Water Damage': 'B-RES',
-    'Reduce Wood Damage': 'G-RES',
-    'Reduce Light Damage': 'L-RES',
-    'Reduce Dark Damage': 'D-RES',
-
-    'Healer Killer': 'K-HEALER',
-    'Machine Killer': 'K-MACHINE',
-    'Dragon Killer': 'K-DRAGON',
-    'Attacker Killer': 'K-ATTACKER',
-    'Physical Killer': 'K-PHYSICAL',
-    'God Killer': 'K-GOD',
-    'Devil Killer': 'K-DEVIL',
-    'Balance Killer': 'K-BALANCE',
+AWAKENING_MAP = {
+    1: 'boost_hp',
+    2: 'boost_atk',
+    3: 'boost_rcv',
+    4: 'reduce_fire',
+    5: 'reduce_water',
+    6: 'reduce_wood',
+    7: 'reduce_light',
+    8: 'reduce_dark',
+    9: 'misc_autoheal',
+    10: 'res_bind',
+    11: 'res_blind',
+    12: 'res_jammer',
+    13: 'res_poison',
+    14: 'oe_fire',
+    15: 'oe_water',
+    16: 'oe_wood',
+    17: 'oe_light',
+    18: 'oe_dark',
+    19: 'misc_te',
+    20: 'misc_bindclear',
+    21: 'misc_sb',
+    22: 'row_fire',
+    23: 'row_water',
+    24: 'row_wood',
+    25: 'row_light',
+    26: 'row_dark',
+    27: 'misc_tpa',
+    28: 'res_skillbind',
+    29: 'oe_heart',
+    30: 'misc_multiboost',
+    31: 'killer_dragon',
+    32: 'killer_god',
+    33: 'killer_devil',
+    34: 'killer_machine',
+    35: 'killer_balance',
+    36: 'killer_attacker',
+    37: 'killer_physical',
+    38: 'killer_healer',
+    39: 'killer_evomat',
+    40: 'killer_awoken',
+    41: 'killer_enhancemat',
+    42: 'killer_vendor',
+    43: 'misc_comboboost',
+    44: 'misc_guardbreak',
+    45: 'misc_extraattack',
+    46: 'teamboost_hp',
+    47: 'teamboost_rcv',
+    48: 'misc_voidshield',
+    49: 'misc_assist',
+    50: 'misc_super_extraattack',
+    51: 'misc_skillcharge',
+    52: 'res_bind_super',
+    53: 'misc_te_super',
+    54: 'res_cloud',
+    55: 'res_seal',
+    56: 'misc_sb_super',
+    57: 'attack_boost_high',
+    58: 'attack_boost_low',
+    59: 'l_shield',
+    60: 'l_attack',
+    61: 'misc_super_comboboost',
+    62: 'orb_combo',
+    63: 'misc_voice',
+    64: 'misc_dungeonbonus',
+    65: 'reduce_hp',
+    66: 'reduce_atk',
+    67: 'reduce_rcv',
+    68: 'res_blind_super',
+    69: 'res_jammer_super',
+    70: 'res_poison_super',
+    71: 'misc_jammerboost',
+    72: 'misc_poisonboost',
 }
 
 
@@ -1127,44 +960,10 @@ def createMultiplierText(hp1, atk1, rcv1, resist1, hp2=None, atk2=None, rcv2=Non
 
     def fmtNum(val):
         return ('{:.2f}').format(val).strip('0').rstrip('.')
+
     text = "{}/{}/{}".format(fmtNum(hp1 * hp2), fmtNum(atk1 * atk2), fmtNum(rcv1 * rcv2))
-    if resist1 * resist2 < 1:
-        resist1 = resist1 if resist1 < 1 else 0
-        resist2 = resist2 if resist2 < 1 else 0
+    if resist1 * resist2 > 0:
+        # resist1 = resist1 if resist1 < 1 else 0
+        # resist2 = resist2 if resist2 < 1 else 0
         text += ' Resist {}%'.format(fmtNum(100 * (1 - (1 - resist1) * (1 - resist2))))
     return text
-
-
-def _map_awakenings_text(m: padguide2.PgMonster):
-    awakenings_row = ''
-    unique_awakenings = set(m.awakening_names)
-    for a in unique_awakenings:
-        count = m.awakening_names.count(a)
-        awakenings_row += ' {}x{}'.format(AWAKENING_NAME_MAP.get(a, a), count)
-    awakenings_row = awakenings_row.strip()
-
-    if not len(awakenings_row):
-        awakenings_row = 'No Awakenings'
-
-    return awakenings_row
-
-
-# TODO: move to padguide2
-def compute_killers(*types):
-    if 'Balance' in types:
-        return ['Any']
-    killers = set()
-    for t in types:
-        killers.update(type_to_killers_map.get(t, []))
-    return sorted(killers)
-
-
-type_to_killers_map = {
-    'God': ['Devil'],
-    'Devil': ['God'],
-    'Machine': ['God', 'Balance'],
-    'Dragon': ['Machine', 'Healer'],
-    'Physical': ['Machine', 'Healer'],
-    'Attacker': ['Devil', 'Physical'],
-    'Healer': ['Dragon', 'Attacker'],
-}

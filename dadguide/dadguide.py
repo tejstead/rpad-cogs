@@ -7,41 +7,30 @@ combines them into a an in-memory interconnected database.
 Don't hold on to any of the dastructures exported from here, or the
 entire database could be leaked when the module is reloaded.
 """
-from _collections import defaultdict, deque, OrderedDict
 import asyncio
 import csv
-from datetime import datetime
-from datetime import timedelta
 import difflib
-from itertools import groupby
 import json
-from operator import itemgetter
 import os
 import re
-import time
+import shutil
+import sqlite3 as lite
 import traceback
-
-import aiohttp
-import discord
-from discord.ext import commands
+from _collections import defaultdict, deque, OrderedDict
+from datetime import datetime
 from enum import Enum
+
 import pytz
 import romkan
-import sqlite3 as lite
-
 from __main__ import send_cmd_help
+from discord.ext import commands
 
 from . import rpadutils
 from .rpadutils import CogSettings
 from .utils import checks
-from .utils.chat_formatting import box, inline
-from .utils.dataIO import dataIO
+from .utils.chat_formatting import inline
 
-
-# DUMMY_FILE_PATTERN = 'data/padguide2/{}.dummy'
-# JSON_FILE_PATTERN = 'data/padguide2/{}.json'
 CSV_FILE_PATTERN = 'data/dadguide/{}.csv'
-# ATTR_EXPORT_PATH = 'data/padguide2/card_data.csv'
 NAMES_EXPORT_PATH = 'data/dadguide/computed_names.json'
 BASENAMES_EXPORT_PATH = 'data/dadguide/base_names.json'
 TRANSLATEDNAMES_EXPORT_PATH = 'data/dadguide/translated_names.json'
@@ -55,9 +44,10 @@ NICKNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('nicknames')
 BASENAME_FILE_PATTERN = CSV_FILE_PATTERN.format('basenames')
 PANTHNAME_FILE_PATTERN = CSV_FILE_PATTERN.format('panthnames')
 
-DB_DUMP_URL = 'https://f002.backblazeb2.com/file/dadguide-data/db/'
-DB_DUMP_DIR = 'data/dadguide/'
-DB_DUMP = 'dadguide.sqlite'
+DB_DUMP_URL = 'https://f002.backblazeb2.com/file/dadguide-data/db/dadguide.sqlite'
+DB_DUMP_FILE = 'data/dadguide/dadguide.sqlite'
+DB_DUMP_WORKING_FILE = 'data/dadguide/dadguide_working.sqlite'
+
 
 class Dadguide(object):
     def __init__(self, bot):
@@ -78,7 +68,8 @@ class Dadguide(object):
         # Map of google-translated JP names to EN names
         self.translated_names = {}
 
-        self.database = DadguideDatabase(data_dir=self.settings.dataDir())
+        self.database = load_database(None)
+        self.index = None
 
     @asyncio.coroutine
     def wait_until_ready(self):
@@ -91,34 +82,33 @@ class Dadguide(object):
 
     def create_index(self, accept_filter=None):
         """Exported function that allows a client cog to create a monster index"""
-        return MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, self.panthname_overrides, accept_filter=accept_filter)
+        return MonsterIndex(self.database,
+                            self.nickname_overrides,
+                            self.basename_overrides,
+                            self.panthname_overrides,
+                            accept_filter=accept_filter)
 
     def get_monster_by_no(self, monster_no: int):
         """Exported function that allows a client cog to get a full PgMonster by monster_no"""
         return self.database.get_monster(monster_no)
-
-    # def get_translated_jp_name(self, jp_name):
-    #     return self.translate_names.get(jp_name, None)
 
     def register_tasks(self):
         self.reload_task = self.bot.loop.create_task(self.reload_data_task())
 
     def __unload(self):
         # Manually nulling out database because the GC for cogs seems to be pretty shitty
+        if self.database:
+            self.database.close()
         self.database = None
         self._is_ready.clear()
 
     async def reload_data_task(self):
         await self.bot.wait_until_ready()
 
-        try:
-            # Try and load the PadGuide database the first time with existing files
-            self.database = DadguideDatabase(data_dir=self.settings.dataDir())
+        # We already had a copy of the database at startup, signal that we're ready now.
+        if self.database.has_database():
+            print('Using stored database at load')
             self._is_ready.set()
-            print('Finished initial Dadguide load with existing database')
-        except Exception as ex:
-            print(ex)
-            print('Initial dadguide database load failed, waiting for download')
 
         while self == self.bot.get_cog('Dadguide'):
             short_wait = False
@@ -130,12 +120,6 @@ class Dadguide(object):
                 short_wait = True
                 print("dadguide data download/refresh failed", ex)
                 traceback.print_exc()
-
-            # try:
-            #     await self.translate_names()
-            # except Exception as ex:
-            #     print("translations failed", ex)
-            #     traceback.print_exc()
 
             try:
                 wait_time = 60 if short_wait else 60 * 60 * 4
@@ -151,23 +135,11 @@ class Dadguide(object):
         os.remove(PANTHNAME_FILE_PATTERN)
         await self.download_and_refresh_nicknames()
 
-    # async def translate_names(self):
-    #     if os.path.exists(TRANSLATEDNAMES_EXPORT_PATH):
-    #         with open(TRANSLATEDNAMES_EXPORT_PATH) as f:
-    #             self.translated_names = json.load(f)
-
-    #     for m in self.database.get_all_monster_jp_name():
-    #         name_jp = m.name_jp
-    #         if rpadutils.containsJp(name_jp) and name_jp not in self.translated_names:
-    #             self.translated_names[name_jp] = await rpadutils.translate_jp_en(self.bot, name_jp)
-
-    #     self.database.translated_names = self.translate_names
-
-    #     with open(TRANSLATEDNAMES_EXPORT_PATH, 'w', encoding='utf-8') as f:
-    #         json.dump(self.translated_names, f, sort_keys=True, indent=4)
-
     async def download_and_refresh_nicknames(self):
-        await self._download_files()
+        if self.settings.dataFile():
+            shutil.copy2(self.settings.dataFile(), DB_DUMP_FILE)
+        else:
+            await self._download_files()
         await self._download_override_files()
 
         nickname_overrides = self._csv_to_tuples(NICKNAME_FILE_PATTERN)
@@ -186,16 +158,16 @@ class Dadguide(object):
         self.panthname_overrides = {x[0].lower(): x[1].lower() for x in panthname_overrides}
         self.panthname_overrides.update({v: v for _, v in self.panthname_overrides.items()})
 
-        self.database = DadguideDatabase(data_dir=self.settings.dataDir())
-        self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides, self.panthname_overrides)
+        self.database = load_database(self.database)
+        self.index = MonsterIndex(self.database, self.nickname_overrides, self.basename_overrides,
+                                  self.panthname_overrides)
 
-        # self.write_monster_attr_data()
         self.write_monster_computed_names()
 
     def write_monster_computed_names(self):
         results = {}
         for name, nm in self.index.all_entries.items():
-            results[name] = int(rpadutils.get_pdx_id(nm))
+            results[name] = int(rpadutils.get_pdx_id_dadguide(nm))
 
         with open(NAMES_EXPORT_PATH, 'w', encoding='utf-8') as f:
             json.dump(results, f, sort_keys=True)
@@ -205,44 +177,12 @@ class Dadguide(object):
             entry = {'bn': list(nm.group_basenames)}
             if nm.extra_nicknames:
                 entry['nn'] = list(nm.extra_nicknames)
-            results[int(rpadutils.get_pdx_id(nm))] = entry
+            results[int(rpadutils.get_pdx_id_dadguide(nm))] = entry
 
         with open(BASENAMES_EXPORT_PATH, 'w', encoding='utf-8') as f:
             json.dump(results, f, sort_keys=True)
 
-    # def write_monster_attr_data(self):
-    #     """Write id,server,attr1,attr2 to be used by the portrait generation process."""
-    #     attr_short_prefix_map = {
-    #         Attribute.Fire: 'r',
-    #         Attribute.Water: 'b',
-    #         Attribute.Wood: 'g',
-    #         Attribute.Light: 'l',
-    #         Attribute.Dark: 'd',
-    #     }
-
-    #     # Monsters who exist only in na have the same na/jp id but differing monster_no
-    #     na_only = self.database.get_na_only_monsters()
-
-    #     na_only_base_no = [x.monster_id for x in na_only]
-    #     na_only_server_no = [x.monster_no_na for x in na_only]
-
-    #     with open(ATTR_EXPORT_PATH, 'w') as csvfile:
-    #         writer = csv.writer(csvfile, delimiter=',', lineterminator='\n')
-    #         for m in self.database.get_all_monsters():
-    #             attr1 = attr_short_prefix_map[m.attr1]
-    #             attr2 = attr_short_prefix_map[m.attr2] if m.attr2 else ''
-    #             if m.monster_id in na_only_base_no:
-    #                 # Writes stuff like voltron
-    #                 writer.writerow([m.monster_no_na, 'na', attr1, attr2])
-    #             elif m.monster_no_jp in na_only_server_no:
-    #                 # Writes stuff like crows
-    #                 writer.writerow([m.monster_no_jp, 'jp', attr1, attr2])
-    #             else:
-    #                 # writes everything else
-    #                 writer.writerow([m.monster_no_na, 'na', attr1, attr2])
-    #                 writer.writerow([m.monster_no_jp, 'jp', attr1, attr2])
-
-    def _csv_to_tuples(self, file_path: str, cols: int=2):
+    def _csv_to_tuples(self, file_path: str, cols: int = 2):
         # Loads a two-column CSV into an array of tuples.
         results = []
         with open(file_path, encoding='utf-8') as f:
@@ -262,56 +202,45 @@ class Dadguide(object):
         return results
 
     async def _download_files(self):
-        # twelve hours expiry
-        # standard_expiry_secs = 12 * 60 * 60
-        # # four hours expiry
-        # quick_expiry_secs = 4 * 60 * 60
-
-        # Use a dummy file to proxy for the entire database being out of date
-        # general_dummy_file = DUMMY_FILE_PATTERN.format('general')
-        # download_all = rpadutils.checkPadguideCacheFile(general_dummy_file, quick_expiry_secs)
-
-        file_path = DB_DUMP_DIR+DB_DUMP
-        file_url = DB_DUMP_URL+DB_DUMP
-        expiry_secs = 1 * 60 * 60
-        await rpadutils.async_cached_dadguide_request(file_path, file_url, expiry_secs)
+        one_hour_secs = 1 * 60 * 60
+        await rpadutils.async_cached_dadguide_request(DB_DUMP_FILE, DB_DUMP_URL, one_hour_secs)
 
     async def _download_override_files(self):
-        overrides_expiry_secs = 1 * 60 * 60
+        one_hour_secs = 1 * 60 * 60
         await rpadutils.makeAsyncCachedPlainRequest(
-            NICKNAME_FILE_PATTERN, NICKNAME_OVERRIDES_SHEET, overrides_expiry_secs)
+            NICKNAME_FILE_PATTERN, NICKNAME_OVERRIDES_SHEET, one_hour_secs)
         await rpadutils.makeAsyncCachedPlainRequest(
-            BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, overrides_expiry_secs)
+            BASENAME_FILE_PATTERN, GROUP_BASENAMES_OVERRIDES_SHEET, one_hour_secs)
         await rpadutils.makeAsyncCachedPlainRequest(
-            PANTHNAME_FILE_PATTERN, PANTHNAME_OVERRIDES_SHEET, overrides_expiry_secs)
+            PANTHNAME_FILE_PATTERN, PANTHNAME_OVERRIDES_SHEET, one_hour_secs)
 
     @commands.group(pass_context=True)
     @checks.is_owner()
     async def dadguide(self, ctx):
-        """PAD database management"""
+        """Dadguide database settings"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 
     @dadguide.command(pass_context=True)
     @checks.is_owner()
-    async def setdatadir(self, ctx, *, data_dir):
-        """Set a local path to padguide data instead of downloading it."""
-        self.settings.setDataDir(data_dir)
+    async def setdatafile(self, ctx, *, data_file):
+        """Set a local path to dadguide data instead of downloading it."""
+        self.settings.setDataFile(data_file)
         await self.bot.say(inline('Done'))
 
 
 class DadguideSettings(CogSettings):
     def make_default_settings(self):
         config = {
-            'data_dir': DB_DUMP_DIR,
+            'data_file': '',
         }
         return config
 
-    def dataDir(self):
-        return self.bot_settings['data_dir']
+    def dataFile(self):
+        return self.bot_settings['data_file']
 
-    def setDataDir(self, data_dir):
-        self.bot_settings['data_dir'] = data_dir
+    def setDataFile(self, data_file):
+        self.bot_settings['data_file'] = data_file
         self.save_settings()
 
 
@@ -329,6 +258,7 @@ class Attribute(Enum):
     Light = 3
     Dark = 4
 
+
 class MonsterType(Enum):
     Evolve = 0
     Balance = 1
@@ -343,12 +273,14 @@ class MonsterType(Enum):
     Enhance = 14
     Vendor = 15
 
+
 class EvoType(Enum):
     """Evo types supported by PadGuide. Numbers correspond to their id values."""
     Base = 0  # Represents monsters who didn't require evo
     Evo = 1
     UvoAwoken = 2
     UuvoReincarnated = 3
+
 
 class DungeonType(Enum):
     Unknown = -1
@@ -357,25 +289,43 @@ class DungeonType(Enum):
     Technical = 2
     Etc = 3
 
+
 class Server(Enum):
     JP = 0
     NA = 1
     KR = 2
 
+
 class DadguideTableNotFound(Exception):
     def __init__(self, table_name):
         self.message = '{} not found'.format(table_name)
 
-class DadguideDatabase(object):
-    def __init__(self, data_dir=None):
-        if data_dir is None:
-            self._con = lite.connect(':memory:', detect_types=lite.PARSE_DECLTYPES)
-        else:
-            self._con = lite.connect(os.path.join(data_dir, DB_DUMP), detect_types=lite.PARSE_DECLTYPES)
-        self._con.row_factory = lite.Row
 
-        # precompile queries
-        # self.queries = DictWithAttrAccess({})
+def load_database(existing_db):
+    # Release the handle to the database file if it has one
+    if existing_db:
+        existing_db.close()
+    # Overwrite the working copy so we can open a handle to it without affecting future downloads
+    if os.path.exists(DB_DUMP_FILE):
+        shutil.copy2(DB_DUMP_FILE, DB_DUMP_WORKING_FILE)
+    # Open the new working copy.
+    return DadguideDatabase(data_file=DB_DUMP_WORKING_FILE)
+
+
+class DadguideDatabase(object):
+    def __init__(self, data_file=None):
+        self._con = None
+
+        if data_file is not None:
+            self._con = lite.connect(data_file, detect_types=lite.PARSE_DECLTYPES)
+            self._con.row_factory = lite.Row
+
+    def has_database(self):
+        return self._con is not None
+
+    def close(self):
+        self._con.close()
+        self._con = None
 
     @staticmethod
     def _select_builder(tables, key=None, where=None, order=None, distinct=False):
@@ -455,7 +405,7 @@ class DadguideDatabase(object):
 
     def _get_table_fields(self, table_name: str):
         # SQL inject vulnerable :v
-        table_info = self._query_many('PRAGMA table_info('+table_name+')', (), dict)
+        table_info = self._query_many('PRAGMA table_info(' + table_name + ')', (), dict)
         pk = None
         fields = []
         for c in table_info:
@@ -489,14 +439,13 @@ class DadguideDatabase(object):
             (awoken_skill_id,),
             DgMonster)
 
-
     def get_awakenings_by_monster(self, monster_id, is_super=None):
         if is_super is None:
             where = '{0}.monster_id=?'.format(DgAwakening.TABLE)
             param = (monster_id,)
         else:
-            where='{0}.monster_id=? AND {0}.is_super=?'.format(DgAwakening.TABLE)
-            param=(monster_id, is_super)
+            where = '{0}.monster_id=? AND {0}.is_super=?'.format(DgAwakening.TABLE)
+            param = (monster_id, is_super)
         return self._query_many(
             self._select_builder(
                 tables={DgAwakening.TABLE: DgAwakening.FIELDS},
@@ -505,15 +454,6 @@ class DadguideDatabase(object):
             ),
             param,
             DgAwakening)
-
-    def monster_is_equip(self, monster_id):
-        return self._query_one(
-            self._select_builder(
-                tables={DgAwakening.TABLE: DgAwakening.FIELDS},
-                where='{0}.monster_id=? AND {0}.awoken_skill_id=49'.format(DgAwakening.TABLE)
-            ),
-            (monster_id,),
-            DgAwakening) is not None
 
     def get_drop_dungeons(self, monster_id):
         return self._query_many(
@@ -590,7 +530,7 @@ class DadguideDatabase(object):
                 tables={DgEvolution.TABLE: DgEvolution.FIELDS},
                 where=' OR '.join(['{}.mat_{}_id=?'.format(DgEvolution.TABLE, i) for i in range(1, 6)])
             ),
-            (monster_id,)*5,
+            (monster_id,) * 5,
             DgEvolution)
 
     def get_base_monster_ids(self):
@@ -667,16 +607,21 @@ class DadguideDatabase(object):
             DgMonster)
 
     def get_na_only_monsters(self):
-        return self._get_monsters_where('{0}.monster_id != {0}.monster_no_na AND {0}.monster_no_jp == {0}.monster_no_na '.format(DgMonster.TABLE), ())
+        return self._get_monsters_where(
+            '{0}.monster_id != {0}.monster_no_na AND {0}.monster_no_jp == {0}.monster_no_na '.format(DgMonster.TABLE),
+            ())
 
     def get_monster(self, monster_id: int):
         return self._select_one_entry_by_pk(monster_id, DgMonster)
 
     def get_all_monster_jp_name(self, as_generator=True):
-        return self._query_many(self._select_builder(tables={DgMonster.TABLE: ('name_jp',)}), (), DictWithAttrAccess, as_generator=as_generator)
+        return self._query_many(self._select_builder(tables={DgMonster.TABLE: ('name_jp',)}), (), DictWithAttrAccess,
+                                as_generator=as_generator)
 
     def get_all_monsters(self, as_generator=True):
-        return self._query_many(self._select_builder(tables={DgMonster.TABLE: DgMonster.FIELDS}), (), DgMonster, as_generator=as_generator)
+        return self._query_many(self._select_builder(tables={DgMonster.TABLE: DgMonster.FIELDS}), (), DgMonster,
+                                as_generator=as_generator)
+
 
 def enum_or_none(enum, value, default=None):
     if value is not None:
@@ -684,10 +629,12 @@ def enum_or_none(enum, value, default=None):
     else:
         return default
 
+
 class DictWithAttrAccess(dict):
     def __init__(self, item):
         super(DictWithAttrAccess, self).__init__(item)
         self.__dict__ = self
+
 
 class DadguideItem(DictWithAttrAccess):
     """
@@ -708,6 +655,7 @@ class DadguideItem(DictWithAttrAccess):
     def key(self):
         return self[self.PK]
 
+
 class DgActiveSkill(DadguideItem):
     TABLE = 'active_skills'
     PK = 'active_skill_id'
@@ -722,11 +670,12 @@ class DgActiveSkill(DadguideItem):
 
     @property
     def desc(self):
-        return self.desc_na if len(self.desc_na) > 0 else self.desc_jp
+        return self.desc_na or self.desc_jp
 
     @property
     def name(self):
-        return self.name_na if self.name_na is not None else self.name_jp
+        return self.name_na or self.name_jp
+
 
 class DgLeaderSkill(DadguideItem):
     TABLE = 'leader_skills'
@@ -738,18 +687,20 @@ class DgLeaderSkill(DadguideItem):
 
     @property
     def desc(self):
-        return self.desc_na if len(self.desc_na) > 0 else self.desc_jp
+        return self.desc_na or self.desc_jp
 
     @property
     def name(self):
-        return self.name_na if self.name_na is not None else self.name_jp
+        return self.name_na or self.name_jp
+
 
 class DgAwakening(DadguideItem):
     TABLE = 'awakenings'
     PK = 'awakening_id'
+    AS_BOOL = ['is_super']
+
     def __init__(self, item, database):
         super(DgAwakening, self).__init__(item, database)
-        self.is_super = bool(self.is_super)
 
     @property
     def skill(self):
@@ -759,6 +710,7 @@ class DgAwakening(DadguideItem):
     def name(self):
         return self.skill.name_na if self.skill.name_na is not None else self.skill.name_jp
 
+
 class DgAwokenSkill(DadguideItem):
     TABLE = 'awoken_skills'
     PK = 'awoken_skill_id'
@@ -767,12 +719,15 @@ class DgAwokenSkill(DadguideItem):
     def monsters_with_awakening(self):
         return self._database.get_monsters_by_awakenings(self.awoken_skill_id)
 
+
 class DgEvolution(DadguideItem):
     TABLE = 'evolutions'
     PK = 'evolution_id'
+
     def __init__(self, item, database):
         super(DgEvolution, self).__init__(item, database)
         self.evolution_type = EvoType(self.evolution_type)
+
 
 class DgSeries(DadguideItem):
     TABLE = 'series'
@@ -786,17 +741,21 @@ class DgSeries(DadguideItem):
     def name(self):
         return self.name_na if self.name_na is not None else self.name_jp
 
+
 class DgDungeon(DadguideItem):
     TABLE = 'dungeons'
     PK = 'dungeon_id'
+
 
 class DgEncounter(DadguideItem):
     TABLE = 'encounters'
     PK = 'encounter_id'
 
+
 class DgDrop(DadguideItem):
     TABLE = 'drops'
     PK = 'drop_id'
+
 
 class DgSchedule(DadguideItem):
     TABLE = 'schedule'
@@ -804,15 +763,18 @@ class DgSchedule(DadguideItem):
 
     @property
     def open_datetime(self):
-        datetime.utcfromtimestamp(self.start_timestamp).replace(tzinfo=pytz.UTC)
+        return datetime.utcfromtimestamp(self.start_timestamp).replace(tzinfo=pytz.UTC)
+
     @property
     def close_datetime(self):
-        datetime.utcfromtimestamp(self.end_timestamp).replace(tzinfo=pytz.UTC)
+        return datetime.utcfromtimestamp(self.end_timestamp).replace(tzinfo=pytz.UTC)
+
 
 class DgMonster(DadguideItem):
     TABLE = 'monsters'
     PK = 'monster_id'
     AS_BOOL = ('on_jp', 'on_na', 'on_kr', 'has_animation', 'has_hqimage')
+
     def __init__(self, item, database):
         super(DgMonster, self).__init__(item, database)
 
@@ -837,12 +799,11 @@ class DgMonster(DadguideItem):
         self.awakenings = self._database.get_awakenings_by_monster(self.monster_id)
         self.superawakening_count = sum(int(a.is_super) for a in self.awakenings)
 
-        # self.is_inheritable = bool(self.inheritable) or (len(self.awakenings) > 0 and self.rarity >= 5 and self.sell_mp >= 3000)
         self.is_inheritable = bool(self.inheritable)
 
         self.evo_from = self._database.get_prev_evolution_by_monster(self.monster_id)
 
-        self.is_equip = self._database.monster_is_equip(self.monster_id)
+        self.is_equip = any([x.awoken_skill_id == 49 for x in self.awakenings])
 
         base_id = self.monster_id
         next_base = self._database.get_prev_evolution_by_monster(base_id)
@@ -859,14 +820,14 @@ class DgMonster(DadguideItem):
         return self.monster_id
 
     def stat(self, key, lv, plus=99, inherit=False, is_plus_297=True):
-        s_min = float(self[key+'_min'])
-        s_max = float(self[key+'_max'])
+        s_min = float(self[key + '_min'])
+        s_max = float(self[key + '_max'])
         if self.level > 1:
-            s_val = s_min + (s_max-s_min) * ((min(lv, 99)-1) / (self.level-1)) ** self[key+'_scale']
+            s_val = s_min + (s_max - s_min) * ((min(lv, 99) - 1) / (self.level - 1)) ** self[key + '_scale']
         else:
             s_val = s_min
         if lv > 99:
-            s_val *= 1+(self.limit_mult/11*(lv-99))/100
+            s_val *= 1 + (self.limit_mult / 11 * (lv - 99)) / 100
         plus_dict = {'hp': 10, 'atk': 5, 'rcv': 3}
         s_val += plus_dict[key] * max(min(plus, 99), 0)
         if inherit:
@@ -891,7 +852,6 @@ class DgMonster(DadguideItem):
 
     @property
     def active_skill(self):
-        """This would be called every time we access a monster's active skill, not sure if good"""
         return self._database.get_active_skill(self.active_skill_id)
 
     @property
@@ -906,7 +866,8 @@ class DgMonster(DadguideItem):
     def mats_for_evo(self):
         if self.evo_from is None:
             return []
-        return [self._database.get_monster(self.evo_from['mat_{}_id'.format(i)]) for i in range(1, 6) if self.evo_from['mat_{}_id'.format(i)] is not None]
+        return [self._database.get_monster(self.evo_from['mat_{}_id'.format(i)]) for i in range(1, 6) if
+                self.evo_from['mat_{}_id'.format(i)] is not None]
 
     @property
     def evo_gem(self):
@@ -973,7 +934,6 @@ class DgMonster(DadguideItem):
                 return True
         return False
 
-
     @property
     def killers(self):
         type_to_killers_map = {
@@ -1007,6 +967,7 @@ class DgMonster(DadguideItem):
     def history_us(self):
         return '[{}] New Added'.format(self.reg_date)
 
+
 class MonsterSearchHelper(object):
     def __init__(self, m: DgMonster):
 
@@ -1029,6 +990,7 @@ class MonsterSearchHelper(object):
 
         def replace_colors(text: str):
             return text.replace('red', 'fire').replace('blue', 'water').replace('green', 'wood')
+
         self.leader = replace_colors(self.leader)
         self.active = replace_colors(self.active)
         self.active_name = replace_colors(self.active_name)
@@ -1109,13 +1071,6 @@ class MonsterSearchHelper(object):
                         for do in dest_orbs:
                             self.orb_convert[so].append(do)
 
-class EventType(Enum):
-    EventTypeWeek = 0
-    EventTypeSpecial = 1
-    EventTypeSpecialWeek = 2
-    EventTypeGuerrilla = 3
-    EventTypeGuerrillaNew = 4
-    EventTypeEtc = -100
 
 def make_roma_subname(name_jp):
     subname = name_jp.replace('＝', '')
@@ -1135,12 +1090,9 @@ def float_or_none(maybe_float: str):
     return float(maybe_float) if maybe_float else None
 
 
-def empty_index():
-    return MonsterIndex(None, {}, {}, {})
-
-
 class MonsterIndex(object):
-    def __init__(self, monster_database, nickname_overrides, basename_overrides, panthname_overrides, accept_filter=None):
+    def __init__(self, monster_database, nickname_overrides, basename_overrides, panthname_overrides,
+                 accept_filter=None):
         # Important not to hold onto anything except IDs here so we don't leak memory
         base_monster_ids = monster_database.get_base_monster_ids()
 
@@ -1179,7 +1131,8 @@ class MonsterIndex(object):
             base_id = base_mon.monster_id
             monster_no_na = monster_database.monster_id_to_no(base_id, region=Server.NA)
             group_basename_overrides = basename_overrides.get(monster_no_na, [])
-            evolution_tree = [monster_database.get_monster(m) for m in monster_database.get_evolution_tree_ids(base_id)]
+            evolution_tree = [monster_database.get_monster(m) for m in
+                              monster_database.get_evolution_tree_ids(base_id)]
             named_mg = NamedMonsterGroup(evolution_tree, group_basename_overrides)
             for monster in evolution_tree:
                 if accept_filter and not accept_filter(monster):
@@ -1198,6 +1151,7 @@ class MonsterIndex(object):
         def named_monsters_sort(nm: NamedMonster):
             return (not nm.is_low_priority, nm.group_size, -1 *
                     nm.base_monster_no_na, nm.monster_no_na)
+
         named_monsters.sort(key=named_monsters_sort)
 
         # set up a set of all pantheon names, a set of all pantheon nicknames, and a dictionary of nickname -> full name
@@ -1235,7 +1189,6 @@ class MonsterIndex(object):
             nm = self.monster_no_na_to_named_monster.get(monster_no_na)
             if nm:
                 self.all_entries[nickname] = nm
-
 
     def init_index(self):
         pass
@@ -1357,7 +1310,8 @@ class MonsterIndex(object):
                 matches.add(m)
         if len(matches):
             all_names = ",".join(map(lambda x: x.name_na, matches))
-            return self.pickBestMonster(matches), None, "Nickname prefix, max of {}, matches=({})".format(len(matches), all_names)
+            return self.pickBestMonster(matches), None, "Nickname prefix, max of {}, matches=({})".format(
+                len(matches), all_names)
 
         # prefix search for full name, take max id
         for nickname, m in self.all_entries.items():
@@ -1377,7 +1331,8 @@ class MonsterIndex(object):
             if (query in m.name_na.lower() or query in m.name_jp.lower()):
                 matches.add(m)
         if len(matches):
-            return self.pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(len(matches))
+            return self.pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(
+                len(matches))
 
         # full name contains on full monster list, take max id
 
@@ -1385,7 +1340,8 @@ class MonsterIndex(object):
             if (query in m.name_na.lower() or query in m.name_jp.lower()):
                 matches.add(m)
         if len(matches):
-            return self.pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(len(matches))
+            return self.pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(
+                len(matches))
 
         # No decent matches. Try near hits on nickname instead
         matches = difflib.get_close_matches(query, self.all_entries.keys(), n=1, cutoff=.8)
@@ -1402,7 +1358,6 @@ class MonsterIndex(object):
 
         # couldn't find anything
         return None, "Could not find a match for: " + query, None
-
 
     def find_monster2(self, query):
         """Search with alternative method for resolving prefixes.
@@ -1467,14 +1422,16 @@ class MonsterIndex(object):
         if not matches.length():
             for pantheon in self.all_pantheon_nicknames:
                 if new_query == pantheon.lower():
-                    matches.get_monsters_from_potential_pantheon_match(pantheon, self.pantheon_nick_to_name, self.pantheons)
+                    matches.get_monsters_from_potential_pantheon_match(pantheon, self.pantheon_nick_to_name,
+                                                                       self.pantheons)
             matches.remove_potential_matches_without_all_prefixes(query_prefixes)
 
         # check for any match on pantheon name, again but only if needed
         if not matches.length():
             for pantheon in self.all_pantheon_nicknames:
                 if new_query in pantheon.lower():
-                    matches.get_monsters_from_potential_pantheon_match(pantheon, self.pantheon_nick_to_name, self.pantheons)
+                    matches.get_monsters_from_potential_pantheon_match(pantheon, self.pantheon_nick_to_name,
+                                                                       self.pantheons)
             matches.remove_potential_matches_without_all_prefixes(query_prefixes)
 
         if matches.length():
@@ -1483,6 +1440,7 @@ class MonsterIndex(object):
 
     def pickBestMonster(self, named_monster_list):
         return max(named_monster_list, key=lambda x: (not x.is_low_priority, x.rarity, x.monster_no_na))
+
 
 class PotentialMatches(object):
     def __init__(self):
@@ -1517,8 +1475,8 @@ class PotentialMatches(object):
 class NamedMonsterGroup(object):
     def __init__(self, evolution_tree: list, basename_overrides: list):
         self.is_low_priority = (
-            self._is_low_priority_monster(evolution_tree[0])
-            or self._is_low_priority_group(evolution_tree))
+                self._is_low_priority_monster(evolution_tree[0])
+                or self._is_low_priority_group(evolution_tree))
 
         base_monster = evolution_tree[0]
         self.group_size = len(evolution_tree)
@@ -1564,7 +1522,9 @@ class NamedMonsterGroup(object):
         groups have equal size, prefer the lowest monster number basename.
         This monster in general has better names, particularly when all the
         names are unique, e.g. for male/female hunters."""
+
         def count_and_id(): return [0, 0]
+
         basename_to_info = defaultdict(count_and_id)
 
         for m in monsters:
