@@ -450,7 +450,7 @@ class DadguideDatabase(object):
             self._select_builder(
                 tables={d_type.TABLE: d_type.FIELDS},
                 where='{}.{}=?'.format(d_type.TABLE, d_type.PK)),
-            (pk,), 
+            (pk,),
             d_type)
 
     def _get_table_fields(self, table_name: str):
@@ -465,7 +465,7 @@ class DadguideDatabase(object):
         if len(fields) == 0:
             raise DadguideTableNotFound(table_name)
         return fields, pk
-    
+
     def get_active_skill(self, active_skill_id: int):
         return self._select_one_entry_by_pk(active_skill_id, DgActiveSkill)
 
@@ -488,7 +488,7 @@ class DadguideDatabase(object):
             ),
             (awoken_skill_id,),
             DgMonster)
-        
+
 
     def get_awakenings_by_monster(self, monster_id, is_super=None):
         if is_super is None:
@@ -853,7 +853,7 @@ class DgMonster(DadguideItem):
         self._alt_evo_id_list = self._database.get_evolution_tree_ids(self._base_monster_id)
 
         self.search = MonsterSearchHelper(self)
-        
+
     @property
     def monster_no(self):
         return self.monster_id
@@ -995,7 +995,7 @@ class DgMonster(DadguideItem):
     @property
     def in_mpshop(self):
         return self.buy_mp is not None
-    
+
     @property
     def mp_evo(self):
         for e_id in self._alt_evo_id_list:
