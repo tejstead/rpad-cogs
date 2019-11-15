@@ -1522,7 +1522,8 @@ class NamedMonsterGroup(object):
         This monster in general has better names, particularly when all the
         names are unique, e.g. for male/female hunters."""
 
-        def count_and_id(): return [0, 0]
+        def count_and_id():
+            return [0, 0]
 
         basename_to_info = defaultdict(count_and_id)
 

@@ -199,9 +199,9 @@ class PadGlobal:
         msg += "\n prefixes: {}".format(list_or_none(m.prefixes))
 
         msg += "\n\nAccepted nickname entries:"
-        accepted_nn = list(filter(lambda nn: m.monster_no == padinfo_cog.index_all.all_entries[nn].monster_no,
+        accepted_nn = list(filter(lambda nn: m.monster_id == padinfo_cog.index_all.all_entries[nn].monster_id,
                                   m.final_nicknames))
-        accepted_twnn = list(filter(lambda nn: m.monster_no == padinfo_cog.index_all.two_word_entries[nn].monster_no,
+        accepted_twnn = list(filter(lambda nn: m.monster_id == padinfo_cog.index_all.two_word_entries[nn].monster_id,
                                     m.final_two_word_nicknames))
 
         msg += "\n nicknames: {}".format(list_or_none(accepted_nn))
@@ -231,8 +231,8 @@ class PadGlobal:
         msg += "\n two_word_nicknames: {}".format(list_or_none(replaced_twnn_text))
 
         msg += "\n\nNickname entry sort parts:"
-        msg += "\n (is_low_priority, group_size, monster_no) : ({}, {}, {})".format(
-            m.is_low_priority, m.group_size, m.monster_no)
+        msg += "\n (is_low_priority, group_size, monster_no_na) : ({}, {}, {})".format(
+            m.is_low_priority, m.group_size, m.monster_no_na)
 
         msg += "\n\nMatch selection sort parts:"
         msg += "\n (is_low_priority, rarity, monster_no_na) : ({}, {}, {})".format(
@@ -712,7 +712,7 @@ class PadGlobal:
             if w.isdigit():
                 nm, _, _ = lookup_named_monster(w)
                 name = nm.group_computed_basename.title()
-                m = monster_no_to_monster(nm.monster_no)
+                m = monster_no_to_monster(nm.monster_id)
                 grp = m.series.name
                 monsters[grp].append(name)
             else:
@@ -752,7 +752,7 @@ class PadGlobal:
         if m != m.base_monster:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_no)
+        name = str(m.monster_id)
 
         op = 'EDITED' if name in self.settings.which() else 'ADDED'
         self.settings.addWhich(name, definition)
@@ -765,7 +765,7 @@ class PadGlobal:
         if m != m.base_monster:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_no)
+        name = str(m.monster_id)
 
         if name not in self.settings.which():
             await self.bot.say("Which item doesn't exist.")
@@ -1054,7 +1054,7 @@ class PadGlobal:
         if m != m.base_monster:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_no)
+        name = str(m.monster_id)
 
         op = 'EDITED' if name in self.settings.leaderGuide() else 'ADDED'
         self.settings.addLeaderGuide(name, definition)
@@ -1066,7 +1066,7 @@ class PadGlobal:
         if m != m.base_monster:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_no)
+        name = str(m.monster_id)
 
         if name not in self.settings.leaderGuide():
             await self.bot.say("LeaderGuide doesn't exist.")
