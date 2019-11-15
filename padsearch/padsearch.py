@@ -654,8 +654,8 @@ class PadSearch:
             except:
                 # If it still failed, raise the original exception
                 raise ex
-        pg_cog = self.bot.get_cog('PadGuide2')
-        monsters = pg_cog.database.all_monsters()
+        dg_cog = self.bot.get_cog('Dadguide')
+        monsters = dg_cog.database.all_monsters()
         matched_monsters = list(filter(config.check_filters, monsters))
 
         # Removing entry with names that have gems in it

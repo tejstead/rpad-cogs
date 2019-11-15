@@ -1,8 +1,7 @@
 """
-Provides access to PadGuide data.
+Provides access to DadGuide data.
 
-Loads every PadGuide related JSON into a simple data structure, and then
-combines them into a an in-memory interconnected database.
+Access via the exported DadGuide sqlite database.
 
 Don't hold on to any of the dastructures exported from here, or the
 entire database could be leaked when the module is reloaded.
@@ -73,9 +72,9 @@ class Dadguide(object):
 
     @asyncio.coroutine
     def wait_until_ready(self):
-        """Wait until the PadGuide2 cog is ready.
+        """Wait until the Dadguide cog is ready.
 
-        Call this from other cogs to wait until PadGuide2 finishes refreshing its database
+        Call this from other cogs to wait until Dadguide finishes refreshing its database
         for the first time.
         """
         yield from self._is_ready.wait()
@@ -275,7 +274,7 @@ class MonsterType(Enum):
 
 
 class EvoType(Enum):
-    """Evo types supported by PadGuide. Numbers correspond to their id values."""
+    """Evo types supported by DadGuide. Numbers correspond to their id values."""
     Base = 0  # Represents monsters who didn't require evo
     Evo = 1
     UvoAwoken = 2
@@ -757,7 +756,7 @@ class DgDrop(DadguideItem):
     PK = 'drop_id'
 
 
-class DgSchedule(DadguideItem):
+class DgScheduledEvent(DadguideItem):
     TABLE = 'schedule'
     PK = 'event_id'
 

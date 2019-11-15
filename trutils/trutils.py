@@ -368,7 +368,7 @@ class TrUtils:
     async def loadallcogs(self, ctx):
         cogs = ['RpadUtils', 'AutoMod2', 'ChannelMod', 'Donations', 'FancySay', 'Memes',
                 'PadBoard', 'Profile', 'Stickers', 'StreamCopy', 'Translate', 'VoiceRole',
-                'PadGuide2', 'PadEvents', 'PadGlobal', 'PadInfo', 'PadRem']
+                'Dadguide', 'PadEvents', 'PadGlobal', 'PadInfo', 'PadRem']
 
         owner_cog = self.bot.get_cog('Owner')
 

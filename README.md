@@ -55,9 +55,9 @@ Code should be pep8 formatted with a 100 character line limit.
 * Some cogs will have cross dependencies on each other. Check the command prompt that Miru is running from if you encounter any errors.
 * Common dependencies include:
     * rpadutils
-    * padguide2
+    * dadguide
     * padinfo
-* Note that when you edit cogs with dependencies, you might need to do multiple reloads. For example, if updating padguide2, you will need to reload padinfo as well.
+* Note that when you edit cogs with dependencies, you might need to do multiple reloads. For example, if updating dadguide, you will need to reload padinfo as well.
 * After you have done all of this, restart the bot again. Hopefully by now `^id ` should work!
 
 ## Other
@@ -70,17 +70,14 @@ Code should be pep8 formatted with a 100 character line limit.
 # Puzzle and Dragons
 
 Most cogs here relate to the mobile game 'Puzzle and Dragons'. Data is sourced from the
-PadHerder private API, which I have obtained permission to use for this bot.
-
-I was asked not to share the details of how to access the API, so that code is not
-checked in here.
+DadGuide mobile app.
 
 | Cog        | Purpose                                                         |
 | ---        | ---                                                             |
 | damagecalc | Simple attack damage calculator                                 |
 | padboard   | Converts board images to dawnglare board/solved board links     |
 | padglobal  | Global PAD info commands                                        |
-| padguide   | Utility classes relating to PadGuide data                       |
+| dadguide   | Utility classes relating to DadGuide data                       |
 | padinfo    | Monster lookup and info display                                 |
 | padrem     | Rare Egg Machine simulation                                     |
 | padvision  | Utilities relating to PAD image scanning                        |
