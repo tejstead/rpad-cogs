@@ -3,23 +3,21 @@ import concurrent.futures
 import inspect
 import json
 import os
-from pathlib import Path
 import re
 import time
 import unicodedata
+import urllib
+from pathlib import Path
 
 import aiohttp
 import backoff
-from dateutil.tz import gettz
-import dill
 import discord
+import pytz
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound
 from discord.ext.commands import converter
-import pytz
 
 from cogs.utils.chat_formatting import *
-
 from .utils.dataIO import fileIO
 
 
@@ -202,9 +200,19 @@ async def async_padguide_ts_request(client_session, time_ms, endpoint):
     async with client_session.get(url) as resp:
         return await resp.json()
 
+@backoff.on_exception(backoff.expo, aiohttp.ClientError, max_time=60)
+@backoff.on_exception(backoff.expo, aiohttp.DisconnectedError, max_time=60)
+async def async_cached_dadguide_request(file_path, file_url, expiry_secs):
+    if should_download(file_path, expiry_secs):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(file_url) as resp:
+                assert resp.status == 200
+                with open(file_path, 'wb') as f:
+                    f.write(await resp.read())
+
 
 def writePlainFile(file_path, text_data):
-    with open(file_path, "wt", encoding='utf-8') as f:
+    with open(file_path, "w", encoding='utf-8') as f:
         f.write(text_data)
 
 
@@ -605,7 +613,7 @@ PDX_JP_ADJUSTMENTS.update(CROWS_2)
 
 def get_pdx_id(m):
     pdx_id = m.monster_no_na
-    if int(m.monster_no) == m.monster_no_jp:
+    if int(m.monster_id) == m.monster_no_jp:
         pdx_id = PDX_JP_ADJUSTMENTS.get(pdx_id, pdx_id)
     return pdx_id
 
