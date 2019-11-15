@@ -1,23 +1,16 @@
-from collections import defaultdict
 import csv
 import difflib
 import io
-import json
-import os
-import re
+from collections import defaultdict
 
-import discord
-from discord.ext import commands
 import prettytable
-
-from __main__ import user_allowed, send_cmd_help
+from __main__ import send_cmd_help
 
 from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
 from .utils.dataIO import dataIO
-
 
 DATA_EXPORT_PATH = 'data/padglobal/padglobal_data.json'
 
@@ -31,7 +24,6 @@ PAD Global Commands
 ^which    : which monster evo info
 """
 
-
 BLACKLISTED_CHARACTERS = '^[]*`~_'
 
 PORTRAIT_TEMPLATE = 'https://storage.googleapis.com/mirubot/padimages/{}/portrait/{}.png'
@@ -42,7 +34,6 @@ FARMABLE_MSG = 'This monster is **farmable** so make as many copies of whichever
 MP_BUY_MSG = ('This monster can be purchased with MP. **DO NOT** buy MP cards without a good reason'
               ', check ^mpdra? for specific recommendations.')
 SIMPLE_TREE_MSG = 'This monster appears to be uncontroversial; use the highest evolution.'
-
 
 PADGLOBAL_COG = None
 
@@ -230,11 +221,11 @@ class PadGlobal:
 
         replaced_nn_text = list(map(lambda nn_info: '{} : {}. {}'.format(
             nn_info[0], nn_info[1].monster_no_na, nn_info[1].name_na),
-            replaced_nn_info))
+                                    replaced_nn_info))
 
         replaced_twnn_text = list(map(lambda nn_info: '{} : {}. {}'.format(
             nn_info[0], nn_info[1].monster_no_na, nn_info[1].name_na),
-            replaced_twnn_info))
+                                      replaced_twnn_info))
 
         msg += "\n nicknames: {}".format(list_or_none(replaced_nn_text))
         msg += "\n two_word_nicknames: {}".format(list_or_none(replaced_twnn_text))
@@ -257,8 +248,8 @@ class PadGlobal:
     @is_padglobal_admin()
     async def forceindexreload(self, ctx):
         await self.bot.say('starting reload')
-        padguide_cog = self.bot.get_cog('PadGuide2')
-        await padguide_cog.reload_config_files()
+        dadguide_cog = self.bot.get_cog('Dadguide')
+        await dadguide_cog.reload_config_files()
         padinfo_cog = self.bot.get_cog('PadInfo')
         await padinfo_cog.refresh_index()
         await self.bot.say('finished reload')
@@ -502,7 +493,7 @@ class PadGlobal:
             await self.bot.say(inline('No definition found'))
 
     @commands.command(pass_context=True)
-    async def glossary(self, ctx, *, term: str=None):
+    async def glossary(self, ctx, *, term: str = None):
         """Shows PAD Glossary entries"""
         if await self._check_disabled(ctx):
             return
@@ -576,7 +567,7 @@ class PadGlobal:
         await self.bot.say("done")
 
     @commands.command(pass_context=True)
-    async def boss(self, ctx, *, term: str=None):
+    async def boss(self, ctx, *, term: str = None):
         """Shows boss skill entries"""
         if await self._check_disabled(ctx):
             return
@@ -657,7 +648,7 @@ class PadGlobal:
         await self.bot.say("done")
 
     @commands.command(pass_context=True)
-    async def which(self, ctx, *, term: str=None):
+    async def which(self, ctx, *, term: str = None):
         """Shows PAD Which Monster entries"""
         if await self._check_disabled(ctx):
             return
@@ -813,7 +804,7 @@ class PadGlobal:
         return emojis
 
     @padglobal.command(pass_context=True)
-    async def addemoji(self, ctx, monster_id: int, server: str='jp'):
+    async def addemoji(self, ctx, monster_id: int, server: str = 'jp'):
         """Create padglobal monster emoji by id..
 
         Uses jp monster IDs by default. You only need to change to na if you want to add
@@ -964,7 +955,7 @@ class PadGlobal:
         return str(getattr(first, second, raw_result))
 
     @commands.command(pass_context=True, aliases=["guides"])
-    async def guide(self, ctx, *, term: str=None):
+    async def guide(self, ctx, *, term: str = None):
         """Shows Leader and Dungeon guide entries."""
         if await self._check_disabled(ctx):
             return
