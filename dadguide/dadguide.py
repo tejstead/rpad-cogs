@@ -1136,7 +1136,7 @@ class MonsterIndex(object):
                 if accept_filter and not accept_filter(monster):
                     continue
                 prefixes = self.compute_prefixes(monster, evolution_tree)
-                extra_nicknames = monster_id_to_nicknames[monster.base_id]
+                extra_nicknames = monster_id_to_nicknames[monster.monster_id]
                 named_monster = NamedMonster(monster, named_mg, prefixes, extra_nicknames)
                 named_monsters.append(named_monster)
 
