@@ -424,6 +424,14 @@ class DadguideDatabase(object):
     def get_awoken_skill(self, awoken_skill_id):
         return self._select_one_entry_by_pk(awoken_skill_id, DgAwokenSkill)
 
+    def get_awoken_skill_id_range(self):
+        SELECT_AWOKEN_SKILL_ID_RANGE = 'SELECT MIN(awoken_skill_id) AS min_asi, MAX(awoken_skill_id) AS max_asi from awoken_skills'
+        result = self._query_one(
+            SELECT_AWOKEN_SKILL_ID_RANGE,
+            (),
+            DadguideItem)
+        return (result.min_asi, result.max_asi)
+
     def get_monsters_by_awakenings(self, awoken_skill_id: int):
         return self._query_many(
             self._select_builder(
