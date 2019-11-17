@@ -784,6 +784,8 @@ class DgMonster(DadguideItem):
             # Remove annoying stuff from NA names, like Jörmungandr
             self.name_na = rpadutils.rmdiacritics(self.name_na)
 
+        self.name_na = self.name_na_override or self.name_na
+
         self.attr1 = enum_or_none(Attribute, self.attribute_1_id)
         self.attr2 = enum_or_none(Attribute, self.attribute_2_id)
 
