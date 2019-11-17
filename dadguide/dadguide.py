@@ -1121,15 +1121,14 @@ class MonsterIndex(object):
             175: ['valentines', 'vday'],
         }
 
-        monster_no_na_to_nicknames = defaultdict(set)
-        for nickname, monster_no_na in nickname_overrides.items():
-            monster_no_na_to_nicknames[monster_no_na].add(nickname)
+        monster_id_to_nicknames = defaultdict(set)
+        for nickname, monster_id in nickname_overrides.items():
+            monster_id_to_nicknames[monster_id].add(nickname)
 
         named_monsters = []
         for base_mon in base_monster_ids:
             base_id = base_mon.monster_id
-            monster_no_na = monster_database.monster_id_to_no(base_id, region=Server.NA)
-            group_basename_overrides = basename_overrides.get(monster_no_na, [])
+            group_basename_overrides = basename_overrides.get(base_id, [])
             evolution_tree = [monster_database.get_monster(m) for m in
                               monster_database.get_evolution_tree_ids(base_id)]
             named_mg = NamedMonsterGroup(evolution_tree, group_basename_overrides)
@@ -1137,7 +1136,7 @@ class MonsterIndex(object):
                 if accept_filter and not accept_filter(monster):
                     continue
                 prefixes = self.compute_prefixes(monster, evolution_tree)
-                extra_nicknames = monster_no_na_to_nicknames[monster.monster_no_na]
+                extra_nicknames = monster_id_to_nicknames[monster.base_id]
                 named_monster = NamedMonster(monster, named_mg, prefixes, extra_nicknames)
                 named_monsters.append(named_monster)
 
@@ -1184,8 +1183,8 @@ class MonsterIndex(object):
         self.monster_no_na_to_named_monster = {m.monster_no_na: m for m in named_monsters}
         self.monster_no_to_named_monster = {m.monster_id: m for m in named_monsters}
 
-        for nickname, monster_no_na in nickname_overrides.items():
-            nm = self.monster_no_na_to_named_monster.get(monster_no_na)
+        for nickname, monster_id in nickname_overrides.items():
+            nm = self.monster_no_to_named_monster.get(monster_id)
             if nm:
                 self.all_entries[nickname] = nm
 
