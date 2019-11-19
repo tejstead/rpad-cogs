@@ -956,14 +956,13 @@ AWAKENING_MAP = {
 
 
 def createMultiplierText(hp1, atk1, rcv1, resist1, hp2=None, atk2=None, rcv2=None, resist2=None):
-    hp2, atk2, rcv2, resist2 = hp2 or hp1, atk2 or atk1, rcv2 or rcv1, resist2 or resist1
+    if all([x is None for x in (hp2, atk2, rcv2, resist2)]):
+        hp2, atk2, rcv2, resist2 = hp1, atk1, rcv1, resist1
 
     def fmtNum(val):
         return ('{:.2f}').format(val).strip('0').rstrip('.')
 
     text = "{}/{}/{}".format(fmtNum(hp1 * hp2), fmtNum(atk1 * atk2), fmtNum(rcv1 * rcv2))
-    if resist1 * resist2 > 0:
-        # resist1 = resist1 if resist1 < 1 else 0
-        # resist2 = resist2 if resist2 < 1 else 0
+    if resist1 > 0 or resist2 > 0:
         text += ' Resist {}%'.format(fmtNum(100 * (1 - (1 - resist1) * (1 - resist2))))
     return text
