@@ -774,7 +774,7 @@ def monsterToEmbed(m: dadguide.DgMonster, emoji_list):
 
     embed.add_field(name=info_row_1, value=info_row_2)
 
-    hp, atk, rcv, weighted = m.stats(lv=99)
+    hp, atk, rcv, weighted = m.stats()
     if m.limit_mult > 0:
         lb_hp, lb_atk, lb_rcv, lb_weighted = m.stats(lv=110)
         stats_row_1 = 'Weighted {} | LB {} (+{}%)'.format(weighted, lb_weighted, m.limit_mult)

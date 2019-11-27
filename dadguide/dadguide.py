@@ -828,7 +828,7 @@ class DgMonster(DadguideItem):
         s_min = float(self[key + '_min'])
         s_max = float(self[key + '_max'])
         if self.level > 1:
-            s_val = s_min + (s_max - s_min) * ((min(lv, 99) - 1) / (self.level - 1)) ** self[key + '_scale']
+            s_val = s_min + (s_max - s_min) * ((min(lv, self.level) - 1) / (self.level - 1)) ** self[key + '_scale']
         else:
             s_val = s_min
         if lv > 99:
