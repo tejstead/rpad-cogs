@@ -540,7 +540,7 @@ class DadguideDatabase(object):
         SELECT_BASE_MONSTER_ID = '''
             SELECT evolutions.from_id as monster_id FROM evolutions WHERE evolutions.from_id NOT IN (SELECT DISTINCT evolutions.to_id FROM evolutions)
             UNION
-            SELECT monsters.monster_id FROM monsters WHERE monsters.monster_id NOT IN (SELECT evolutions.to_id FROM evolutions UNION SELECT evolutions.to_id FROM evolutions)'''
+            SELECT monsters.monster_id FROM monsters WHERE monsters.monster_id NOT IN (SELECT evolutions.from_id FROM evolutions UNION SELECT evolutions.to_id FROM evolutions)'''
         return self._query_many(
             SELECT_BASE_MONSTER_ID,
             (),
