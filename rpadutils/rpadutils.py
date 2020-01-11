@@ -364,8 +364,6 @@ class Menu():
             # This is expected when miru doesn't have manage messages
             pass
 
-        print(emoji_to_message.m.monster_no_na)
-
         # update the emoji mapping however we need to, or just pass through and do nothing
         emoji_to_message.on_update(react_emoji)
 

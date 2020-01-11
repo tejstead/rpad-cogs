@@ -92,11 +92,7 @@ class IdEmojiUpdater(EmojiUpdater):
         else:
             self.selected_emoji = selected_emoji
             return
-        self.emoji_dict = self.pad_info.get_id_emoji_options(
-            self.selected_emoji,
-            m=self.m,
-            recurse=True
-        )
+        self.emoji_dict = self.pad_info.get_id_emoji_options(m=self.m)
 
 
 class PadInfo:
@@ -123,6 +119,7 @@ class PadInfo:
         self.other_info_emoji = '\N{SCROLL}'
         self.previous_monster_emoji = '\N{DOWNWARDS BLACK ARROW}'
         self.next_monster_emoji = '\N{UPWARDS BLACK ARROW}'
+        self.remove_emoji = self.menu.emoji['no']
 
         self.historic_lookups_file_path = "data/padinfo/historic_lookups.json"
         self.historic_lookups_file_path_id2 = "data/padinfo/historic_lookups_id2.json"
@@ -252,7 +249,7 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     async def _do_idmenu(self, ctx, m, starting_menu_emoji):
-        emoji_to_embed = self.get_id_emoji_options(starting_menu_emoji, m=m)
+        emoji_to_embed = self.get_id_emoji_options(m=m)
         return await self._do_menu(
             ctx,
             starting_menu_emoji,
@@ -260,7 +257,7 @@ class PadInfo:
                            m=m, selected_emoji=starting_menu_emoji)
         )
 
-    def get_id_emoji_options(self, starting_menu_emoji, m=None, recurse=True):
+    def get_id_emoji_options(self, m=None):
         id_embed = monsterToEmbed(m, self.get_emojis())
         evo_embed = monsterToEvoEmbed(m)
         mats_embed = monsterToEvoMatsEmbed(m)
@@ -289,6 +286,9 @@ class PadInfo:
 
         emoji_to_embed[self.next_monster_emoji] = None
         emoji_to_embed[self.previous_monster_emoji] = None
+
+        # remove emoji needs to be last
+        emoji_to_embed[self.remove_emoji] = self.menu.reaction_delete_message
         return emoji_to_embed
 
     async def _do_evolistmenu(self, ctx, sm):
@@ -309,18 +309,17 @@ class PadInfo:
             # Selected menu wasn't generated for this monster
             return EMBED_NOT_GENERATED
 
-        remove_emoji = self.menu.emoji['no']
-        emoji_to_embed.emoji_dict[remove_emoji] = self.menu.reaction_delete_message
+        emoji_to_embed.emoji_dict[self.remove_emoji] = self.menu.reaction_delete_message
 
-        # try:
-        result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji,
-                                                               timeout=timeout)
-        if result_msg and result_embed:
-            # Message is finished but not deleted, clear the footer
-            result_embed.set_footer(text=discord.Embed.Empty)
-            await self.bot.edit_message(result_msg, embed=result_embed)
-        # except Exception as ex:
-        #     print('Menu failure', ex)
+        try:
+            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed,
+                starting_menu_emoji, timeout=timeout)
+            if result_msg and result_embed:
+                # Message is finished but not deleted, clear the footer
+                result_embed.set_footer(text=discord.Embed.Empty)
+                await self.bot.edit_message(result_msg, embed=result_embed)
+        except Exception as ex:
+            print('Menu failure', ex)
 
     @commands.command(pass_context=True, aliases=['img'])
     async def pic(self, ctx, *, query: str):
