@@ -229,6 +229,8 @@ def default_check(reaction, user):
 
 
 class EmojiUpdater(object):
+    # a pass-through class that does nothing to the emoji dictionary
+    # or to the selected emoji
     def __init__(self, emoji_to_embed, **kwargs):
         self.emoji_dict = emoji_to_embed
         self.selected_emoji = None
@@ -364,6 +366,7 @@ class Menu():
 
         print(emoji_to_message.m.monster_no_na)
 
+        # update the emoji mapping however we need to, or just pass through and do nothing
         emoji_to_message.on_update(react_emoji)
 
         return await self._custom_menu(

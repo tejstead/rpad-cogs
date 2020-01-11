@@ -283,6 +283,10 @@ class PadInfo:
 
         emoji_to_embed[self.other_info_emoji] = other_info_embed
 
+        # it's impossible for the previous/next ones to be accessed because
+        # IdEmojiUpdater won't allow it, however they have to be defined
+        # so that the buttons print in the first place
+
         emoji_to_embed[self.next_monster_emoji] = None
         emoji_to_embed[self.previous_monster_emoji] = None
         return emoji_to_embed
