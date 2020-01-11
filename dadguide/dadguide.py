@@ -971,6 +971,14 @@ class DgMonster(DadguideItem):
     def history_us(self):
         return '[{}] New Added'.format(self.reg_date)
 
+    @property
+    def next_monster(self):
+        return self._database.get_monster(self.monster_no + 1)
+
+    @property
+    def prev_monster(self):
+        return self._database.get_monster(self.monster_no - 1)
+
 
 class MonsterSearchHelper(object):
     def __init__(self, m: DgMonster):

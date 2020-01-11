@@ -228,6 +228,15 @@ def default_check(reaction, user):
         return True
 
 
+class EmojiUpdater(object):
+    def __init__(self, emoji_to_embed, **kwargs):
+        self.emoji_dict = emoji_to_embed
+        self.selected_emoji = None
+
+    def on_update(self, selected_emoji):
+        self.selected_emoji = selected_emoji
+
+
 class Menu():
     def __init__(self, bot):
         self.bot = bot
@@ -309,11 +318,11 @@ class Menu():
         message = kwargs.get('message', None)
 
         reactions_required = not message
-        new_message_content = emoji_to_message[selected_emoji]
+        new_message_content = emoji_to_message.emoji_dict[selected_emoji]
         message = await self.show_menu(ctx, message, new_message_content)
 
         if reactions_required:
-            for e in emoji_to_message:
+            for e in emoji_to_message.emoji_dict:
                 try:
                     await self.bot.add_reaction(message, e)
                 except Exception as e:
@@ -321,7 +330,7 @@ class Menu():
                     pass
 
         r = await self.bot.wait_for_reaction(
-            emoji=list(emoji_to_message.keys()),
+            emoji=list(emoji_to_message.emoji_dict.keys()),
             message=message,
             user=ctx.message.author,
             check=check,
@@ -336,7 +345,7 @@ class Menu():
             return message, new_message_content
 
         react_emoji = r.reaction.emoji
-        react_action = emoji_to_message[r.reaction.emoji]
+        react_action = emoji_to_message.emoji_dict[r.reaction.emoji]
 
         if inspect.iscoroutinefunction(react_action):
             message = await react_action(self.bot, ctx, message)
@@ -353,8 +362,12 @@ class Menu():
             # This is expected when miru doesn't have manage messages
             pass
 
+        print(emoji_to_message.m.monster_no_na)
+
+        emoji_to_message.on_update(react_emoji)
+
         return await self._custom_menu(
-            ctx, emoji_to_message, react_emoji,
+            ctx, emoji_to_message, emoji_to_message.selected_emoji,
             timeout=timeout,
             check=check,
             message=message)

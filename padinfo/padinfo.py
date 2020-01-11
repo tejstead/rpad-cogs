@@ -76,6 +76,29 @@ def get_pic_url(m):
         return RPAD_PIC_TEMPLATE.format('jp', m.monster_no_jp)
 
 
+class IdEmojiUpdater(EmojiUpdater):
+    def __init__(self, emoji_to_embed, m:dadguide.DgMonster=None,
+                 pad_info=None, selected_emoji=None):
+        self.emoji_dict = emoji_to_embed
+        self.m = m
+        self.pad_info = pad_info
+        self.selected_emoji = selected_emoji
+
+    def on_update(self, selected_emoji):
+        if selected_emoji == self.pad_info.previous_monster_emoji:
+            self.m = self.m.prev_monster
+        elif selected_emoji == self.pad_info.next_monster_emoji:
+            self.m = self.m.next_monster
+        else:
+            self.selected_emoji = selected_emoji
+            return
+        self.emoji_dict = self.pad_info.get_id_emoji_options(
+            self.selected_emoji,
+            m=self.m,
+            recurse=True
+        )
+
+
 class PadInfo:
     def __init__(self, bot):
         self.bot = bot
@@ -98,6 +121,8 @@ class PadInfo:
         self.skillups_emoji = '\N{MEAT ON BONE}'
         self.pic_emoji = '\N{FRAME WITH PICTURE}'
         self.other_info_emoji = '\N{SCROLL}'
+        self.previous_monster_emoji = '\N{DOWNWARDS BLACK ARROW}'
+        self.next_monster_emoji = '\N{UPWARDS BLACK ARROW}'
 
         self.historic_lookups_file_path = "data/padinfo/historic_lookups.json"
         self.historic_lookups_file_path_id2 = "data/padinfo/historic_lookups_id2.json"
@@ -227,6 +252,15 @@ class PadInfo:
             await self.bot.say(self.makeFailureMsg(err))
 
     async def _do_idmenu(self, ctx, m, starting_menu_emoji):
+        emoji_to_embed = self.get_id_emoji_options(starting_menu_emoji, m=m)
+        return await self._do_menu(
+            ctx,
+            starting_menu_emoji,
+            IdEmojiUpdater(emoji_to_embed, pad_info=self,
+                           m=m, selected_emoji=starting_menu_emoji)
+        )
+
+    def get_id_emoji_options(self, starting_menu_emoji, m=None, recurse=True):
         id_embed = monsterToEmbed(m, self.get_emojis())
         evo_embed = monsterToEvoEmbed(m)
         mats_embed = monsterToEvoMatsEmbed(m)
@@ -239,7 +273,6 @@ class PadInfo:
         emoji_to_embed[self.evo_emoji] = evo_embed
         emoji_to_embed[self.mats_emoji] = mats_embed
         emoji_to_embed[self.pic_emoji] = pic_embed
-
         pantheon_embed = monsterToPantheonEmbed(m)
         if pantheon_embed:
             emoji_to_embed[self.pantheon_emoji] = pantheon_embed
@@ -250,7 +283,9 @@ class PadInfo:
 
         emoji_to_embed[self.other_info_emoji] = other_info_embed
 
-        return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed)
+        emoji_to_embed[self.next_monster_emoji] = None
+        emoji_to_embed[self.previous_monster_emoji] = None
+        return emoji_to_embed
 
     async def _do_evolistmenu(self, ctx, sm):
         monsters = sm.alt_evos
@@ -263,25 +298,25 @@ class PadInfo:
             if m.monster_id == sm.monster_id:
                 starting_menu_emoji = emoji
 
-        return await self._do_menu(ctx, starting_menu_emoji, emoji_to_embed, timeout=60)
+        return await self._do_menu(ctx, starting_menu_emoji, EmojiUpdater(emoji_to_embed), timeout=60)
 
     async def _do_menu(self, ctx, starting_menu_emoji, emoji_to_embed, timeout=30):
-        if starting_menu_emoji not in emoji_to_embed:
+        if starting_menu_emoji not in emoji_to_embed.emoji_dict:
             # Selected menu wasn't generated for this monster
             return EMBED_NOT_GENERATED
 
         remove_emoji = self.menu.emoji['no']
-        emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
+        emoji_to_embed.emoji_dict[remove_emoji] = self.menu.reaction_delete_message
 
-        try:
-            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji,
-                                                                   timeout=timeout)
-            if result_msg and result_embed:
-                # Message is finished but not deleted, clear the footer
-                result_embed.set_footer(text=discord.Embed.Empty)
-                await self.bot.edit_message(result_msg, embed=result_embed)
-        except Exception as ex:
-            print('Menu failure', ex)
+        # try:
+        result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji,
+                                                               timeout=timeout)
+        if result_msg and result_embed:
+            # Message is finished but not deleted, clear the footer
+            result_embed.set_footer(text=discord.Embed.Empty)
+            await self.bot.edit_message(result_msg, embed=result_embed)
+        # except Exception as ex:
+        #     print('Menu failure', ex)
 
     @commands.command(pass_context=True, aliases=['img'])
     async def pic(self, ctx, *, query: str):
@@ -358,7 +393,7 @@ class PadInfo:
         emoji_to_embed[self.left_emoji] = monsterToEmbed(left_m, self.get_emojis())
         emoji_to_embed[self.right_emoji] = monsterToEmbed(right_m, self.get_emojis())
 
-        await self._do_menu(ctx, self.ls_emoji, emoji_to_embed)
+        await self._do_menu(ctx, self.ls_emoji, EmojiUpdater(emoji_to_embed))
 
     @commands.command(name="helpid", pass_context=True, aliases=['helppic', 'helpimg'])
     async def _helpid(self, ctx):
