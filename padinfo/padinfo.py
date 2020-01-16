@@ -117,8 +117,8 @@ class PadInfo:
         self.skillups_emoji = '\N{MEAT ON BONE}'
         self.pic_emoji = '\N{FRAME WITH PICTURE}'
         self.other_info_emoji = '\N{SCROLL}'
-        self.previous_monster_emoji = '\N{DOWNWARDS BLACK ARROW}'
-        self.next_monster_emoji = '\N{UPWARDS BLACK ARROW}'
+        self.previous_monster_emoji = '\N{HEAVY MINUS SIGN}'
+        self.next_monster_emoji = '\N{HEAVY PLUS SIGN}'
         self.remove_emoji = self.menu.emoji['no']
 
         self.historic_lookups_file_path = "data/padinfo/historic_lookups.json"
@@ -284,8 +284,8 @@ class PadInfo:
         # IdEmojiUpdater won't allow it, however they have to be defined
         # so that the buttons print in the first place
 
-        emoji_to_embed[self.next_monster_emoji] = None
         emoji_to_embed[self.previous_monster_emoji] = None
+        emoji_to_embed[self.next_monster_emoji] = None
 
         # remove emoji needs to be last
         emoji_to_embed[self.remove_emoji] = self.menu.reaction_delete_message
