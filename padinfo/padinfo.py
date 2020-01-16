@@ -86,13 +86,18 @@ class IdEmojiUpdater(EmojiUpdater):
 
     def on_update(self, selected_emoji):
         if selected_emoji == self.pad_info.previous_monster_emoji:
+            if self.m.prev_monster is None:
+                return False
             self.m = self.m.prev_monster
         elif selected_emoji == self.pad_info.next_monster_emoji:
+            if self.m.next_monster is None:
+                return False
             self.m = self.m.next_monster
         else:
             self.selected_emoji = selected_emoji
-            return
+            return True
         self.emoji_dict = self.pad_info.get_id_emoji_options(m=self.m)
+        return True
 
 
 class PadInfo:

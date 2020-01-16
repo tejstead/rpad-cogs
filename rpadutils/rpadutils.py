@@ -237,6 +237,7 @@ class EmojiUpdater(object):
 
     def on_update(self, selected_emoji):
         self.selected_emoji = selected_emoji
+        return True
 
 
 class Menu():
@@ -314,14 +315,16 @@ class Menu():
             else:
                 return await self.bot.say(new_message_content)
 
-    async def _custom_menu(self, ctx, emoji_to_message, selected_emoji, **kwargs):
+    async def _custom_menu(self, ctx, emoji_to_message, selected_emoji,
+                           allowed_action=True, **kwargs):
         timeout = kwargs.get('timeout', 15)
         check = kwargs.get('check', default_check)
         message = kwargs.get('message', None)
 
         reactions_required = not message
         new_message_content = emoji_to_message.emoji_dict[selected_emoji]
-        message = await self.show_menu(ctx, message, new_message_content)
+        if allowed_action:
+            message = await self.show_menu(ctx, message, new_message_content)
 
         if reactions_required:
             for e in emoji_to_message.emoji_dict:
@@ -365,13 +368,14 @@ class Menu():
             pass
 
         # update the emoji mapping however we need to, or just pass through and do nothing
-        emoji_to_message.on_update(react_emoji)
 
+        allowed_action = emoji_to_message.on_update(react_emoji)
         return await self._custom_menu(
             ctx, emoji_to_message, emoji_to_message.selected_emoji,
             timeout=timeout,
             check=check,
-            message=message)
+            message=message,
+            allowed_action=allowed_action)
 
 
 def char_to_emoji(c):
