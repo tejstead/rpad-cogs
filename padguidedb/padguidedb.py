@@ -221,7 +221,7 @@ class PadGuideDb:
     def do_extract_images(self):
         args = [
             'bash',
-            '/home/tactical0retreat/rpad-cogs-utils/pad_api_data/utils/miru_image_load.sh',
+            '/home/tactical0retreat/dadguide/dadguide-jobs/media/update_image_files.sh',
         ]
         subprocess.run(args)
 
