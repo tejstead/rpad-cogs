@@ -43,6 +43,7 @@ Code should be pep8 formatted with a 100 character line limit.
     * ply
     * aiohttp
     * discord
+* Or you can do this via `pip install -r requirements.txt`
 ## Setting up the bot
 * Install Red - [Windows Install](https://twentysix26.github.io/Red-Docs/red_install_windows/) (or switch to whichever OS you want)
 * Create your bot account & have it join a private server with just you and the bot, for testing. Probably don't name it Miru to avoid confusion. This step is also explained in the above instructions.

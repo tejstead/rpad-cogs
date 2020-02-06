@@ -27,7 +27,7 @@ class PadMonitor:
         """Refresh the monster indexes."""
         pg_cog = self.bot.get_cog('Dadguide')
         await pg_cog.wait_until_ready()
-        all_monsters = pg_cog.database.get_all_monsters()
+        all_monsters = pg_cog.database.get_all_monsters(as_generator=False)
         jp_monster_map = {m.monster_no: m for m in all_monsters if m.on_jp}
         na_monster_map = {m.monster_no: m for m in all_monsters if m.on_na}
 
@@ -49,8 +49,8 @@ class PadMonitor:
                 msg = 'New monsters added to {}:'.format(name)
                 for m in [new_map[x] for x in delta_set]:
                     msg += '\n\tNo. {} {}'.format(m.monster_no, m.name_na)
-                    if rpadutils.containsJp(m.name_na):
-                        msg += ' ({})'.format(m.translated_jp_name)
+                    if rpadutils.containsJp(m.name_na) and m.name_na_override != m.name_na and m.name_na_override is not None:
+                        msg += ' ({})'.format(m.name_na_override)
                 return msg
             else:
                 print('no monsters')
