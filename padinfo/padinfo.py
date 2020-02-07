@@ -48,12 +48,15 @@ submit an override suggestion: https://docs.google.com/forms/d/1kJH9Q0S8iqqULwrR
 EMBED_NOT_GENERATED = -1
 
 INFO_PDX_TEMPLATE = 'http://www.puzzledragonx.com/en/monster.asp?n={}'
-RPAD_PIC_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/{}/full/{}.png'
-RPAD_PORTRAIT_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/{}/portrait/{}.png'
-VIDEO_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/animated/{}.mp4'
-GIF_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/padimages/animated/{}.gif'
-ORB_SKIN_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/paddata/orb_styles/extract/jp/BLOCK{0:03d}.PNG'
-ORB_SKIN_CB_TEMPLATE = 'https://f002.backblazeb2.com/file/miru-data/paddata/orb_styles/extract/jp/BLOCK{0:03d}CB.PNG'
+
+MEDIA_PATH = 'https://f002.backblazeb2.com/file/dadguide-data/media/'
+RPAD_PIC_TEMPLATE = MEDIA_PATH + 'portraits/{0:05d}.png'
+RPAD_PORTRAIT_TEMPLATE = MEDIA_PATH + 'icons/{0:05d}.png'
+VIDEO_TEMPLATE = MEDIA_PATH + 'animated_portraits/{0:05d}.mp4'
+GIF_TEMPLATE = MEDIA_PATH + 'animated_portraits/{0:05d}.gif'
+ORB_SKIN_TEMPLATE = MEDIA_PATH + 'orb_skins/{0:03d}.png'
+ORB_SKIN_CB_TEMPLATE = MEDIA_PATH + 'orb_skins/{0:03d}cb.png'
+
 YT_SEARCH_TEMPLATE = 'https://www.youtube.com/results?search_query={}'
 SKYOZORA_TEMPLATE = 'http://pad.skyozora.com/pets/{}'
 
@@ -63,21 +66,15 @@ def get_pdx_url(m):
 
 
 def get_portrait_url(m):
-    if int(m.monster_id) != m.monster_no_na:
-        return RPAD_PORTRAIT_TEMPLATE.format('na', m.monster_no_na)
-    else:
-        return RPAD_PORTRAIT_TEMPLATE.format('jp', m.monster_no_jp)
+    return RPAD_PORTRAIT_TEMPLATE.format(m.monster_id)
 
 
 def get_pic_url(m):
-    if int(m.monster_id) != m.monster_no_na:
-        return RPAD_PIC_TEMPLATE.format('na', m.monster_no_na)
-    else:
-        return RPAD_PIC_TEMPLATE.format('jp', m.monster_no_jp)
+    return RPAD_PIC_TEMPLATE.format(m.monster_id)
 
 
 class IdEmojiUpdater(EmojiUpdater):
-    def __init__(self, emoji_to_embed, m:dadguide.DgMonster=None,
+    def __init__(self, emoji_to_embed, m: dadguide.DgMonster = None,
                  pad_info=None, selected_emoji=None):
         self.emoji_dict = emoji_to_embed
         self.m = m
@@ -266,7 +263,7 @@ class PadInfo:
         id_embed = monsterToEmbed(m, self.get_emojis())
         evo_embed = monsterToEvoEmbed(m)
         mats_embed = monsterToEvoMatsEmbed(m)
-        animated = self.check_monster_animated(m.monster_no_jp)
+        animated = m.has_animation
         pic_embed = monsterToPicEmbed(m, animated=animated)
         other_info_embed = monsterToOtherInfoEmbed(m)
 
@@ -429,8 +426,9 @@ class PadInfo:
 
         m, err, debug_info = self.findMonster(query)
         if m is not None:
-            base_dir = '/home/tactical0retreat/pad_data/voices/fixed'
-            voice_file = os.path.join(base_dir, server, '{}.wav'.format(m.monster_no_na))
+            voice_id = m.voice_id_jp if server == 'jp' else m.voice_id_na
+            base_dir = '/home/tactical0retreat/dadguide/data/media/voices'
+            voice_file = os.path.join(base_dir, server, '{0:03d}.wav'.format(voice_id))
             header = '{} ({})'.format(monsterToHeader(m), server)
             if not os.path.exists(voice_file):
                 await self.bot.say(inline('Could not find voice for ' + header))
@@ -497,28 +495,6 @@ class PadInfo:
         monster_index = self.index_na if na_only else self.index_all
         return monster_index.find_monster2(query)
 
-    @padinfo.command(pass_context=True)
-    @checks.is_owner()
-    async def setanimationdir(self, ctx, *, animation_dir=''):
-        """Set a directory containing animated images"""
-        self.settings.setAnimationDir(animation_dir)
-        await self.bot.say(inline('Done'))
-
-    def check_monster_animated(self, monster_id: int):
-        if not self.settings.animationDir():
-            return False
-
-        try:
-            animated_ids = set()
-            for f in os.listdir(self.settings.animationDir()):
-                f = f.replace('.mp4', '')
-                if f.isdigit() and int(f) == monster_id:
-                    return True
-        except:
-            pass
-
-        return False
-
 
 def setup(bot):
     print('padinfo bot setup')
@@ -545,13 +521,6 @@ class PadInfoSettings(CogSettings):
         es = self.emojiServers()
         es.clear()
         es.extend(emoji_servers)
-        self.save_settings()
-
-    def animationDir(self):
-        return self.bot_settings['animation_dir']
-
-    def setAnimationDir(self, animation_dir):
-        self.bot_settings['animation_dir'] = animation_dir
         self.save_settings()
 
 
