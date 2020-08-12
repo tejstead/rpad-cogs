@@ -21,7 +21,7 @@ import pytz
 
 from __main__ import user_allowed, send_cmd_help
 
-from . import padguide2
+from . import dadguide
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
@@ -62,9 +62,9 @@ class PadEvents:
             await asyncio.sleep(60 * 60 * 1)
 
     async def refresh_data(self):
-        pg_cog = self.bot.get_cog('PadGuide2')
-        await pg_cog.wait_until_ready()
-        database = pg_cog.database
+        dg_cog = self.bot.get_cog('Dadguide')
+        await dg_cog.wait_until_ready()
+        database = dg_cog.database
         scheduled_events = database.all_scheduled_events()
 
         new_events = []
@@ -159,7 +159,7 @@ class PadEvents:
             await self.bot.say("Unsupported server, pick one of NA, KR, JP")
             return
 
-        te = padguide.PgEvent(None, ignore_bad=True)
+        te = dadguide.DgScheduledEvent(None, ignore_bad=True)
         te.server = server
 
         te.dungeon_code = 1
@@ -501,7 +501,7 @@ class PadEventSettings(CogSettings):
 
 
 class Event:
-    def __init__(self, scheduled_event: padguide2.PgScheduledEvent):
+    def __init__(self, scheduled_event: dadguide.DgScheduledEvent):
         self.key = scheduled_event.key()
         self.server = scheduled_event.server
         self.open_datetime = scheduled_event.open_datetime

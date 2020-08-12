@@ -3,22 +3,19 @@ import concurrent.futures
 import inspect
 import json
 import os
-from pathlib import Path
 import re
 import time
 import unicodedata
+import urllib
 
 import aiohttp
 import backoff
-from dateutil.tz import gettz
-import dill
 import discord
+import pytz
+from cogs.utils.chat_formatting import *
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound
 from discord.ext.commands import converter
-import pytz
-
-from cogs.utils.chat_formatting import *
 
 from .utils.dataIO import fileIO
 
@@ -175,36 +172,19 @@ def readJsonFile(file_path):
         return json.load(f)
 
 
-def checkPadguideCacheFile(cache_file, expiry_secs):
-    """Cache_file and expiry secs are used to determine if we should make the request."""
-    if shouldDownload(cache_file, expiry_secs):
-        Path(cache_file).touch()
-        return True
-    return False
-
-
-async def async_cached_padguide_request(client_session, endpoint, result_file, time_ms=0):
-    """Make a request to the PadGuide API.
-
-    The endpoint is the JSP file name on the PadGuide API.
-    The result_file is the place to store the resulting file.
-    The time_ms is the time since update to pull for. Set to 0 for all time. Cannot be 0 for events.
-    """
-    resp = await async_padguide_ts_request(client_session, time_ms, endpoint)
-    writeJsonFile(result_file, resp)
-
-
 @backoff.on_exception(backoff.expo, aiohttp.ClientError, max_time=60)
 @backoff.on_exception(backoff.expo, aiohttp.DisconnectedError, max_time=60)
-async def async_padguide_ts_request(client_session, time_ms, endpoint):
-    STORAGE_URL = 'https://f002.backblazeb2.com/file/miru-data/paddata/padguide/{}.json'
-    url = STORAGE_URL.format(endpoint)
-    async with client_session.get(url) as resp:
-        return await resp.json()
+async def async_cached_dadguide_request(file_path, file_url, expiry_secs):
+    if should_download(file_path, expiry_secs):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(file_url) as resp:
+                assert resp.status == 200
+                with open(file_path, 'wb') as f:
+                    f.write(await resp.read())
 
 
 def writePlainFile(file_path, text_data):
-    with open(file_path, "wt", encoding='utf-8') as f:
+    with open(file_path, "w", encoding='utf-8') as f:
         f.write(text_data)
 
 
@@ -245,6 +225,18 @@ def default_check(reaction, user):
     if user.bot:
         return False
     else:
+        return True
+
+
+class EmojiUpdater(object):
+    # a pass-through class that does nothing to the emoji dictionary
+    # or to the selected emoji
+    def __init__(self, emoji_to_embed, **kwargs):
+        self.emoji_dict = emoji_to_embed
+        self.selected_emoji = None
+
+    def on_update(self, selected_emoji):
+        self.selected_emoji = selected_emoji
         return True
 
 
@@ -323,17 +315,19 @@ class Menu():
             else:
                 return await self.bot.say(new_message_content)
 
-    async def _custom_menu(self, ctx, emoji_to_message, selected_emoji, **kwargs):
+    async def _custom_menu(self, ctx, emoji_to_message, selected_emoji,
+                           allowed_action=True, **kwargs):
         timeout = kwargs.get('timeout', 15)
         check = kwargs.get('check', default_check)
         message = kwargs.get('message', None)
 
         reactions_required = not message
-        new_message_content = emoji_to_message[selected_emoji]
-        message = await self.show_menu(ctx, message, new_message_content)
+        new_message_content = emoji_to_message.emoji_dict[selected_emoji]
+        if allowed_action:
+            message = await self.show_menu(ctx, message, new_message_content)
 
         if reactions_required:
-            for e in emoji_to_message:
+            for e in emoji_to_message.emoji_dict:
                 try:
                     await self.bot.add_reaction(message, e)
                 except Exception as e:
@@ -341,7 +335,7 @@ class Menu():
                     pass
 
         r = await self.bot.wait_for_reaction(
-            emoji=list(emoji_to_message.keys()),
+            emoji=list(emoji_to_message.emoji_dict.keys()),
             message=message,
             user=ctx.message.author,
             check=check,
@@ -356,7 +350,7 @@ class Menu():
             return message, new_message_content
 
         react_emoji = r.reaction.emoji
-        react_action = emoji_to_message[r.reaction.emoji]
+        react_action = emoji_to_message.emoji_dict[r.reaction.emoji]
 
         if inspect.iscoroutinefunction(react_action):
             message = await react_action(self.bot, ctx, message)
@@ -373,11 +367,15 @@ class Menu():
             # This is expected when miru doesn't have manage messages
             pass
 
+        # update the emoji mapping however we need to, or just pass through and do nothing
+
+        allowed_action = emoji_to_message.on_update(react_emoji)
         return await self._custom_menu(
-            ctx, emoji_to_message, react_emoji,
+            ctx, emoji_to_message, emoji_to_message.selected_emoji,
             timeout=timeout,
             check=check,
-            message=message)
+            message=message,
+            allowed_action=allowed_action)
 
 
 def char_to_emoji(c):
@@ -606,6 +604,12 @@ PDX_JP_ADJUSTMENTS.update(CROWS_2)
 def get_pdx_id(m):
     pdx_id = m.monster_no_na
     if int(m.monster_no) == m.monster_no_jp:
+        pdx_id = PDX_JP_ADJUSTMENTS.get(pdx_id, pdx_id)
+    return pdx_id
+
+def get_pdx_id_dadguide(m):
+    pdx_id = m.monster_no_na
+    if int(m.monster_id) == m.monster_no_jp:
         pdx_id = PDX_JP_ADJUSTMENTS.get(pdx_id, pdx_id)
     return pdx_id
 

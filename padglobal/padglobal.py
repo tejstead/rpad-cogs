@@ -1,23 +1,16 @@
-from collections import defaultdict
 import csv
 import difflib
 import io
-import json
-import os
-import re
+from collections import defaultdict
 
-import discord
-from discord.ext import commands
 import prettytable
-
-from __main__ import user_allowed, send_cmd_help
+from __main__ import send_cmd_help
 
 from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
 from .utils.dataIO import dataIO
-
 
 DATA_EXPORT_PATH = 'data/padglobal/padglobal_data.json'
 
@@ -27,9 +20,9 @@ PAD Global Commands
 ^padfaq   : FAQ command list
 ^boards   : optimal boards
 ^glossary : common PAD definitions
+^boss     : boss mechanics
 ^which    : which monster evo info
 """
-
 
 BLACKLISTED_CHARACTERS = '^[]*`~_'
 
@@ -41,7 +34,6 @@ FARMABLE_MSG = 'This monster is **farmable** so make as many copies of whichever
 MP_BUY_MSG = ('This monster can be purchased with MP. **DO NOT** buy MP cards without a good reason'
               ', check ^mpdra? for specific recommendations.')
 SIMPLE_TREE_MSG = 'This monster appears to be uncontroversial; use the highest evolution.'
-
 
 PADGLOBAL_COG = None
 
@@ -90,6 +82,7 @@ class PadGlobal:
         faq = {k: v for k, v in self.c_commands.items() if k in self.settings.faq()}
         boards = {k: v for k, v in self.c_commands.items() if k in self.settings.boards()}
         glossary = self.settings.glossary()
+        bosses = self.settings.boss()
         which = self.settings.which()
         dungeon_guide = self.settings.dungeonGuide()
         leader_guide = self.settings.leaderGuide()
@@ -99,6 +92,7 @@ class PadGlobal:
             'faq': faq,
             'boards': boards,
             'glossary': glossary,
+            'boss': bosses,
             'which': which,
             'dungeon_guide': dungeon_guide,
             'leader_guide': leader_guide,
@@ -205,9 +199,9 @@ class PadGlobal:
         msg += "\n prefixes: {}".format(list_or_none(m.prefixes))
 
         msg += "\n\nAccepted nickname entries:"
-        accepted_nn = list(filter(lambda nn: m.monster_no == padinfo_cog.index_all.all_entries[nn].monster_no,
+        accepted_nn = list(filter(lambda nn: m.monster_id == padinfo_cog.index_all.all_entries[nn].monster_id,
                                   m.final_nicknames))
-        accepted_twnn = list(filter(lambda nn: m.monster_no == padinfo_cog.index_all.two_word_entries[nn].monster_no,
+        accepted_twnn = list(filter(lambda nn: m.monster_id == padinfo_cog.index_all.two_word_entries[nn].monster_id,
                                     m.final_two_word_nicknames))
 
         msg += "\n nicknames: {}".format(list_or_none(accepted_nn))
@@ -227,18 +221,18 @@ class PadGlobal:
 
         replaced_nn_text = list(map(lambda nn_info: '{} : {}. {}'.format(
             nn_info[0], nn_info[1].monster_no_na, nn_info[1].name_na),
-            replaced_nn_info))
+                                    replaced_nn_info))
 
         replaced_twnn_text = list(map(lambda nn_info: '{} : {}. {}'.format(
             nn_info[0], nn_info[1].monster_no_na, nn_info[1].name_na),
-            replaced_twnn_info))
+                                      replaced_twnn_info))
 
         msg += "\n nicknames: {}".format(list_or_none(replaced_nn_text))
         msg += "\n two_word_nicknames: {}".format(list_or_none(replaced_twnn_text))
 
         msg += "\n\nNickname entry sort parts:"
-        msg += "\n (is_low_priority, group_size, monster_no) : ({}, {}, {})".format(
-            m.is_low_priority, m.group_size, m.monster_no)
+        msg += "\n (is_low_priority, group_size, monster_no_na) : ({}, {}, {})".format(
+            m.is_low_priority, m.group_size, m.monster_no_na)
 
         msg += "\n\nMatch selection sort parts:"
         msg += "\n (is_low_priority, rarity, monster_no_na) : ({}, {}, {})".format(
@@ -254,8 +248,8 @@ class PadGlobal:
     @is_padglobal_admin()
     async def forceindexreload(self, ctx):
         await self.bot.say('starting reload')
-        padguide_cog = self.bot.get_cog('PadGuide2')
-        await padguide_cog.reload_config_files()
+        dadguide_cog = self.bot.get_cog('Dadguide')
+        await dadguide_cog.reload_config_files()
         padinfo_cog = self.bot.get_cog('PadInfo')
         await padinfo_cog.refresh_index()
         await self.bot.say('finished reload')
@@ -357,6 +351,19 @@ class PadGlobal:
 
         self.settings.setBoards(command)
         await self.bot.say("PAD command set to boards.")
+
+    @padglobal.command(pass_context=True)
+    async def checktype(self, ctx, command: str):
+        """Checks if a command is board, FAQ, or general"""
+        command = command.lower()
+        if command in self.settings.boards():
+            await self.bot.say('{} is a board.'.format(command))
+        elif command in self.settings.faq():
+            await self.bot.say('{} is a FAQ.'.format(command))
+        elif command in self.c_commands:
+            await self.bot.say('{} is a general padglobal command.'.format(command))
+        else:
+            await self.bot.say('{} is not a padglobal command. It might be a meme or a custom command.'.format(command))
 
     @commands.command(pass_context=True)
     async def pad(self, ctx):
@@ -486,7 +493,7 @@ class PadGlobal:
             await self.bot.say(inline('No definition found'))
 
     @commands.command(pass_context=True)
-    async def glossary(self, ctx, *, term: str=None):
+    async def glossary(self, ctx, *, term: str = None):
         """Shows PAD Glossary entries"""
         if await self._check_disabled(ctx):
             return
@@ -560,7 +567,88 @@ class PadGlobal:
         await self.bot.say("done")
 
     @commands.command(pass_context=True)
-    async def which(self, ctx, *, term: str=None):
+    async def boss(self, ctx, *, term: str = None):
+        """Shows boss skill entries"""
+        if await self._check_disabled(ctx):
+            return
+        if term:
+            term_new, definition = self.lookup_boss(term)
+            if definition:
+                if term_new != term.lower():
+                    await self.bot.say('No entry for {} found, corrected to {}'.format(term, term_new))
+                await self.bot.say(definition)
+            else:
+                await self.bot.say(inline('No mechanics found'))
+            return
+        msg = self.boss_to_text()
+        for page in pagify(msg):
+            await self.bot.whisper(page)
+
+    @commands.command(pass_context=True)
+    async def bosslist(self, ctx):
+        """Shows boss skill entries"""
+        if await self._check_disabled(ctx):
+            return
+        msg = self.boss_to_text_index()
+        for page in pagify(msg):
+            await self.bot.whisper(page)
+
+    def lookup_boss(self, term):
+        bosses = self.settings.boss()
+        term = term.lower()
+        definition = bosses.get(term, None)
+        if definition:
+            return term, definition
+        matches = self._get_corrected_cmds(term, bosses.keys())
+
+        if not matches:
+            matches = difflib.get_close_matches(term, bosses.keys(), n=1, cutoff=.8)
+
+        if not matches:
+            return term, None
+        else:
+            term = matches[0]
+            return term, bosses[term]
+
+    def boss_to_text(self):
+        bosses = self.settings.boss()
+        msg = '__**PAD Boss Mechanics (also check out ^pad / ^padfaq / ^boards / ^which /^glossary)**__'
+        for term in sorted(bosses.keys()):
+            definition = bosses[term]
+            msg += '\n**{}**\n{}'.format(term, definition)
+        return msg
+
+    def boss_to_text_index(self):
+        bosses = self.settings.boss()
+        msg = '__**Available PAD Boss Mechanics (also check out ^pad / ^padfaq / ^boards / ^which /^glossary)**__'
+        msg = msg + '\n' + ',\n'.join(sorted(bosses.keys()))
+        return msg
+
+    @padglobal.command(pass_context=True)
+    async def addboss(self, ctx, term, *, definition):
+        """Adds a set of boss mechanics.
+        If you want to use a multiple word boss name, enclose it in quotes."""
+        term = term.lower()
+        op = 'EDITED' if term in self.settings.boss() else 'ADDED'
+        definition = clean_global_mentions(definition)
+        definition = definition.replace(u'\u200b', '')
+        definition = replace_emoji_names_with_code(self._get_emojis(), definition)
+        self.settings.addBoss(term, definition)
+        await self.bot.say("PAD boss mechanics successfully {}.".format(op))
+
+    @padglobal.command(pass_context=True)
+    async def rmboss(self, ctx, *, term):
+        """Adds a set of boss mechanics."""
+        term = term.lower()
+        if term not in self.settings.boss():
+            await self.bot.say("Boss mechanics item doesn't exist.")
+            return
+
+        self.settings.rmBoss(term)
+        await self.bot.say("done")
+
+    @commands.command(pass_context=True)
+    async def which(self, ctx, *, term: str = None):
         """Shows PAD Which Monster entries"""
         if await self._check_disabled(ctx):
             return
@@ -624,7 +712,7 @@ class PadGlobal:
             if w.isdigit():
                 nm, _, _ = lookup_named_monster(w)
                 name = nm.group_computed_basename.title()
-                m = monster_no_to_monster(nm.monster_no)
+                m = monster_no_to_monster(nm.monster_id)
                 grp = m.series.name
                 monsters[grp].append(name)
             else:
@@ -664,7 +752,7 @@ class PadGlobal:
         if m != m.base_monster:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_no)
+        name = str(m.monster_id)
 
         op = 'EDITED' if name in self.settings.which() else 'ADDED'
         self.settings.addWhich(name, definition)
@@ -677,7 +765,7 @@ class PadGlobal:
         if m != m.base_monster:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_no)
+        name = str(m.monster_id)
 
         if name not in self.settings.which():
             await self.bot.say("Which item doesn't exist.")
@@ -716,7 +804,7 @@ class PadGlobal:
         return emojis
 
     @padglobal.command(pass_context=True)
-    async def addemoji(self, ctx, monster_id: int, server: str='jp'):
+    async def addemoji(self, ctx, monster_id: int, server: str = 'jp'):
         """Create padglobal monster emoji by id..
 
         Uses jp monster IDs by default. You only need to change to na if you want to add
@@ -867,7 +955,7 @@ class PadGlobal:
         return str(getattr(first, second, raw_result))
 
     @commands.command(pass_context=True, aliases=["guides"])
-    async def guide(self, ctx, *, term: str=None):
+    async def guide(self, ctx, *, term: str = None):
         """Shows Leader and Dungeon guide entries."""
         if await self._check_disabled(ctx):
             return
@@ -966,7 +1054,7 @@ class PadGlobal:
         if m != m.base_monster:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_no)
+        name = str(m.monster_id)
 
         op = 'EDITED' if name in self.settings.leaderGuide() else 'ADDED'
         self.settings.addLeaderGuide(name, definition)
@@ -978,7 +1066,7 @@ class PadGlobal:
         if m != m.base_monster:
             m = m.base_monster
             await self.bot.say("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_no)
+        name = str(m.monster_id)
 
         if name not in self.settings.leaderGuide():
             await self.bot.say("LeaderGuide doesn't exist.")
@@ -1034,6 +1122,7 @@ class PadGlobalSettings(CogSettings):
             'boards': [],
             'glossary': {},
             'which': {},
+            'boss': {},
             'disabled_servers': [],
         }
         return config
@@ -1103,6 +1192,22 @@ class PadGlobalSettings(CogSettings):
         glossary = self.glossary()
         if term in glossary:
             glossary.pop(term)
+            self.save_settings()
+
+    def boss(self):
+        key = 'boss'
+        if key not in self.bot_settings:
+            self.bot_settings[key] = {}
+        return self.bot_settings[key]
+
+    def addBoss(self, term, definition):
+        self.boss()[term] = definition
+        self.save_settings()
+
+    def rmBoss(self, term):
+        boss = self.boss()
+        if term in boss:
+            boss.pop(term)
             self.save_settings()
 
     def which(self):

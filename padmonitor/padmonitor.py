@@ -1,18 +1,10 @@
-import io
-import traceback
+from __main__ import send_cmd_help
 
-import discord
-from discord.ext import commands
-
-from __main__ import user_allowed, send_cmd_help
-
-from . import padguide2
 from . import rpadutils
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.dataIO import dataIO
 
 
 class PadMonitor:
@@ -33,10 +25,10 @@ class PadMonitor:
 
     async def check_seen(self):
         """Refresh the monster indexes."""
-        pg_cog = self.bot.get_cog('PadGuide2')
+        pg_cog = self.bot.get_cog('Dadguide')
         await pg_cog.wait_until_ready()
-        all_monsters = pg_cog.database.all_monsters()
-        jp_monster_map = {m.monster_no: m for m in all_monsters}
+        all_monsters = pg_cog.database.get_all_monsters(as_generator=False)
+        jp_monster_map = {m.monster_no: m for m in all_monsters if m.on_jp}
         na_monster_map = {m.monster_no: m for m in all_monsters if m.on_na}
 
         def process(existing, new_map, name):
@@ -57,8 +49,8 @@ class PadMonitor:
                 msg = 'New monsters added to {}:'.format(name)
                 for m in [new_map[x] for x in delta_set]:
                     msg += '\n\tNo. {} {}'.format(m.monster_no, m.name_na)
-                    if rpadutils.containsJp(m.name_na):
-                        msg += ' ({})'.format(m.translated_jp_name)
+                    if rpadutils.containsJp(m.name_na) and m.name_na_override != m.name_na and m.name_na_override is not None:
+                        msg += ' ({})'.format(m.name_na_override)
                 return msg
             else:
                 print('no monsters')

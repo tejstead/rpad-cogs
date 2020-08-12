@@ -13,7 +13,7 @@ from cogs.utils import checks
 from cogs.utils.chat_formatting import pagify, box
 from cogs.utils.dataIO import dataIO
 
-from .rpadutils import Menu, char_to_emoji
+from .rpadutils import Menu, EmojiUpdater, char_to_emoji
 from .utils.chat_formatting import *
 
 
@@ -101,7 +101,8 @@ class SchoolIdol:
         emoji_to_embed[remove_emoji] = self.menu.reaction_delete_message
 
         try:
-            result_msg, result_embed = await self.menu.custom_menu(ctx, emoji_to_embed, starting_menu_emoji, timeout=20)
+            result_msg, result_embed = await self.menu.custom_menu(ctx,
+                EmojiUpdater(emoji_to_embed), starting_menu_emoji, timeout=20)
             if result_msg and result_embed:
                 # Message is finished but not deleted, clear the footer
                 result_embed.set_footer(text=discord.Embed.Empty)

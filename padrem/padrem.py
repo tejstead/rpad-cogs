@@ -1,40 +1,15 @@
-from _collections import OrderedDict
 import asyncio
-from builtins import filter
-from collections import defaultdict
-import csv
-from datetime import datetime
-from datetime import timedelta
-from dateutil import tz
-import http.client
-from itertools import groupby
-import json
-from operator import itemgetter
-import os
-import pytz
 import random
-import re
-from setuptools.command.alias import alias
-import threading
-import time
-import time
 import traceback
-import urllib.parse
+from _collections import OrderedDict
 
-from enum import Enum
-
-from __main__ import user_allowed, send_cmd_help
-import discord
 from discord.ext import commands
-import prettytable
 
-from . import padguide2
+from . import dadguide
 from .rpadutils import *
-from .rpadutils import CogSettings
+from .rpadutils import CogSettings, normalizeServer
 from .utils import checks
-from .utils.chat_formatting import *
-from .utils.dataIO import fileIO
-
+from .utils.chat_formatting import box, pagify
 
 SUPPORTED_SERVERS = ["NA", "JP"]
 
@@ -64,9 +39,9 @@ class PadRem:
             await asyncio.sleep(60 * 60 * 1)
 
     async def refresh_data(self):
-        pg_cog = self.bot.get_cog('PadGuide2')
-        await pg_cog.wait_until_ready()
-        database = pg_cog.database
+        dg_cog = self.bot.get_cog('Dadguide')
+        await dg_cog.wait_until_ready()
+        database = dg_cog.database
         self.pgrem = PgRemWrapper(database, self.settings.getBoosts())
 
     @commands.command(name="setboost", pass_context=True)
@@ -248,7 +223,7 @@ class PadRemSettings(CogSettings):
 
 
 class RemMonster(object):
-    def __init__(self, monster: padguide2.PgMonster):
+    def __init__(self, monster: dadguide.DgMonster):
         self.monster_no = monster.monster_no
         self.monster_no_na = monster.monster_no_na
         self.rarity = monster.rarity
@@ -257,7 +232,7 @@ class RemMonster(object):
 
 
 class PgRemWrapper:
-    def __init__(self, database: padguide2.PgRawDatabase, id_to_boost_map: dict, skip_load=False):
+    def __init__(self, database: dadguide.PgRawDatabase, id_to_boost_map: dict, skip_load=False):
         self.server_to_config = {}
         if skip_load:
             return
@@ -305,7 +280,7 @@ class PgRemWrapper:
                         na_rem_list.append(rm)
             else:
                 # Otherwise this is special rems or carnivals
-                if ei.row_type == padguide2.RemRowType.divider:
+                if ei.row_type == dadguide.RemRowType.divider:
                     # We started a new machine (always happens for first row)
                     cur_mon_list = []
                     modifier_list.append(EggMachineModifier(ei, cur_mon_list, boost_rate))
@@ -573,17 +548,17 @@ class EggMachineModifier:
             self.boost_rate = 3
 
     def isGodfest(self):
-        return self.rem_type == padguide2.RemType.godfest
+        return self.rem_type == dadguide.RemType.godfest
 
     def isRare(self):
-        return self.rem_type == padguide2.RemType.rare
+        return self.rem_type == dadguide.RemType.rare
 
     def isCarnival(self):
         name = self.name.lower()
         return self.isRare() and ('gala' in name or 'carnival' in name or 'special!' in name)
 
     def getName(self):
-        if self.rem_type == padguide2.RemType.godfest.value:
+        if self.rem_type == dadguide.RemType.godfest.value:
             return 'Godfest x{}'.format(self.boost_rate)
         else:
             return self.name

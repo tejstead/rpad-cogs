@@ -1,28 +1,16 @@
-import asyncio
-from collections import defaultdict
 import datetime
-import http.client
-import json
-import os
-import random
-import re
-import time
-import traceback
-
-import discord
-from discord.ext import commands
-from enum import Enum
 
 from __main__ import set_cog
-from __main__ import user_allowed, send_cmd_help
-from google.cloud import vision
+
+try:
+    from google.cloud import vision
+except:
+    print('google cloud vision not found, some features unavailable')
 
 from .rpadutils import *
 from .rpadutils import CogSettings
 from .utils import checks
 from .utils.chat_formatting import *
-from .utils.dataIO import fileIO
-
 
 GETMIRU_HELP = """
 The new public Miru is open for invite to any server: personal, private, secret-handshake-entry-only, etc
@@ -198,7 +186,7 @@ class TrUtils:
         except discord.NotFound:
             await self.bot.say(inline('Cannot find that message, check the channel and message id'))
             return
-        except discord.NotFound:
+        except discord.Forbidden:
             await self.bot.say(inline('No permissions to do that'))
             return
         if msg.author.id != self.bot.user.id:
@@ -372,7 +360,7 @@ class TrUtils:
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
     async def clearimagetypeblacklist(self, ctx, channel: discord.Channel, image_type: str):
-        self.settings.clearImageTypeBlacklist(ctx.message.server.id, channel.id, image_type)
+        self.settings.clearImageTypeBlacklist(ctx.message.server.id, channel.id)
         await self.bot.say('`done`')
 
     @commands.command(pass_context=True)
@@ -380,7 +368,7 @@ class TrUtils:
     async def loadallcogs(self, ctx):
         cogs = ['RpadUtils', 'AutoMod2', 'ChannelMod', 'Donations', 'FancySay', 'Memes',
                 'PadBoard', 'Profile', 'Stickers', 'StreamCopy', 'Translate', 'VoiceRole',
-                'PadGuide2', 'PadEvents', 'PadGlobal', 'PadInfo', 'PadRem']
+                'Dadguide', 'PadEvents', 'PadGlobal', 'PadInfo', 'PadRem']
 
         owner_cog = self.bot.get_cog('Owner')
 
